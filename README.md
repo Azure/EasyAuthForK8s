@@ -1,8 +1,8 @@
-# EasyAuth for AKS
+# EasyAuth for Kubernetes
 
-EasyAuth for AKS is a simple Identity and Access Management module that allows you to protect applications in a kubernetes cluster without having to modify application source code.
+EasyAuth for Kubernetes is a simple Identity and Access Management module that allows you to protect applications in a kubernetes cluster without having to modify application source code.
 
-Similar to the [security features](https://docs.microsoft.com/en-us/azure/app-service/overview-authentication-authorization) of Azure App Service, EasyAuth for AKS is designed to do four basic functions:
+Similar to the [security features](https://docs.microsoft.com/en-us/azure/app-service/overview-authentication-authorization) of Azure App Service, EasyAuth for Kubernetes is designed to do four basic functions:
 * Authenticate callers via Azure Active Directory
 * Validate and refresh tokens
 * Manage authenticated sessions
@@ -18,7 +18,7 @@ A few of these features include:
 * Multitenant applications
 
 ## Concepts
-EasyAuth for AKS integrates with your cluster's [ingress controller](https://kubernetes.io/docs/concepts/services-networking/ingress-controllers/).  When a request is received, the EasyAuth service validates the user's session.  If the caller isn't authenticated yet, the service will route the caller to the appropriate Azure AD tenant to sign in.  The service then starts a managed session for the user and adds a cookie or bearer token to the response that will be used to authenticate the caller on future requests.
+EasyAuth for Kubernetes integrates with your cluster's [ingress controller](https://kubernetes.io/docs/concepts/services-networking/ingress-controllers/).  When a request is received, the EasyAuth service validates the user's session.  If the caller isn't authenticated yet, the service will route the caller to the appropriate Azure AD tenant to sign in.  The service then starts a managed session for the user and adds a cookie or bearer token to the response that will be used to authenticate the caller on future requests.
 
 > Note: The authentication flow supports single sign on, so the user will not be prompted for credentials if they are already signed via the Azure AD tenant.  Also, user sessions are by default short-lived (60 minutes), so EasyAuth will request a new token and refresh the cookie as needed to maintain the session.
 
