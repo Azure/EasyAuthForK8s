@@ -7,8 +7,8 @@ These are **critical dependencies to install prior** to running the commands bel
 - [JQ](https://stedolan.github.io/jq/)
 - [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli?view=azure-cli-latest)
     - Important! Make sure you are running the LATEST version of the Azure CLI.
-- Kubectl
-- Helm
+- [Kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/)
+- [Helm](https://helm.sh/docs/intro/install/)
 
 ## Set Variables
 
