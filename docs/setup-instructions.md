@@ -8,7 +8,7 @@ These are **critical dependencies to install prior** to running the commands bel
 - [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli?view=azure-cli-latest)
     - Important! Make sure you are running the LATEST version of the Azure CLI.
 - [Kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/)
-- [Helm](https://helm.sh/docs/intro/install/)
+- [Helm 3](https://helm.sh/docs/intro/install/)
 
 ## Set Variables
 
@@ -60,16 +60,8 @@ Note: It takes several minutes to create the AKS cluster. Complete these steps b
 
 ## Install Helm
 
-    # Create the service account for tiller
-    kubectl --namespace kube-system create serviceaccount tiller
-    
-    # Create cluster role binding
-    kubectl create clusterrolebinding tiller-cluster-rule --clusterrole=cluster-admin --serviceaccount=kube-system:tiller
-    
-    # Helm init
-    helm init --service-account tiller
-    
-    # Note: it make take a minute for the tiller service on the cluster to start
+    #Add stable repo to Helm 3
+    helm repo add stable https://kubernetes-charts.storage.googleapis.com
 
 ## Install NGINX Ingress
 
