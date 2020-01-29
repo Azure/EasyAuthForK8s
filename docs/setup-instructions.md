@@ -37,12 +37,17 @@ Review these very carefully and modify.
     COOKIE_SECRET=$(python -c 'import os,base64; print(base64.b64encode(os.urandom(16)).decode("utf-8"))')
     echo $COOKIE_SECRET
 
+## Login to Azure
+
+    az login
+    az account set -s "<the azure subscription you want to deploy this in.>"
+
 ## Create AKS Cluster
 
 Note: It takes several minutes to create the AKS cluster. Complete these steps before proceeding to the next section.
 
     az group create -n $CLUSTER_RG -l $LOCATION
-    az aks create -g $CLUSTER_RG -n $CLUSTER_NAME --vm-set-type VirtualMachineScaleSets
+    az aks create -g $CLUSTER_RG -n $CLUSTER_NAME --vm-set-type VirtualMachineScaleSets --generate-ssh-keys
     az aks get-credentials -g $CLUSTER_RG -n $CLUSTER_NAME
     
     # Important! Wait for the steps above to complete before proceeding.
