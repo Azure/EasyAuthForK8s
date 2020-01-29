@@ -5,8 +5,6 @@ VisualStudioVersion = 16.0.29411.108
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OCP.Msal.Proxy.Web", "OCP.Msal.Proxy.Web\OCP.Msal.Proxy.Web.csproj", "{5D2D2FE4-E8EC-4AC0-AA71-9BF1EC88B13A}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.Identity.Web", "Microsoft.Identity.Web\Microsoft.Identity.Web.csproj", "{393686A7-86B6-4B45-8BA3-5CA436ACFD51}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -17,10 +15,6 @@ Global
 		{5D2D2FE4-E8EC-4AC0-AA71-9BF1EC88B13A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5D2D2FE4-E8EC-4AC0-AA71-9BF1EC88B13A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5D2D2FE4-E8EC-4AC0-AA71-9BF1EC88B13A}.Release|Any CPU.Build.0 = Release|Any CPU
-		{393686A7-86B6-4B45-8BA3-5CA436ACFD51}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{393686A7-86B6-4B45-8BA3-5CA436ACFD51}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{393686A7-86B6-4B45-8BA3-5CA436ACFD51}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{393686A7-86B6-4B45-8BA3-5CA436ACFD51}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
