@@ -4,7 +4,7 @@ echo "BEGIN @ $(date +"%T"): START OF SCRIPT"
 echo ""
 echo "BEGIN @ $(date +"%T"): Set variables..."
 
-ITERATION=26
+ITERATION=27
 AD_APP_NAME="$USER-msal-proxy$ITERATION"
 CLUSTER_NAME=msal-proxy$ITERATION
 CLUSTER_RG=msal-proxyrg$ITERATION
@@ -171,7 +171,7 @@ cat azure-pvc-roles.yaml
 kubectl apply -f azure-pvc-roles.yaml
 
 cat << EOF > msal-proxy/templates/msal-net-proxy.yaml
-apiVersion: extensions/v1beta
+apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
   labels:
@@ -321,7 +321,7 @@ echo "COMPLETE @ $(date +"%T"): Install Cert Manager"
 
 echo "BEGIN @ $(date +"%T"): Deploy the Ingress Resources..."
 cat << EOF > hello-world-ingress.yaml
-apiVersion: extensions/v1beta
+apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
   name: hello-world-ingress
@@ -347,7 +347,7 @@ spec:
           servicePort: 8080
         path: /(.*)
 ---
-apiVersion: extensions/v1beta
+apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
   name: msal-net-proxy
