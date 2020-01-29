@@ -315,7 +315,7 @@ Inspired by [https://docs.microsoft.com/en-us/azure/aks/ingress-tls](https://doc
     helm repo update
 
     # Install the cert manager
-    helm install --name cert-manager --namespace cert-manager --set ingressShim.defaultIssuerName=letsencrypt-prod --set ingressShim.defaultIssuerKind=ClusterIssuer jetstack/cert-manager --version v0.11.0
+    helm install cert-manager --namespace cert-manager --set ingressShim.defaultIssuerName=letsencrypt-prod --set ingressShim.defaultIssuerKind=ClusterIssuer jetstack/cert-manager --version v0.11.0
     
     # Make sure the cert-manager pods have started BEFORE proceeding. It can take 2-3 min for the cert-manager-webhook container to start up
     kubectl get pods -n cert-manager
