@@ -37,12 +37,17 @@ Review these very carefully and modify.
     COOKIE_SECRET=$(python -c 'import os,base64; print(base64.b64encode(os.urandom(16)).decode("utf-8"))')
     echo $COOKIE_SECRET
 
+## Login to Azure
+
+    az login
+    az account set -s "<the azure subscription you want to deploy this in.>"
+
 ## Create AKS Cluster
 
 Note: It takes several minutes to create the AKS cluster. Complete these steps before proceeding to the next section.
 
     az group create -n $CLUSTER_RG -l $LOCATION
-    az aks create -g $CLUSTER_RG -n $CLUSTER_NAME --vm-set-type VirtualMachineScaleSets
+    az aks create -g $CLUSTER_RG -n $CLUSTER_NAME --vm-set-type VirtualMachineScaleSets --generate-ssh-keys
     az aks get-credentials -g $CLUSTER_RG -n $CLUSTER_NAME
     
     # Important! Wait for the steps above to complete before proceeding.
@@ -65,8 +70,10 @@ Note: It takes several minutes to create the AKS cluster. Complete these steps b
 
 ## Install NGINX Ingress
 
+    # Add ingress-controllers namespace
+    kubectl create namespace ingress-controllers
     # Install the ingress controller
-    helm install stable/nginx-ingress nginx-ingress --namespace ingress-controllers --set rbac.create=true
+    helm install nginx-ingress stable/nginx-ingress --namespace ingress-controllers --set rbac.create=true
     
     # Important! It take a few minutes for Azure to assign a public IP address to the ingress. Run this command until it returns a public IP address.
     kubectl get services/nginx-ingress-controller -n ingress-controllers -o jsonpath="{.status.loadBalancer.ingress[0].ip}"
@@ -308,7 +315,7 @@ Inspired by [https://docs.microsoft.com/en-us/azure/aks/ingress-tls](https://doc
     helm repo update
 
     # Install the cert manager
-    helm install --name cert-manager --namespace cert-manager --set ingressShim.defaultIssuerName=letsencrypt-prod --set ingressShim.defaultIssuerKind=ClusterIssuer jetstack/cert-manager --version v0.11.0
+    helm install cert-manager --namespace cert-manager --set ingressShim.defaultIssuerName=letsencrypt-prod --set ingressShim.defaultIssuerKind=ClusterIssuer jetstack/cert-manager --version v0.11.0
     
     # Make sure the cert-manager pods have started BEFORE proceeding. It can take 2-3 min for the cert-manager-webhook container to start up
     kubectl get pods -n cert-manager
