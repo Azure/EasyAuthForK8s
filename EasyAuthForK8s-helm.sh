@@ -4,7 +4,7 @@ echo "BEGIN @ $(date +"%T"): START OF SCRIPT"
 echo ""
 echo "BEGIN @ $(date +"%T"): Set variables..."
 
-ITERATION=30
+ITERATION=31
 AD_APP_NAME="$USER-msal-proxy$ITERATION"
 CLUSTER_NAME=msal-proxy$ITERATION
 CLUSTER_RG=msal-proxyrg$ITERATION
@@ -188,7 +188,7 @@ spec:
         k8s-app: msal-net-proxy
     spec:
       containers:
-      -  image: richtercloud/msal-net-proxy-opt:latest
+      -  image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
          imagePullPolicy: Always
          name: msal-net-proxy
          env:
