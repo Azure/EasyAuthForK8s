@@ -171,7 +171,7 @@ cat azure-pvc-roles.yaml
 kubectl apply -f azure-pvc-roles.yaml
 
 cat << EOF > msal-proxy/templates/msal-net-proxy.yaml
-apiVersion: extensions/v1
+apiVersion: extensions/v1beta
 kind: Deployment
 metadata:
   labels:
@@ -321,7 +321,7 @@ echo "COMPLETE @ $(date +"%T"): Install Cert Manager"
 
 echo "BEGIN @ $(date +"%T"): Deploy the Ingress Resources..."
 cat << EOF > hello-world-ingress.yaml
-apiVersion: extensions/v1
+apiVersion: extensions/v1beta
 kind: Ingress
 metadata:
   name: hello-world-ingress
@@ -347,7 +347,7 @@ spec:
           servicePort: 8080
         path: /(.*)
 ---
-apiVersion: extensions/v1
+apiVersion: extensions/v1beta
 kind: Ingress
 metadata:
   name: msal-net-proxy
