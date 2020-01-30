@@ -1,4 +1,4 @@
-name: CI
+name: testAction
 
 on: [push]
 
