@@ -16,6 +16,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Logging;
 using Microsoft.IdentityModel.Tokens;
 
@@ -34,14 +35,13 @@ namespace OCP.Msal.Proxy.Web
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-
             AzureADOptions azureAdOptions = Configuration.GetSection(AzureAdConfigSection).Get<AzureADOptions>();
             services.AddSingleton<AzureADOptions>(azureAdOptions);
             services.Configure<CookiePolicyOptions>(options => { options.MinimumSameSitePolicy = SameSiteMode.None; });
 
             //services.AddHttpContextAccessor();
 
-            
+
             services.AddAuthentication()
                 // allow Bearer tokens for non-interactive applications
                 .AddAzureADBearer(options => Configuration.Bind(AzureAdConfigSection, options))
@@ -81,8 +81,8 @@ namespace OCP.Msal.Proxy.Web
                 .PersistKeysToFileSystem(new DirectoryInfo(Configuration["DataProtectionFileLocation"]));
 
             
-            services.AddMvc()
-                .SetCompatibilityVersion(CompatibilityVersion.Version_2_2);
+            services.AddMvc(options => options.EnableEndpointRouting = false)
+                .SetCompatibilityVersion(CompatibilityVersion.Version_3_0);
 
             services.Configure<ForwardedHeadersOptions>(options =>
             {
@@ -97,7 +97,7 @@ namespace OCP.Msal.Proxy.Web
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IHostingEnvironment env)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
             if (env.IsDevelopment())
             {
@@ -129,7 +129,6 @@ namespace OCP.Msal.Proxy.Web
 
             app.UseCookiePolicy();
             app.UseAuthentication();
-
             app.UseMvc();
 
         }
