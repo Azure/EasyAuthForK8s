@@ -332,3 +332,10 @@ ASALocalRun/
 
 /OCP.Msal.Proxy.Web/appsetting.DESKTOP-E5MPKJL.json
 /OCP.Msal.Proxy.Web/appsettings.DESKTOP-E5MPKJL.json
+
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
