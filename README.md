@@ -1,3 +1,5 @@
+[![Actions Status](https://github.com/Azure/EasyAuthForK8s/workflows/Docker%20Build%20and%20Push/badge.svg)](https://github.com/Azure/EasyAuthForK8s/actions)
+
 # EasyAuth for Kubernetes
 
 EasyAuth for Kubernetes is a simple Identity and Access Management module that allows you to protect applications in a kubernetes cluster without having to modify application source code.
