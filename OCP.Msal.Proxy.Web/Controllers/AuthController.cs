@@ -99,17 +99,16 @@ namespace OCP.Msal.Proxy.Web.Controllers
             return Redirect("/msal/auth");
         }
 
-        private void AddResponseHeadersFromClaims(IEnumerable<Claim> claims, IHeaderDictionary headers)
+        internal static void AddResponseHeadersFromClaims(IEnumerable<Claim> claims, IHeaderDictionary headers)
         {
-            if (claims != null && headers != null)
+            if (claims == null || headers == null) return;
+
+            foreach (var claim in claims)
             {
-                foreach (var claim in claims)
-                {
-                    var claimName = claim.Type;
-                    if (claimName.Contains("/")) claimName = claimName.Split('/')[claimName.Split('/').Length - 1];
-                    var name = $"X-Injected-{claimName}";
-                    if (!headers.ContainsKey(name)) headers.Add(name, claim.Value);
-                }
+                var claimName = claim.Type;
+                if (claimName.Contains("/")) claimName = claimName.Split('/')[claimName.Split('/').Length - 1];
+                var name = $"X-Injected-{claimName}";
+                if (!headers.ContainsKey(name)) headers.Add(name, claim.Value);
             }
         }
     }
