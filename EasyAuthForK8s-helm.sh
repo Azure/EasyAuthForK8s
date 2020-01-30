@@ -4,7 +4,7 @@ echo "BEGIN @ $(date +"%T"): START OF SCRIPT"
 echo ""
 echo "BEGIN @ $(date +"%T"): Set variables..."
 
-ITERATION=31
+ITERATION=$RANDOM
 AD_APP_NAME="$USER-msal-proxy$ITERATION"
 CLUSTER_NAME=msal-proxy$ITERATION
 CLUSTER_RG=msal-proxyrg$ITERATION
