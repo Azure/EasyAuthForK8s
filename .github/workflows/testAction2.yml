@@ -1,0 +1,19 @@
+name: testAction2
+
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Run a one-line script
+      run: echo Hello, world!
+    - name: Run a multi-line script
+      run: |
+        echo Add other actions to build,
+        echo test, and deploy your project.
+    - name: Call our main script!
+      run: sh main.sh -a dakondra-msal-proxy -c msal-proxy -r msal-proxyrg -e dakondra@microsoft.com -d microsoft.com -l southcentralus
