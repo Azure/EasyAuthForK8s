@@ -31,9 +31,10 @@ jobs:
 
       - name: Get code coverage
         run: |
+           mkdir -p pages/results/$GITHUB_SHA
            export id=$(docker images --filter "label=test=true" -q | head -1)
            docker create --name testcontainer $id
-           docker cp testcontainer:/testresults ./pages/results/${{ github.ref }}
+           docker cp testcontainer:/testresults ./pages/results/$GITHUB_SHA
            docker rm testcontainer
            ls -la ./testresults
            ls -la /home/runner/work/_actions
