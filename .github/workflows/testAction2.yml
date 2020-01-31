@@ -15,5 +15,11 @@ jobs:
       run: |
         echo Add other actions to build,
         echo test, and deploy your project.
+        
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.DANIEL_AZURE_CREDENTIALS }}
+        
     - name: Call our main script!
-      run: sh main.sh -a dakondra-msal-proxy -c msal-proxy -r msal-proxyrg -e dakondra@microsoft.com -d microsoft.com -l southcentralus
+      run: sh ./AutomationScripts/main.sh -a dakondra-msal-proxy -c msal-proxy -r msal-proxyrg -e dakondra@microsoft.com -d microsoft.com -l southcentralus
