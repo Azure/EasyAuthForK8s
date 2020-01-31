@@ -29,10 +29,17 @@ jobs:
       - name: Build image
         run: docker build . --file Dockerfile --tag image
 
+      - name: Get code coverage
+        run: |
+           docker build . --file Dockerfile --tag image
+        
       - name: docker hub login
         run: |
-          docker login -u ${{ secrets.DOCKER_USER_ID }} -p ${{ secrets.DOCKER_REGISTRY_PASS }}
-
+           export id=$(docker images --filter "label=test=true" -q | head -1)
+           docker create --name testcontainer $id
+           docker cp testcontainer:/testresults ./testresults
+           docker rm testcontainer
+           ls -la ./testresults
       - name: publish docker image
         run: |
           IMAGE_ID=$IMAGE_NAME

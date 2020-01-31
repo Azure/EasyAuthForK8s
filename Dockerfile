@@ -14,9 +14,6 @@ COPY ./OCP.Msal.Proxy.Tests ./OCP.Msal.Proxy.Tests
 LABEL test=true
 RUN dotnet tool install dotnet-reportgenerator-globaltool --version 4.4.6 --tool-path /tools
 RUN dotnet test --results-directory /testresults --logger "trx;LogFileName=test_results.xml" /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura /p:CoverletOutput=/testresults/coverage/ /p:Exclude="[xunit.*]*%2c[OCP.Msal.Proxy.Tests]" ./OCP.Msal.Proxy.Tests/OCP.Msal.Proxy.Tests.csproj
-RUN ls -la /testresults
-
-RUN ls -la /testresults/coverage
 
 RUN /tools/reportgenerator "-reports:/testresults/coverage/coverage.cobertura.xml" "-targetdir:/testresults/coverage/reports" "-reporttypes:HTMLInline;HTMLChart"
 RUN ls -la /testresults/coverage/reports
