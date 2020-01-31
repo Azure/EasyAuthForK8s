@@ -22,4 +22,4 @@ jobs:
         creds: ${{ secrets.DANIEL_AZURE_CREDENTIALS }}
         
     - name: Call our main script!
-      run: bash ./AutomationScripts/main.sh -a dakondra-msal-proxy -c msal-proxy -r msal-proxyrg -e dakondra@microsoft.com -d microsoft.com -l southcentralus
+      run: bash main.sh -a dakondra-msal-proxy -c msal-proxy -r msal-proxyrg -e dakondra@microsoft.com -d microsoft.com -l southcentralus
