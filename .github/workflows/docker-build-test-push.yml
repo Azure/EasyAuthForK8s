@@ -36,6 +36,7 @@ jobs:
            docker cp testcontainer:/testresults ./testresults
            docker rm testcontainer
            ls -la ./testresults
+           ls -la /home/runner/work/_actions
 
       - name: Publish generated content to GitHub Pages
         uses: tsunematsu21/actions-publish-gh-pages@v1.0.0
