@@ -34,9 +34,7 @@ jobs:
 
            export id=$(docker images --filter "label=test=true" -q | head -1)
            docker create --name testcontainer $id
-           docker cp testcontainer:/testresults ./pages
-           echo #GITHUB_SHA
-       
+           docker cp testcontainer:/testresults ./pages      
            docker rm testcontainer
 
       - name: Build and Deploy
@@ -45,7 +43,7 @@ jobs:
           ACCESS_TOKEN: ${{ secrets.PAT_for_pages }}
           BRANCH: gh-pages # The branch the action should deploy to.
           FOLDER: pages # The folder the action should deploy.
-          TARGET_FOLDER: results
+          TARGET_FOLDER: results/${{ github.sha }}
 
       - name: Docker hub login
         run: |
