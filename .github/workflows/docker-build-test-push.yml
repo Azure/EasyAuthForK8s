@@ -43,8 +43,8 @@ jobs:
         with:
           ACCESS_TOKEN: ${{ secrets.PAT_for_pages }}
           BRANCH: gh-pages # The branch the action should deploy to.
-          FOLDER: build # The folder the action should deploy.
-          
+          FOLDER: ./testresults # The folder the action should deploy.
+
       - name: Docker hub login
         run: |
            docker login -u ${{ secrets.DOCKER_USER_ID }} -p ${{ secrets.DOCKER_REGISTRY_PASS }}
