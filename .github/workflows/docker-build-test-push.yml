@@ -45,7 +45,7 @@ jobs:
           ACCESS_TOKEN: ${{ secrets.PAT_for_pages }}
           BRANCH: gh-pages # The branch the action should deploy to.
           FOLDER: pages # The folder the action should deploy.
-          TARGET_FOLDER: results/${{ github.sha }}
+          TARGET_FOLDER: results
 
       - name: Docker hub login
         run: |
