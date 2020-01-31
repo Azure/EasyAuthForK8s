@@ -136,7 +136,7 @@ echo "COMPLETE @ $(date +"%T"): Setting variables"
 echo "****BEGIN @ $(date +"%T"): Call AKS Cluster Creation script...****"
 # If there is no flag set for SKIP_CLUSTER_CREATION, then create the AKS cluster.
 if [ -z "$SKIP_CLUSTER_CREATION" ]; then
-    . ./1-clusterCreation.sh
+    . 1-clusterCreation.sh
 else
     echo "CLUSTER CREATION WAS SKIPPED!"
 fi
@@ -153,7 +153,7 @@ helm repo add stable https://kubernetes-charts.storage.googleapis.com
 
 
 echo "****BEGIN @ $(date +"%T"): Call Ingress Controller Creation script****"
-. ./2-ingressCreation.sh
+. 2-ingressCreation.sh
 echo "****COMPLETE @ $(date +"%T"): Ingress controller created script****"
 
 echo "BEGIN @ $(date +"%T"): Deploy sample app..."
@@ -169,19 +169,19 @@ fi
 echo "COMPLETE @ $(date +"%T"): Deployed sample app"
 
 echo "****BEGIN @ $(date +"%T"): Call ADD App Creation script****"
-. ./3-registerAADApp.sh
+. 3-registerAADApp.sh
 echo "****COMPLETE @ $(date +"%T"): AAD App created script****"
 
 echo "****BEGIN @ $(date +"%T"): Call Deploy MSAL Proxy script****"
-. ./4-deployMSALProxy.sh
+. 4-deployMSALProxy.sh
 echo "****COMPLETE @ $(date +"%T"): Deployed MSAL Proxy script****"
 
 echo "****BEGIN @ $(date +"%T"): Call Install Cert Manager script****"
-. ./5-installCertManager.sh
+. 5-installCertManager.sh
 echo "****COMPLETE @ $(date +"%T"): Installed Cert Manager script****"
 
 echo "****BEGIN @ $(date +"%T"): Call Deploy New Ingress Resource script****"
-. ./6-deployNewIngressResource.sh
+. 6-deployNewIngressResource.sh
 echo "****COMPLETE @ $(date +"%T"): Deployed New Ingress Resource script****"
 
 
