@@ -38,13 +38,13 @@ jobs:
            ls -la ./testresults
            ls -la /home/runner/work/_actions
 
-      - name: Publish generated content to GitHub Pages
-        uses: tsunematsu21/actions-publish-gh-pages@v1.0.0
+      - name: Build and Deploy
+        uses: JamesIves/github-pages-deploy-action@releases/v3
         with:
-          dir: ./testresults
-          branch: gh-pages
-          token: ${{ secrets.PAT_for_pages }}
-
+          ACCESS_TOKEN: ${{ secrets.PAT_for_pages }}
+          BRANCH: gh-pages # The branch the action should deploy to.
+          FOLDER: build # The folder the action should deploy.
+          
       - name: Docker hub login
         run: |
            docker login -u ${{ secrets.DOCKER_USER_ID }} -p ${{ secrets.DOCKER_REGISTRY_PASS }}
