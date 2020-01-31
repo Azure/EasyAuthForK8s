@@ -31,12 +31,12 @@ jobs:
 
       - name: Get code coverage
         run: |
-           mkdir -p pages/results/${{ github.sha }}
+
            export id=$(docker images --filter "label=test=true" -q | head -1)
            docker create --name testcontainer $id
-           docker cp testcontainer:/testresults pages/results/${{ github.sha }}
+           docker cp testcontainer:/testresults ./pages
            echo #GITHUB_SHA
-           ls -la pages/results/${{ github.sha }}
+       
            docker rm testcontainer
 
       - name: Build and Deploy
@@ -45,6 +45,7 @@ jobs:
           ACCESS_TOKEN: ${{ secrets.PAT_for_pages }}
           BRANCH: gh-pages # The branch the action should deploy to.
           FOLDER: pages # The folder the action should deploy.
+          TARGET_FOLDER: results/${{ github.sha }}
 
       - name: Docker hub login
         run: |
