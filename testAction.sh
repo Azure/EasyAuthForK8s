@@ -1,1 +1,0 @@
-echo "I was called from GitHub actions!"
