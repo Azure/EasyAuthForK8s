@@ -3,8 +3,6 @@
 echo ""
 echo "BEGIN @ $(date +"%T"): START OF SCRIPT"
 
-echo $RANDOM
-
 # Check Helm Installation
 if ! [ -x "$(command -v helm)" ]; then
     echo "Please install Helm."
@@ -36,7 +34,7 @@ echo ""
 echo "BEGIN @ $(date +"%T"): Set variables..."
 
 # Initialize Variables for flags
-ITERATION=36
+ITERATION=$RANDOM
 AD_APP_NAME=''
 CLUSTER_NAME=''
 CLUSTER_RG=''
@@ -84,19 +82,26 @@ do
 		h)
             # Change to how others show it like az
             echo "HELP: Here are the flags and their variables"
-			echo "-a is for AD_APP_NAME"
-            echo "-c is for CLUSTER_NAME"
-            echo "-r is for CLUSTER_RG"
-            echo "-e is for EMAIL"
-            echo "-d is for EMAIL_DOMAIN"
-            echo "-l is for LOCATION"
-            echo "-i is for INPUTIMAGE"
-            echo "-n is for NAMESPACE"
-            echo "-s is for CLIENTID"
-            echo "-p is for SKIP_CLUSTER_CREATION"
+			echo "REQUIRED: -a is for AD_APP_NAME"
+            echo "REQUIRED: -c is for CLUSTER_NAME"
+            echo "REQUIRED: -r is for CLUSTER_RG"
+            echo "REQUIRED: -e is for EMAIL"
+            echo "REQUIRED: -d is for EMAIL_DOMAIN"
+            echo "REQUIRED: -l is for LOCATION"
+            echo "OPTOINAL: -i is for INPUTIMAGE"
+            echo "OPTOINAL: -n is for NAMESPACE"
+            echo "OPTOINAL: -s is for CLIENTID"
+            echo "OPTOINAL: -p is for SKIP_CLUSTER_CREATION"
 			exit ;;
 	esac
 done
+
+
+# Force required flags.
+if [ -z "$AD_APP_NAME" ] || [ -z "$CLUSTER_NAME" ] || [ -z "$CLUSTER_RG" ] || [ -z "$EMAIL" ] || [ -z "$EMAIL_DOMAIN" ] || [ -z "$LOCATION" ]; then
+    echo "*****ERROR. Please enter all required flags.*****"
+    exit
+fi 
 
 
 # ITERATION=34
