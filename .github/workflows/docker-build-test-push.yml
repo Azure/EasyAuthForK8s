@@ -31,15 +31,28 @@ jobs:
 
       - name: Get code coverage
         run: |
-           docker build . --file Dockerfile --tag image
-        
-      - name: docker hub login
-        run: |
            export id=$(docker images --filter "label=test=true" -q | head -1)
            docker create --name testcontainer $id
            docker cp testcontainer:/testresults ./testresults
            docker rm testcontainer
            ls -la ./testresults
+
+      - name: Publish generated content to GitHub Pages
+        uses: tsunematsu21/actions-publish-gh-pages@v1.0.0
+        with:
+          dir: ./testresults
+          branch: gh-pages
+          token: ${{ secrets.PAT_for_pages }}
+      - name: Publish generated content to GitHub Pages
+        uses: tsunematsu21/actions-publish-gh-pages@v1.0.0
+        with:
+          dir: dist
+          branch: gh-pages
+          token: ${{ secrets.ACCESS_TOKEN }}
+      - name: Docker hub login
+        run: |
+           docker login -u ${{ secrets.DOCKER_USER_ID }} -p ${{ secrets.DOCKER_REGISTRY_PASS }}
+        
       - name: publish docker image
         run: |
           IMAGE_ID=$IMAGE_NAME
