@@ -34,7 +34,7 @@ echo ""
 echo "BEGIN @ $(date +"%T"): Set variables..."
 
 # Initialize Variables for flags
-ITERATION=$RANDOM
+ITERATION=''
 AD_APP_NAME=''
 CLUSTER_NAME=''
 CLUSTER_RG=''
@@ -103,6 +103,12 @@ if [ -z "$AD_APP_NAME" ] || [ -z "$CLUSTER_NAME" ] || [ -z "$CLUSTER_RG" ] || [ 
     exit
 fi 
 
+# If there is no flag set for SKIP_CLUSTER_CREATION, then create a random iteration.
+if [ -z "$SKIP_CLUSTER_CREATION" ]; then
+    ITERATION=$RANDOM
+else
+    ITERATION=''
+fi
 
 # ITERATION=34
 # AD_APP_NAME="$1$ITERATION"
