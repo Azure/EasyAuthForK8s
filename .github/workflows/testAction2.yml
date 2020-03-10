@@ -21,5 +21,5 @@ jobs:
       with:
         creds: ${{ secrets.DANIEL_AZURE_CREDENTIALS }}
         
-    - name: Call our main script!
-      run: bash main.sh -a dakondra-msal-proxy -c msal-proxy -r msal-proxyrg -e dakondra@microsoft.com -d microsoft.com -l southcentralus
+    - name: Call our main script with skip cluster creation!
+      run: bash main.sh -a dakondra-msal-proxy -c msal-proxy -r msal-proxyrg -e dakondra@microsoft.com -d microsoft.com -l southcentralus -p true
