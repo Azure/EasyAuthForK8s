@@ -155,6 +155,7 @@ echo "COMPLETE @ $(date +"%T"): Getting cluster creds"
 
 
 # Add Helm
+helm init
 helm repo add stable https://kubernetes-charts.storage.googleapis.com
 
 
