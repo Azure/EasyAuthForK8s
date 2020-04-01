@@ -1,0 +1,34 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="905af93b-512d-4f3e-8986-592aecf87386" name="@f6a5ea3b923e 2020-04-01 17:33:37" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2020-04-01T17:33:37.0458375+00:00" queuing="2020-04-01T17:33:37.0458377+00:00" start="2020-04-01T17:33:34.1585172+00:00" finish="2020-04-01T17:33:37.0640641+00:00" />
+  <TestSettings name="default" id="0d33e273-e0bf-41b8-b815-a33489b30cd8">
+    <Deployment runDeploymentRoot="_f6a5ea3b923e_2020-04-01_17_33_37" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="8952d2fe-9c39-4027-bae5-0703d87eaf19" testId="eb223c9f-24bf-8303-38b3-d6113beb6012" testName="OCP.Msal.Proxy.Tests.AuthControllerTests.ClaimIsInjectedIntoHeaderAsExpected" computerName="f6a5ea3b923e" duration="00:00:00.0128120" startTime="2020-04-01T17:33:36.9394484+00:00" endTime="2020-04-01T17:33:36.9395816+00:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="8952d2fe-9c39-4027-bae5-0703d87eaf19" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="OCP.Msal.Proxy.Tests.AuthControllerTests.ClaimIsInjectedIntoHeaderAsExpected" storage="/app/ocp.msal.proxy.tests/bin/debug/netcoreapp3.1/ocp.msal.proxy.tests.dll" id="eb223c9f-24bf-8303-38b3-d6113beb6012">
+      <Execution id="8952d2fe-9c39-4027-bae5-0703d87eaf19" />
+      <TestMethod codeBase="/app/OCP.Msal.Proxy.Tests/bin/Debug/netcoreapp3.1/OCP.Msal.Proxy.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="OCP.Msal.Proxy.Tests.AuthControllerTests" name="ClaimIsInjectedIntoHeaderAsExpected" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="eb223c9f-24bf-8303-38b3-d6113beb6012" executionId="8952d2fe-9c39-4027-bae5-0703d87eaf19" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Results Not in a List" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="All Loaded Results" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="1" executed="1" passed="1" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v2.4.1 (64-bit .NET Core 3.1.3)
+[xUnit.net 00:00:01.22]   Discovering: OCP.Msal.Proxy.Tests
+[xUnit.net 00:00:01.28]   Discovered:  OCP.Msal.Proxy.Tests
+[xUnit.net 00:00:01.28]   Starting:    OCP.Msal.Proxy.Tests
+[xUnit.net 00:00:01.43]   Finished:    OCP.Msal.Proxy.Tests
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>
