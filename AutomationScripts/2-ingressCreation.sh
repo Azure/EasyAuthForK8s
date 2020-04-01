@@ -2,7 +2,7 @@
 
 echo "BEGIN @ $(date +"%T"): Installing the ingress controller..."
 kubectl create ns ingress-controllers
-helm install stable/nginx-ingress --name nginx-ingress --namespace=ingress-controllers --set rbac.create=true
+helm install nginx-ingress stable/nginx-ingress --namespace ingress-controllers --set rbac.create=true
 
 INGRESS_IP=$(kubectl get services/nginx-ingress-controller -n ingress-controllers -o jsonpath="{.status.loadBalancer.ingress[0].ip}")
 
