@@ -4,21 +4,24 @@ echo "BEGIN @ $(date +"%T"): START OF SCRIPT"
 echo ""
 echo "BEGIN @ $(date +"%T"): Set variables..."
 
-ITERATION=$RANDOM
+if [ "$#" --lt 3 ]; then
+    echo "please pass in iteration number (integer), Azure region, email address"
+    echo "e.g."
+    echo "./EasyAuthForK8s-helm.sh 100 eastus user@example.com"
+fi
+
+ITERATION=$1
 AD_APP_NAME="$USER-msal-proxy$ITERATION"
 CLUSTER_NAME=msal-proxy$ITERATION
 CLUSTER_RG=msal-proxyrg$ITERATION
-EMAIL=kgates@microsoft.com
-EMAIL_DOMAIN=microsoft.com
-LOCATION=southcentralus
+EMAIL=$3
+LOCATION=$2
 APP_HOSTNAME="$AD_APP_NAME.$LOCATION.cloudapp.azure.com"
 HOMEPAGE=https://$APP_HOSTNAME
 IDENTIFIER_URIS=$HOMEPAGE
 REPLY_URLS=https://$APP_HOSTNAME/msal/signin-oidc
-COOKIE_SECRET=$(python -c 'import os,base64; print(base64.b64encode(os.urandom(16)).decode("utf-8"))')
 INGRESS_IP=0
 
-echo "COOKIE_SECRET: " $COOKIE_SECRET
 echo "COMPLETE @ $(date +"%T"): Setting variables"
 
 echo "BEGIN @ $(date +"%T"): Creating the resource group..."
@@ -102,27 +105,6 @@ echo "AZURE_TENANT_ID: " $AZURE_TENANT_ID
 echo "COMPLETE @ $(date +"%T"): Register AAD Application"
 
 echo "BEGIN @ $(date +"%T"): Deploy MSAL Proxy..."
-cat << EOF > msal-proxy/templates/azure-files-storage-class.yaml
-kind: StorageClass
-apiVersion: storage.k8s.io/v1
-metadata:
-  name: azurefile
-provisioner: kubernetes.io/azure-file
-mountOptions:
-  - dir_mode=0777
-  - file_mode=0777
-  - uid=1000
-  - gid=1000
-  - mfsymlinks
-  - nobrl
-  - cache=none
-parameters:
-  skuName: Standard_LRS
-EOF
-
-cat azure-files-storage-class.yaml
-
-# kubectl apply -f azure-files-storage-class.yaml
 
 cat << EOF > msal-proxy/templates/data-protection-persistent-claim.yaml
 apiVersion: v1
@@ -274,13 +256,11 @@ TLS_SECRET_NAME=ingress-tls-prod
 
 kubectl create namespace cert-manager
 
-kubectl apply -f https://raw.githubusercontent.com/jetstack/cert-manager/release-0.11/deploy/manifests/00-crds.yaml --validate=false
-
 helm repo add jetstack https://charts.jetstack.io
 
 helm repo update
 
-helm install cert-manager --namespace cert-manager --set ingressShim.defaultIssuerName=letsencrypt-prod --set ingressShim.defaultIssuerKind=ClusterIssuer jetstack/cert-manager --version v0.11.0
+helm install cert-manager --namespace cert-manager --set installCRDs=true --set ingressShim.defaultIssuerName=letsencrypt-prod --set ingressShim.defaultIssuerKind=ClusterIssuer jetstack/cert-manager --version v0.15.1
 
 kubectl get pods -n cert-manager
 
