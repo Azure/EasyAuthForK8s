@@ -134,7 +134,7 @@ For this case we're using the Kubernetes Up and Running Daemon
     cat manifest.json
 
     # Create the Azure AD SP for our application and save the Client ID to a variable
-    CLIENT_ID=$(az ad sp create-for-rbac --skip-assignment name $AD_APP_NAME -o json | jq -r '.appId')
+    CLIENT_ID=$(az ad sp create-for-rbac --skip-assignment --name $AD_APP_NAME -o json | jq -r '.appId')
     echo $CLIENT_ID
 
     # Update the Azure AD App Registration
