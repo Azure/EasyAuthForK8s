@@ -111,8 +111,6 @@ For this case we're using the Kubernetes Up and Running Daemon
 
 ## Register AAD Application
 
-## Register AAD Application
-
     # The default app created has permissions we don't need and can cause problem if you are in a more restricted tenant environment
     # Copy/paste the entire snippet BELOW (and then press ENTER) to create the manifest.json file
     cat << EOF > manifest.json
