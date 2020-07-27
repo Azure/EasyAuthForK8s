@@ -232,7 +232,7 @@ For this case we're using the Kubernetes Up and Running Daemon
 
     # Copy/paste the entire snippet BELOW (and then press ENTER) to create the msal-net-proxy.yaml file
     cat << EOF > msal-net-proxy.yaml
-    apiVersion: extensions/v1beta1
+    apiVersion: apps/v1
     kind: Deployment
     metadata:
       labels:
