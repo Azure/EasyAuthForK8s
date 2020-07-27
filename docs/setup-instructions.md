@@ -111,9 +111,33 @@ For this case we're using the Kubernetes Up and Running Daemon
 
 ## Register AAD Application
 
-    # Create the Azure AD App Registration and save the Client ID to a variable
-    CLIENT_ID=$(az ad sp create-for-rbac --skip-assignment --display-name $AD_APP_NAME --homepage $HOMEPAGE --reply-urls $REPLY_URLS --required-resource-accesses @manifest.json -o json | jq -r '.appId')
-    echo $CLIENT_ID
+# The default app created has permissions we don't need and can cause problem if you are in a more restricted tenant environment
+# Copy/paste the entire snippet BELOW (and then press ENTER) to create the manifest.json file
+cat << EOF > manifest.json
+[
+   {
+      "resourceAccess" : [
+         {
+            "id" : "e1fe6dd8-ba31-4d61-89e7-88639da4683d",
+            "type" : "Scope"
+         }
+      ],
+      "resourceAppId" : "00000003-0000-0000-c000-000000000000"
+   }
+]
+EOF
+# End of snippet to copy/paste
+
+# Important! Review the file and check the values.
+cat manifest.json
+
+# Create the Azure AD SP for our application and save the Client ID to a variable
+CLIENT_ID=$(az ad sp create-for-rbac --skip-assignment name $AD_APP_NAME -o json | jq -r '.appId')
+echo $CLIENT_ID
+
+# Update the Azure AD App Registration
+az ad app update --id $CLIENT_ID --homepage $HOMEPAGE --reply-urls $REPLY_URLS --required-resource-accesses @manifest.json
+
     
     # The newly registered app does not have a password.  Use "az ad app credential reset" to add password and save to a variable.
     CLIENT_SECRET=$(az ad app credential reset --id $CLIENT_ID -o json | jq '.password' -r)
