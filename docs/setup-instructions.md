@@ -34,8 +34,6 @@ Review these very carefully and modify.
     HOMEPAGE=https://$APP_HOSTNAME
     IDENTIFIER_URIS=$HOMEPAGE
     REPLY_URLS=https://$APP_HOSTNAME/msal/signin-oidc
-    COOKIE_SECRET=$(python -c 'import os,base64; print(base64.b64encode(os.urandom(16)).decode("utf-8"))')
-    echo $COOKIE_SECRET
 
 ## Login to Azure
 
