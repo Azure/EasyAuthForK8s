@@ -83,6 +83,7 @@ az network public-ip update -g $NODE_RG -n $IP_NAME --dns-name $AD_APP_NAME
 # Get the FQDN assigned to the public IP address
 INGRESS_HOST=$(az network public-ip show -g $NODE_RG -n $IP_NAME -o json | jq -r '.dnsSettings.fqdn')
 echo $INGRESS_HOST
+# This should be the same as the $APP_HOSTNAME
 ```
 
 ## Register AAD Application
@@ -145,7 +146,7 @@ Inspired by [https://docs.microsoft.com/en-us/azure/aks/ingress-tls](https://doc
 
 ```
 # Set the secret name
-TLS_SECRET_NAME=$INGRESS_HOST-tls
+TLS_SECRET_NAME=$APP_HOSTNAME-tls
 
 # Create the namespace 
 kubectl create namespace cert-manager
