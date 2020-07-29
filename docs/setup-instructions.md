@@ -18,14 +18,11 @@ Review these very carefully and modify.
     AD_APP_NAME="$USER-msal-proxy"
     
     # Set your AKS cluster name and resource group
-    CLUSTER_NAME=msal-proxy
-    CLUSTER_RG=msal-proxyrg
+    CLUSTER_NAME=msal-proxy-aks
+    CLUSTER_RG=msal-proxy-rg
     
     # Set the email address for the cluster certificate issuer
     EMAIL=dakondra@microsoft.com
-    
-    # Set email domain for certificates
-    EMAIL_DOMAIN=microsoft.com
     
     # Region to create resources
     LOCATION=southcentralus
@@ -45,22 +42,11 @@ Review these very carefully and modify.
 Note: It takes several minutes to create the AKS cluster. Complete these steps before proceeding to the next section.
 
     az group create -n $CLUSTER_RG -l $LOCATION
-    az aks create -g $CLUSTER_RG -n $CLUSTER_NAME --vm-set-type VirtualMachineScaleSets --generate-ssh-keys
+    az aks create -g $CLUSTER_RG -n $CLUSTER_NAME --vm-set-type VirtualMachineScaleSets --generate-ssh-keys --enable-managed-identity
     az aks get-credentials -g $CLUSTER_RG -n $CLUSTER_NAME
     
     # Important! Wait for the steps above to complete before proceeding.
     
-    
-    # Important! If you get the error below when running the second line, run these two commands and then run az aks create.
-    # "For Error: Operation failed with status: 'Bad Request'. Details: Service principal clientID: XXXXXX not found in Active Directory tenant XXXXXX, Please see [https://aka.ms/aks-sp-help](https://aka.ms/aks-sp-help) for more details."
-    cd .azure/
-    rm aksServicePrincipal.json
-    cd ..
-    az aks create -g $CLUSTER_RG -n $CLUSTER_NAME --vm-set-type VirtualMachineScaleSets
-    
-    # If the error persists, try it again.
-    # For more information, you can go here: https://stackoverflow.com/questions/47516018/creating-a-kubernetes-cluster-in-azure-fails
-
 ## Install Helm
 
     #Add stable repo to Helm 3
@@ -78,239 +64,76 @@ Note: It takes several minutes to create the AKS cluster. Complete these steps b
 
 ## Configure DNS for the cluster public IP
 
-Important! Ensure you have [JQ](https://stedolan.github.io/jq/) installed prior to running the commands below.
+To use AAD authentication for your application, you must use a FQDN with HTTPS.  For this tutorial, we will add a DNS record to the Ingress Public IP address.
 
-Set variables and update the DNS name on the IP address.
+```
+# Get the AKS MC_ resource group name
+NODE_RG=$(az aks show -n $CLUSTER_NAME -g $CLUSTER_RG -o json | jq -r '.nodeResourceGroup')
+echo $NODE_RG
 
-    # Get the AKS MC_ resource group name
-    NODE_RG=$(az aks show -n $CLUSTER_NAME -g $CLUSTER_RG -o json | jq -r '.nodeResourceGroup')
-    echo $NODE_RG
-    
-    INGRESS_IP=$(kubectl get services/nginx-ingress-controller -n ingress-controllers -o jsonpath="{.status.loadBalancer.ingress[0].ip}")
-    echo $INGRESS_IP
-    
-    IP_NAME=$(az network public-ip list -g $NODE_RG -o json | jq -c ".[] | select(.ipAddress | contains(\"$INGRESS_IP\"))" | jq '.name' -r)
-    echo $IP_NAME
-    
-    # Add a DNS name ($AD_APP_NAME) to the public IP address
-    az network public-ip update -g $NODE_RG -n $IP_NAME --dns-name $AD_APP_NAME
-    
-    # Get the FQDN assigned to the public IP address
-    INGRESS_HOST=$(az network public-ip show -g $NODE_RG -n $IP_NAME -o json | jq -r '.dnsSettings.fqdn')
-    echo $INGRESS_HOST
+INGRESS_IP=$(kubectl get services/nginx-ingress-controller -n ingress-controllers -o jsonpath="{.status.loadBalancer.ingress[0].ip}")
+echo $INGRESS_IP
 
-## Deploy the application and create the ClusterIP Service
+IP_NAME=$(az network public-ip list -g $NODE_RG -o json | jq -c ".[] | select(.ipAddress | contains(\"$INGRESS_IP\"))" | jq '.name' -r)
+echo $IP_NAME
 
-For this case we're using the Kubernetes Up and Running Daemon
+# Add a DNS name ($AD_APP_NAME) to the public IP address
+az network public-ip update -g $NODE_RG -n $IP_NAME --dns-name $AD_APP_NAME
 
-[kubernetes-up-and-running/kuard](https://github.com/kubernetes-up-and-running/kuard)
-
-    kubectl run kuard-pod --image=gcr.io/kuar-demo/kuard-amd64:1 --expose --port=8080
+# Get the FQDN assigned to the public IP address
+INGRESS_HOST=$(az network public-ip show -g $NODE_RG -n $IP_NAME -o json | jq -r '.dnsSettings.fqdn')
+echo $INGRESS_HOST
+```
 
 ## Register AAD Application
 
-    # The default app created has permissions we don't need and can cause problem if you are in a more restricted tenant environment
-    # Copy/paste the entire snippet BELOW (and then press ENTER) to create the manifest.json file
-    cat << EOF > manifest.json
-    [
-       {
-          "resourceAccess" : [
-             {
-                "id" : "e1fe6dd8-ba31-4d61-89e7-88639da4683d",
-                "type" : "Scope"
-             }
-          ],
-          "resourceAppId" : "00000003-0000-0000-c000-000000000000"
-       }
-    ]
-    EOF
-    # End of snippet to copy/paste
+```
+# The default app created has permissions we don't need and can cause problem if you are in a more restricted tenant environment
+# Copy/paste the entire snippet BELOW (and then press ENTER) to create the manifest.json file
+cat << EOF > manifest.json
+[
+    {
+      "resourceAccess" : [
+          {
+            "id" : "e1fe6dd8-ba31-4d61-89e7-88639da4683d",
+            "type" : "Scope"
+          }
+      ],
+      "resourceAppId" : "00000003-0000-0000-c000-000000000000"
+    }
+]
+EOF
+# End of snippet to copy/paste
 
-    # Important! Review the file and check the values.
-    cat manifest.json
+# Important! Review the file and check the values.
+cat manifest.json
 
-    # Create the Azure AD SP for our application and save the Client ID to a variable
-    CLIENT_ID=$(az ad sp create-for-rbac --skip-assignment --name "http://$AD_APP_NAME" -o json | jq -r '.appId')
-    echo $CLIENT_ID
+# Create the Azure AD SP for our application and save the Client ID to a variable
+APP_ID=$(az ad sp create-for-rbac --skip-assignment --name "http://$AD_APP_NAME" -o json | jq -r '.appId')
+echo $APP_ID
 
-    # Update the Azure AD App Registration
-    az ad app update --id $CLIENT_ID --homepage $HOMEPAGE --reply-urls $REPLY_URLS --required-resource-accesses @manifest.json
+# Update the Azure AD App Registration
+az ad app update --id $APP_ID --homepage $HOMEPAGE --reply-urls $REPLY_URLS --required-resource-accesses @manifest.json
 
-    # The newly registered app does not have a password.  Use "az ad app credential reset" to add password and save to a variable.
-    CLIENT_SECRET=$(az ad app credential reset --id $CLIENT_ID -o json | jq '.password' -r)
-    echo $CLIENT_SECRET
-    
-    # Get your Azure AD tenant ID and save to variable
-    AZURE_TENANT_ID=$(az account show -o json | jq '.tenantId' -r)
-    echo $AZURE_TENANT_ID
+# The newly registered app does not have a password.  Use "az ad app credential reset" to add password and save to a variable.
+CLIENT_SECRET=$(az ad app credential reset --id $APP_ID -o json | jq '.password' -r)
+echo $CLIENT_SECRET
+
+# Get your Azure AD tenant ID and save to variable
+AZURE_TENANT_ID=$(az account show -o json | jq '.tenantId' -r)
+echo $AZURE_TENANT_ID
+```
 
 ## Deploy MSAL Proxy
 
-    # Copy/paste the entire snippet BELOW (and then press ENTER) to create the azure-files-storage-class.yaml file
-    cat << EOF > azure-files-storage-class.yaml
-    kind: StorageClass
-    apiVersion: storage.k8s.io/v1
-    metadata:
-      name: azurefile
-    provisioner: kubernetes.io/azure-file
-    mountOptions:
-      - dir_mode=0777
-      - file_mode=0777
-      - uid=1000
-      - gid=1000
-      - mfsymlinks
-      - nobrl
-      - cache=none
-    parameters:
-      skuName: Standard_LRS
-    EOF
-    # End of snippet to copy/paste
-    
-    # Important! Review the file and check the values.
-    cat azure-files-storage-class.yaml
-    
-    # Deploy the 
-    kubectl apply -f azure-files-storage-class.yaml
+```
+kubectl create secret generic aad-secret \
+  --from-literal=AZURE_TENANT_ID=$AZURE_TENANT_ID \
+  --from-literal=CLIENT_ID=$CLIENT_ID \
+  --from-literal=CLIENT_SECRET=$CLIENT_SECRET
+helm install msal-proxy ./charts/msal-proxy 
+```
 
-    # Copy/paste the entire snippet BELOW (and then press ENTER) to create the data-protection-persistent-claim.yaml file
-    cat << EOF > data-protection-persistent-claim.yaml
-    apiVersion: v1
-    kind: PersistentVolumeClaim
-    metadata:
-      name: msal-net-proxy-az-file-pv-claim
-    spec:
-      accessModes:
-        - ReadWriteMany
-      storageClassName: azurefile
-      resources:
-        requests:
-          storage: 5Gi
-    EOF
-    # End of snippet to copy/paste
-    
-    # Important! Review the file and check the values.
-    cat data-protection-persistent-claim.yaml
-    
-    # Deploy the 
-    kubectl apply -f data-protection-persistent-claim.yaml
-
-    # Copy/paste the entire snippet BELOW (and then press ENTER) to create the azure-pvc-roles.yaml file
-    cat << EOF > azure-pvc-roles.yaml
-    apiVersion: rbac.authorization.k8s.io/v1
-    kind: ClusterRole
-    metadata:
-      name: system:azure-cloud-provider
-    rules:
-    - apiGroups: ['']
-      resources: ['secrets']
-      verbs:     ['get','create']
-    ---
-    apiVersion: rbac.authorization.k8s.io/v1
-    kind: ClusterRoleBinding
-    metadata:
-      name: system:azure-cloud-provider
-    roleRef:
-      kind: ClusterRole
-      apiGroup: rbac.authorization.k8s.io
-      name: system:azure-cloud-provider
-    subjects:
-    - kind: ServiceAccount
-      name: persistent-volume-binder
-      namespace: kube-system
-    EOF
-    # End of snippet to copy/paste
-    
-    # Important! Review the file and check the values.
-    cat azure-pvc-roles.yaml
-    
-    # Deploy the 
-    kubectl apply -f azure-pvc-roles.yaml
-
-    # Copy/paste the entire snippet BELOW (and then press ENTER) to create the msal-net-proxy.yaml file
-    cat << EOF > msal-net-proxy.yaml
-    apiVersion: apps/v1
-    kind: Deployment
-    metadata:
-      labels:
-        k8s-app: msal-net-proxy
-      name: msal-net-proxy
-    spec:
-      replicas: 2
-      selector:
-        matchLabels:
-          k8s-app: msal-net-proxy
-      template:
-        metadata:
-          labels:
-            k8s-app: msal-net-proxy
-        spec:
-          containers:
-          -  image: richtercloud/msal-net-proxy-opt:latest
-             imagePullPolicy: Always
-             name: msal-net-proxy
-             env:
-             -  name: DataProtectionFileLocation
-                value: /mnt/dp
-             -  name: ForceHttps
-                value: "true"
-             -  name: AzureAd__Instance
-                value: https://login.microsoftonline.com/
-             -  name: AzureAd__Domain
-                value: microsoft.onmicrosoft.com
-             -  name: AzureAd__TenantId
-                value: $AZURE_TENANT_ID
-             -  name: AzureAd__ClientId
-                value: $CLIENT_ID
-             -  name: AzureAd__CallbackPath
-                value: /msal/signin-oidc
-             -  name: AzureAd__SignedOutCallbackPath
-                value: /msal/signout-callback-oidc
-             -  name: AzureAd__ClientSecret
-                value: $CLIENT_SECRET
-             -  name: Logging__LogLevel__Default
-                value: Debug
-             -  name: AllowedHosts
-                value: "*"
-             -  name: RedirectParam
-                value: rd
-             -  name: ShowLogin
-                value: "false"    
-             ports:
-             - containerPort: 80
-               protocol: TCP
-             volumeMounts:
-             - mountPath: "/mnt/dp"
-               name: dpvol
-          volumes:
-          - name: dpvol
-            persistentVolumeClaim:
-              claimName: msal-net-proxy-az-file-pv-claim
-    ---
-    apiVersion: v1
-    kind: Service
-    metadata:
-      labels:
-        k8s-app: msal-net-proxy
-      name: msal-net-proxy
-    spec:
-      ports:
-      - name: http
-        port: 80
-        protocol: TCP
-        targetPort: 80
-      selector:
-        k8s-app: msal-net-proxy
-    EOF
-    # End of snippet to copy/paste
-    
-    # Important! Review the file and check the values
-    cat msal-net-proxy.yaml
-    
-    # Deploy the 
-    kubectl apply -f msal-net-proxy.yaml
-    
-    # Check to see if the services, deployment and pods are running and healthy
-    kubectl get svc,deploy,pod
 
 ## Install Cert Manager
 
@@ -320,116 +143,130 @@ Inspired by [https://docs.microsoft.com/en-us/azure/aks/ingress-tls](https://doc
 
 ### Deploy Production Cert Manager
 
-    # Set the secret name
-    TLS_SECRET_NAME=ingress-tls-prod
+```
+# Set the secret name
+TLS_SECRET_NAME=$INGRESS_HOST-tls
 
-    # Create the namespace 
-    kubectl create namespace cert-manager
-    
-    # Deploy the jetpack CRD, role bindings
-    kubectl apply -f https://raw.githubusercontent.com/jetstack/cert-manager/release-0.11/deploy/manifests/00-crds.yaml --validate=false
-    
-    # Add the Jetstack Helm repository
-    helm repo add jetstack https://charts.jetstack.io
-    
-    # Update your local Helm chart repository cache
-    helm repo update
+# Create the namespace 
+kubectl create namespace cert-manager
 
-    # Install the cert manager
-    helm install cert-manager --namespace cert-manager --set ingressShim.defaultIssuerName=letsencrypt-prod --set ingressShim.defaultIssuerKind=ClusterIssuer jetstack/cert-manager --version v0.11.0
-    
-    # Make sure the cert-manager pods have started BEFORE proceeding. It can take 2-3 min for the cert-manager-webhook container to start up
-    kubectl get pods -n cert-manager
+# Deploy the jetpack CRD, role bindings
+kubectl apply -f https://raw.githubusercontent.com/jetstack/cert-manager/release-0.11/deploy/manifests/00-crds.yaml --validate=false
 
-    # Copy/paste the entire snippet BELOW (and then press ENTER) to create the cluster-issuer-prod.yaml file
-    cat << EOF > cluster-issuer-prod.yaml
-    apiVersion: cert-manager.io/v1alpha2
-    kind: ClusterIssuer
-    metadata:
+# Add the Jetstack Helm repository
+helm repo add jetstack https://charts.jetstack.io
+
+# Update your local Helm chart repository cache
+helm repo update
+
+# Install the cert manager
+helm install cert-manager --namespace cert-manager --set ingressShim.defaultIssuerName=letsencrypt-prod --set ingressShim.defaultIssuerKind=ClusterIssuer jetstack/cert-manager --version v0.11.0
+
+# Make sure the cert-manager pods have started BEFORE proceeding. It can take 2-3 min for the cert-manager-webhook container to start up
+kubectl get pods -n cert-manager
+
+# Copy/paste the entire snippet BELOW (and then press ENTER) to create the cluster-issuer-prod.yaml file
+cat << EOF > cluster-issuer-prod.yaml
+apiVersion: cert-manager.io/v1alpha2
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+  namespace: cert-manager
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: $EMAIL
+    privateKeySecretRef:
       name: letsencrypt-prod
-      namespace: cert-manager
-    spec:
-      acme:
-        server: https://acme-v02.api.letsencrypt.org/directory
-        email: $EMAIL
-        privateKeySecretRef:
-          name: letsencrypt-prod
-        # Add a single challenge solver, HTTP01 using nginx
-        solvers:
-        - http01:
-            ingress:
-              class: nginx
-    EOF
-    # End of snippet to copy/paste
+    # Add a single challenge solver, HTTP01 using nginx
+    solvers:
+    - http01:
+        ingress:
+          class: nginx
+EOF
+# End of snippet to copy/paste
 
-    # Important! Review the file and check the values.
-    cat cluster-issuer-prod.yaml
-    
-    # Deploy the issuer config to the cluster
-    kubectl apply -f cluster-issuer-prod.yaml
+# Important! Review the file and check the values.
+cat cluster-issuer-prod.yaml
 
-## Deploy the Ingress Resources
+# Deploy the issuer config to the cluster
+kubectl apply -f cluster-issuer-prod.yaml
+```
 
-    # Copy/paste the entire snippet BELOW (and then press ENTER) to create the hello-world-ingress.yaml file
-    cat << EOF > hello-world-ingress.yaml
-    apiVersion: extensions/v1beta1
-    kind: Ingress
-    metadata:
-      name: hello-world-ingress
-      annotations:
-        nginx.ingress.kubernetes.io/auth-url: "https://\$host/msal/auth"
-        nginx.ingress.kubernetes.io/auth-signin: "https://\$host/msal/index?rd=\$escaped_request_uri"
-        nginx.ingress.kubernetes.io/auth-response-headers: "x-injected-aio,x-injected-name,x-injected-nameidentifier,x-injected-objectidentifier,x-injected-preferred_username,x-injected-tenantid,x-injected-uti"
-        kubernetes.io/ingress.class: nginx
-        kubernetes.io/tls-acme: "true"
-        certmanager.k8s.io/cluster-issuer: letsencrypt-prod
-        nginx.ingress.kubernetes.io/rewrite-target: /\$1
-    spec:
-      tls:
-      - hosts:
-        - $APP_HOSTNAME
-        secretName: $TLS_SECRET_NAME
-      rules:
-      - host: $APP_HOSTNAME
-        http:
-          paths:
-          - backend:
-              serviceName: kuard-pod
-              servicePort: 8080
-            path: /(.*)
-    ---
-    apiVersion: extensions/v1beta1
-    kind: Ingress
-    metadata:
-      name: msal-net-proxy
-    spec:
-      rules:
-      - host: $APP_HOSTNAME
-        http:
-          paths:
-          - backend:
-              serviceName: msal-net-proxy
-              servicePort: 80
-            path: /msal
-      tls:
-      - hosts:
-        - $APP_HOSTNAME
-        secretName: $TLS_SECRET_NAME
-    EOF
-    # End of snippet to copy/paste
+## Deploy the Application
 
-    # Important! Review the file and check the values.
-    cat hello-world-ingress.yaml
-    
-    # Deploy the ingress config to the cluster
-    kubectl apply -f hello-world-ingress.yaml
+For this sample app, we will use [kuard](https://github.com/kubernetes-up-and-running/kuard).
+
+To enable MSAL, the application will need two ingress rules.
+  * Ingress for the application.  This needs HTTPS and some annotations to use the nginx auth plugin
+  * Ingress for the MSAL Proxy.  This is for the `/msal` path for the same host
+
+```
+kubectl run kuard-pod --image=gcr.io/kuar-demo/kuard-amd64:1 --expose --port=8080
+
+cat << EOF > kuard-ingress.yaml
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: kuard
+  annotations:
+    nginx.ingress.kubernetes.io/auth-url: "https://\$host/msal/auth"
+    nginx.ingress.kubernetes.io/auth-signin: "https://\$host/msal/index?rd=\$escaped_request_uri"
+    nginx.ingress.kubernetes.io/auth-response-headers: "x-injected-aio,x-injected-name,x-injected-nameidentifier,x-injected-objectidentifier,x-injected-preferred_username,x-injected-tenantid,x-injected-uti"
+    kubernetes.io/ingress.class: nginx
+    kubernetes.io/tls-acme: "true"
+    certmanager.k8s.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/rewrite-target: /\$1
+spec:
+  tls:
+  - hosts:
+    - $APP_HOSTNAME
+    secretName: $TLS_SECRET_NAME
+  rules:
+  - host: $APP_HOSTNAME
+    http:
+      paths:
+      - backend:
+          serviceName: kuard-pod
+          servicePort: 8080
+        path: /(.*)
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: msal-proxy
+spec:
+  rules:
+  - host: $APP_HOSTNAME
+    http:
+      paths:
+      - backend:
+          serviceName: msal-proxy
+          servicePort: 80
+        path: /msal
+  tls:
+  - hosts:
+    - $APP_HOSTNAME
+    secretName: $TLS_SECRET_NAME
+EOF
+
+# End of snippet to copy/paste
+
+# Important! Review the file and check the values.
+cat msal-proxy-ingress.yaml
+
+# Deploy the ingress config to the cluster
+kubectl apply -f msal-proxy-ingress.yaml
+```
 
 ## Verify Production Certificate works
 
 After creating the ingress resource, this will initiate the Let's Encrypt certificate request process.   
 
-    # Verify certificate - this may take a few minutes to show the cert as ready=true
-    kubectl get certificate $TLS_SECRET_NAME
+```
+# Verify certificate - this may take a few minutes to show the cert as ready=true
+kubectl get certificate $TLS_SECRET_NAME
+```
 
 It should look something like this:
 
@@ -443,9 +280,10 @@ It should look something like this:
 
 ## Clean-up (optional)
 
-    az ad app delete --id $CLIENT_ID
+    az ad app delete --id $APP_ID
     helm delete nginx-ingress --purge
     helm delete cert-manager --purge
+    helm delete msal-proxy --purge
     kubectl delete secret ingress-tls-prod
     kubectl delete -f https://raw.githubusercontent.com/jetstack/cert-manager/release-0.11/deploy/manifests/00-crds.yaml
     kubectl delete ns cert-manager
