@@ -130,7 +130,7 @@ echo $AZURE_TENANT_ID
 ```
 kubectl create secret generic aad-secret \
   --from-literal=AZURE_TENANT_ID=$AZURE_TENANT_ID \
-  --from-literal=CLIENT_ID=$CLIENT_ID \
+  --from-literal=CLIENT_ID=$APP_ID \
   --from-literal=CLIENT_SECRET=$CLIENT_SECRET
 helm install msal-proxy ./charts/msal-proxy 
 ```
@@ -254,10 +254,10 @@ EOF
 # End of snippet to copy/paste
 
 # Important! Review the file and check the values.
-cat msal-proxy-ingress.yaml
+cat kuard-ingress.yaml
 
 # Deploy the ingress config to the cluster
-kubectl apply -f msal-proxy-ingress.yaml
+kubectl apply -f kuard-ingress.yaml
 ```
 
 ## Verify Production Certificate works
