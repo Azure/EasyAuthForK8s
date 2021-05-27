@@ -108,8 +108,13 @@ namespace OCP.Msal.Proxy.Web.Controllers
                 var claimName = claim.Type;
                 if (claimName.Contains("/")) claimName = claimName.Split('/')[claimName.Split('/').Length - 1];
                 var name = $"X-Injected-{claimName}";
-                if (!headers.ContainsKey(name)) headers.Add(name, claim.Value);
+                if (!headers.ContainsKey(name) && IsValidHeaderValue(claim.Value)) headers.Add(name, claim.Value);
             }
+        }
+
+        internal static bool IsValidHeaderValue(string value)
+        {
+            return value.All(c => c >= 32 && c < 127);
         }
     }
 }
