@@ -1,7 +1,9 @@
 #!/bin/sh -x
 
+# Every file has one dot instead of two because we are calling main.sh, so we access the "current" directory which is where main.sh is located.
+
 echo "BEGIN @ $(date +"%T"): Deploy MSAL Proxy..."
-cat << EOF > ../msal-proxy/templates/azure-files-storage-class.yaml
+cat << EOF > ./K8s-Config/azure-files-storage-class.yaml
 kind: StorageClass
 apiVersion: storage.k8s.io/v1
 metadata:
@@ -19,11 +21,11 @@ parameters:
   skuName: Standard_LRS
 EOF
 
-cat msal-proxy/templates/azure-files-storage-class.yaml
+cat ./K8s-Config/azure-files-storage-class.yaml
 
 # kubectl apply -f azure-files-storage-class.yaml
 
-cat << EOF > ../msal-proxy/templates/data-protection-persistent-claim.yaml
+cat << EOF > ./K8s-Config/data-protection-persistent-claim.yaml
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -37,11 +39,28 @@ spec:
       storage: 5Gi
 EOF
 
-cat msal-proxy/templates/data-protection-persistent-claim.yaml
+cat ./K8s-Config/data-protection-persistent-claim.yaml
 
 # kubectl apply -f data-protection-persistent-claim.yaml
 
-cat << EOF > ../azure-pvc-roles.yaml
+cat << EOF > ./K8s-Config/aad-secret.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: aad-secret
+  namespace: default
+type: Opaque
+stringData:
+    AZURE_TENANT_ID: $AZURE_TENANT_ID
+    CLIENT_ID: $CLIENT_ID
+    CLIENT_SECRET: $CLIENT_SECRET
+EOF
+
+cat ./K8s-Config/aad-secret.yaml
+
+kubectl apply -f ./K8s-Config/aad-secret.yaml
+
+cat << EOF > ./K8s-Config/azure-pvc-roles.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -65,11 +84,11 @@ subjects:
   namespace: kube-system
 EOF
 
-cat azure-pvc-roles.yaml
+cat ./K8s-Config/azure-pvc-roles.yaml
 
-kubectl apply -f azure-pvc-roles.yaml
+kubectl apply -f ./K8s-Config/azure-pvc-roles.yaml
 
-cat << EOF > ../msal-proxy/templates/msal-net-proxy.yaml
+cat << EOF > ./K8s-Config/msal-net-proxy.yaml
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
@@ -143,13 +162,15 @@ spec:
   selector:
     k8s-app: msal-net-proxy
 EOF
-cat msal-proxy/templates/msal-net-proxy.yaml
+cat ./K8s-Config/msal-net-proxy.yaml
 
 # kubectl apply -f msal-net-proxy.yaml
 
 echo "BEGIN @ $(date +"%T"): Calling Helm..."
 echo ""
-helm install msal-proxy msal-proxy
+
+helm install msal-proxy ./charts/msal-proxy 
+
 echo ""
 echo "COMPLETE @ $(date +"%T"): Calling Helm"
 

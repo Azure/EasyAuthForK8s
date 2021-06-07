@@ -1,8 +1,8 @@
 #!/bin/sh -x
 
 echo "BEGIN @ $(date +"%T"): Deploy the Ingress Resources..."
-cat << EOF > ../hello-world-ingress.yaml
-apiVersion: extensions/v1beta1
+cat << EOF > ./K8s-Config/hello-world-ingress.yaml
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: hello-world-ingress
@@ -24,11 +24,14 @@ spec:
     http:
       paths:
       - backend:
-          serviceName: kuard-pod
-          servicePort: 8080
+          service:
+            name: kuard-pod
+            port:
+              number: 8080
         path: /(.*)
+        pathType: Prefix
 ---
-apiVersion: extensions/v1beta1
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: msal-net-proxy
@@ -38,17 +41,20 @@ spec:
     http:
       paths:
       - backend:
-          serviceName: msal-net-proxy
-          servicePort: 80
+          service:
+            name: msal-net-proxy
+            port: 
+              number: 80
         path: /msal
+        pathType: Prefix
   tls:
   - hosts:
     - $APP_HOSTNAME
     secretName: $TLS_SECRET_NAME
 EOF
 
-cat hello-world-ingress.yaml
+cat ./K8s-Config/hello-world-ingress.yaml
 
-kubectl apply -f hello-world-ingress.yaml
+kubectl apply -f ./K8s-Config/hello-world-ingress.yaml
 
 echo "COMPLETE @ $(date +"%T"): Deploy the Ingress Resources"

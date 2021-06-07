@@ -4,7 +4,6 @@ metadata:
   labels:
     k8s-app: msal-net-proxy
   name: msal-net-proxy
-  namespace: ingress-basic
 spec:
   replicas: 2
   selector:
@@ -16,7 +15,7 @@ spec:
         k8s-app: msal-net-proxy
     spec:
       containers:
-      -  image: richtercloud/msal-net-proxy-opt:latest
+      -  image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
          imagePullPolicy: Always
          name: msal-net-proxy
          env:
@@ -29,24 +28,15 @@ spec:
          -  name: AzureAd__Domain
             value: microsoft.onmicrosoft.com
          -  name: AzureAd__TenantId
-            valueFrom:
-              secretKeyRef:
-                name: azure-ad-secrets
-                key: AzureAd__TenantId
+            value: 72f988bf-86f1-41af-91ab-2d7cd011db47
          -  name: AzureAd__ClientId
-            valueFrom:
-              secretKeyRef:
-                name: azure-ad-secrets
-                key: AzureAd__ClientId
+            value: cc37d3ad-32ce-4786-9c69-bb0025d788d3
          -  name: AzureAd__CallbackPath
             value: /msal/signin-oidc
          -  name: AzureAd__SignedOutCallbackPath
             value: /msal/signout-callback-oidc
          -  name: AzureAd__ClientSecret
-            valueFrom:
-              secretKeyRef:
-                name: azure-ad-secrets
-                key: AzureAd__ClientSecret
+            value: ON9.HC1I9PYS9cGr-G13CDqm1VkTbPGSUu
          -  name: Logging__LogLevel__Default
             value: Debug
          -  name: AllowedHosts
@@ -65,16 +55,13 @@ spec:
       - name: dpvol
         persistentVolumeClaim:
           claimName: msal-net-proxy-az-file-pv-claim
-
 ---
-
 apiVersion: v1
 kind: Service
 metadata:
   labels:
     k8s-app: msal-net-proxy
   name: msal-net-proxy
-  namespace: ingress-basic
 spec:
   ports:
   - name: http
