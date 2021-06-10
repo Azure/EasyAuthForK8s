@@ -1,7 +1,7 @@
 #!/bin/sh -x
 
 echo "BEGIN @ $(date +"%T"): Install Cert Manager..."
-TLS_SECRET_NAME=ingress-tls-prod
+TLS_SECRET_NAME=$APP_HOSTNAME-tls
 
 kubectl create namespace cert-manager
 
@@ -16,13 +16,24 @@ helm repo update
 helm install \
   cert-manager jetstack/cert-manager \
   --namespace cert-manager \
-  --create-namespace \
   --version v1.3.1 \
   --set installCRDs=true \
   --set ingressShim.defaultIssuerName=letsencrypt-prod \
   --set ingressShim.defaultIssuerKind=ClusterIssuer
 
 kubectl get pods -n cert-manager
+
+echo "Make sure the cert-manager pods have started BEFORE proceeding."
+
+INPUT_STRING=no
+while [ "$INPUT_STRING" != "yes" ]
+do
+  echo ""
+  kubectl get pods -n cert-manager  
+  echo ""
+  echo "Did the cert-manager pods start OK? Type 'yes' or press enter to try again..."
+  read INPUT_STRING
+done
 
 cat << EOF > ./K8s-Config/cluster-issuer-prod.yaml
 apiVersion: cert-manager.io/v1alpha2
@@ -44,16 +55,6 @@ spec:
 EOF
 
 cat ./K8s-Config/cluster-issuer-prod.yaml
-
-INPUT_STRING=no
-while [ "$INPUT_STRING" != "yes" ]
-do
-  echo ""
-  kubectl get pods -n cert-manager  
-  echo ""
-  echo "Did the cert-manager pods start OK? Type 'yes' or press enter to try again..."
-  read INPUT_STRING
-done
 
 kubectl apply -f ./K8s-Config/cluster-issuer-prod.yaml
 

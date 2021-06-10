@@ -30,13 +30,13 @@ spec:
          -  name: AzureAd__TenantId
             value: 72f988bf-86f1-41af-91ab-2d7cd011db47
          -  name: AzureAd__ClientId
-            value: cc37d3ad-32ce-4786-9c69-bb0025d788d3
+            value: ae837949-bc92-4573-aafb-95c657a7392c
          -  name: AzureAd__CallbackPath
             value: /msal/signin-oidc
          -  name: AzureAd__SignedOutCallbackPath
             value: /msal/signout-callback-oidc
          -  name: AzureAd__ClientSecret
-            value: ON9.HC1I9PYS9cGr-G13CDqm1VkTbPGSUu
+            value: gZC5Ns1LDb_KimcB_3a9-SImyUNWbPrNOn
          -  name: Logging__LogLevel__Default
             value: Debug
          -  name: AllowedHosts

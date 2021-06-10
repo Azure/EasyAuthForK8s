@@ -13,10 +13,10 @@ metadata:
 spec:
   tls:
   - hosts:
-    - aadautofix.eastus.cloudapp.azure.com
+    - dakondra-msal-proxy.eastus.cloudapp.azure.com
     secretName: ingress-tls-prod
   rules:
-  - host: aadautofix.eastus.cloudapp.azure.com
+  - host: dakondra-msal-proxy.eastus.cloudapp.azure.com
     http:
       paths:
       - backend:
@@ -33,7 +33,7 @@ metadata:
   name: msal-net-proxy
 spec:
   rules:
-  - host: aadautofix.eastus.cloudapp.azure.com
+  - host: dakondra-msal-proxy.eastus.cloudapp.azure.com
     http:
       paths:
       - backend:
@@ -45,5 +45,5 @@ spec:
         pathType: Prefix
   tls:
   - hosts:
-    - aadautofix.eastus.cloudapp.azure.com
+    - dakondra-msal-proxy.eastus.cloudapp.azure.com
     secretName: ingress-tls-prod

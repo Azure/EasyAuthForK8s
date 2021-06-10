@@ -162,18 +162,6 @@ echo "****BEGIN @ $(date +"%T"): Call Ingress Controller Creation script****"
 . ./AutomationScripts/2-ingressCreation.sh
 echo "****COMPLETE @ $(date +"%T"): Ingress controller created script****"
 
-echo "BEGIN @ $(date +"%T"): Deploy sample app..."
-# INPUTIMAGE=$7 
-# If we have a parameter for an image install a custom image. If not, then we install kuard.
-if [ -z "$INPUTIMAGE" ]; then
-    echo "No image input, installing kuard."
-    kubectl run kuard-pod --image=gcr.io/kuar-demo/kuard-amd64:1 --expose --port=8080
-else
-    echo "Your custom image $INPUTIMAGE installed"
-    kubectl run kuard-pod --image=$INPUTIMAGE --expose --port=8080
-fi
-echo "COMPLETE @ $(date +"%T"): Deployed sample app"
-
 echo "****BEGIN @ $(date +"%T"): Call ADD App Creation script****"
 . ./AutomationScripts/3-registerAADApp.sh
 echo "****COMPLETE @ $(date +"%T"): AAD App created script****"
@@ -185,6 +173,18 @@ echo "****COMPLETE @ $(date +"%T"): Deployed MSAL Proxy script****"
 echo "****BEGIN @ $(date +"%T"): Call Install Cert Manager script****"
 . ./AutomationScripts/5-installCertManager.sh
 echo "****COMPLETE @ $(date +"%T"): Installed Cert Manager script****"
+
+echo "BEGIN @ $(date +"%T"): Deploy sample app..."
+# INPUTIMAGE=$7 
+# If we have a parameter for an image install a custom image. If not, then we install kuard.
+if [ -z "$INPUTIMAGE" ]; then
+    echo "No image input, installing kuard."
+    kubectl run kuard-pod --image=gcr.io/kuar-demo/kuard-amd64:1 --expose --port=8080
+else
+    echo "Your custom image $INPUTIMAGE installed"
+    kubectl run custom-pod --image=$INPUTIMAGE --expose --port=8080
+fi
+echo "COMPLETE @ $(date +"%T"): Deployed sample app"
 
 echo "****BEGIN @ $(date +"%T"): Call Deploy New Ingress Resource script****"
 . ./AutomationScripts/6-deployNewIngressResource.sh
@@ -203,8 +203,6 @@ do
   read INPUT_STRING
 done
 echo "COMPLETE @ $(date +"%T"): Verify Production Certificate works"
-echo ""
-echo ""
 echo "END OF SCRIPT"
 echo ""
 echo ""
