@@ -1,6 +1,6 @@
 name: testAction2
 
-# on: [push]
+on: [push]
 
 jobs:
   build:
