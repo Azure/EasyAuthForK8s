@@ -38,7 +38,7 @@ namespace OCP.Msal.Proxy.Web.Controllers
                 scope = $"k8seasyauth://{_adOptions.ClientId}/.default"
             });
 
-            Response.Headers.Add("X-OriginalAccessToken", await HttpContext.GetTokenAsync("access_token"));
+            Response.Headers.Add("X-OriginalAccessToken", await HttpContext.GetTokenAsync(AzureADDefaults.JwtBearerAuthenticationScheme, "access_token"));
             AddResponseHeadersFromClaims(User.Claims, Response.Headers);
 
             return StatusCode(202, User.Identity.Name);
@@ -78,7 +78,7 @@ namespace OCP.Msal.Proxy.Web.Controllers
         {
             if (!User.Identity.IsAuthenticated) return StatusCode(401, "Not Authenticated");
             
-            Response.Headers.Add("X-OriginalAccessToken", await HttpContext.GetTokenAsync("access_token"));
+            Response.Headers.Add("X-OriginalAccessToken", await HttpContext.GetTokenAsync(AzureADDefaults.OpenIdScheme, "access_token"));
             AddResponseHeadersFromClaims(User.Claims, Response.Headers);
 
             return StatusCode(202, User.Identity.Name);
@@ -113,13 +113,14 @@ namespace OCP.Msal.Proxy.Web.Controllers
                     var claimName = claim.Type;
 
                     if (claimName.Contains("/"))
-                        claimName = claimName.Split('/')[claimName.Split('/').Length - 1];
-                    var name = $"X-Injected-{claim.Type}";
+                        claimName = claimName.Split('/')[^1];
+
+                    var name = $"X-Injected-{claimName}";
 
                     if (!headers.ContainsKey(name))
                         headers.Add(name, claim.Value);
                     else
-                        headers[name] += $",{claim.Value}";
+                        headers[name] += $", {claim.Value}";
                 }
             }
         }
