@@ -47,6 +47,7 @@ namespace OCP.Msal.Proxy.Web
             services.Configure<JwtBearerOptions>(AzureADDefaults.JwtBearerAuthenticationScheme, (configureOptions) =>
             {
                 configureOptions.Authority += "/v2.0";
+                configureOptions.SaveToken = true;
             });
 
             //configure OIDC options
@@ -54,6 +55,7 @@ namespace OCP.Msal.Proxy.Web
             {
                 configureOptions.Authority += "/v2.0";
                 configureOptions.ResponseType = "code";
+                configureOptions.SaveTokens = true;
             });
 
             //add authz policies to distinguish between application types
