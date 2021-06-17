@@ -34,7 +34,7 @@ The diagram above conveys the basic interaction between the components for a use
 * [Setup Instructions](docs/setup-instructions.md) - step-by-step guide to building a cluster, configuring the ingress controller, and deploying an application protected by EasyAuth
 * [Detailed Architecture](docs/detailed-architecture.md) - an in-depth guide to how EasyAuth works
 * [Calling a Protected API](docs/protecting-an-api.md) - how to authenticate a client application and call an API protected by EasyAuth
-* [Advanced Use Cases](docs/advanced-scenarios.md) - beyond the basics, notes on how to accomplish some common, yet more complicated, IAM scenarios
+* [Http Headers](docs/headers.md) - Get information about the user that is accessing your application
 
 
 # Contributing

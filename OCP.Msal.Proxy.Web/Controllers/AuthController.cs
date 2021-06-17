@@ -38,7 +38,7 @@ namespace OCP.Msal.Proxy.Web.Controllers
                 scope = $"k8seasyauth://{_adOptions.ClientId}/.default"
             });
 
-            Response.Headers.Add("X-OriginalAccessToken", await HttpContext.GetTokenAsync(AzureADDefaults.JwtBearerAuthenticationScheme, "access_token"));
+            Response.Headers.Add("X-OriginalBearerToken", await HttpContext.GetTokenAsync(AzureADDefaults.JwtBearerAuthenticationScheme, "access_token"));
             AddResponseHeadersFromClaims(User.Claims, Response.Headers);
 
             return StatusCode(202, User.Identity.Name);
@@ -78,7 +78,7 @@ namespace OCP.Msal.Proxy.Web.Controllers
         {
             if (!User.Identity.IsAuthenticated) return StatusCode(401, "Not Authenticated");
             
-            Response.Headers.Add("X-OriginalAccessToken", await HttpContext.GetTokenAsync(AzureADDefaults.OpenIdScheme, "access_token"));
+            Response.Headers.Add("X-OriginalIdToken", await HttpContext.GetTokenAsync(AzureADDefaults.OpenIdScheme, "id_token"));
             AddResponseHeadersFromClaims(User.Claims, Response.Headers);
 
             return StatusCode(202, User.Identity.Name);
