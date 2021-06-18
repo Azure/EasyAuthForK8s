@@ -4,26 +4,29 @@ using System.Diagnostics;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using System.Web;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.AzureAD.UI;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Identity.Web;
 
 namespace OCP.Msal.Proxy.Web.Controllers
 {
     [ApiController]
     public class AuthController : ControllerBase
     {
-        private readonly AzureADOptions _adOptions;
+        private readonly MicrosoftIdentityOptions _identityOptions;
         private readonly IConfiguration _configuration;
         private string redirectParam { get { return this._configuration["RedirectParam"]; }}
 
-        public AuthController(AzureADOptions options, IConfiguration configuration)
+        public AuthController(MicrosoftIdentityOptions options, IConfiguration configuration)
         {
             _configuration = configuration;
-            _adOptions = options;
+            _identityOptions = options;
         }
         private AuthController() { }
 
@@ -32,25 +35,25 @@ namespace OCP.Msal.Proxy.Web.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> ApiAuth()
         {
-            if (!User.Identity.IsAuthenticated) return StatusCode(401, new Models.ApiUnauthorizedMessageModel
+            if (!User.Identity.IsAuthenticated) return Unauthorized(new Models.ApiUnauthorizedMessageModel
             {
-                tokenAuthorityMetadata = $"{_adOptions.Instance}{_adOptions.TenantId}/v2.0/.well-known/openid-configuration",
-                scope = $"k8seasyauth://{_adOptions.ClientId}/.default"
+                tokenAuthorityMetadata = $"{_identityOptions.Instance}{_identityOptions.TenantId}/v2.0/.well-known/openid-configuration",
+                scope = $"k8seasyauth://{_identityOptions.ClientId}/.default"
             });
 
-            Response.Headers.Add("X-OriginalBearerToken", await HttpContext.GetTokenAsync(AzureADDefaults.JwtBearerAuthenticationScheme, "access_token"));
+            Response.Headers.Add("X-OriginalBearerToken", await HttpContext.GetTokenAsync(JwtBearerDefaults.AuthenticationScheme, "access_token"));
             AddResponseHeadersFromClaims(User.Claims, Response.Headers);
 
             return StatusCode(202, User.Identity.Name);
         }
         [Route("msal/login")]
-        [Authorize(Policy = "web")]
+        [AllowAnonymous]
         public IActionResult Login()
         {
             var rd = "/";
             if (Request.Query.ContainsKey(redirectParam) && !string.IsNullOrEmpty(Request.Query[redirectParam].ToString()))
                 rd = Request.Query[redirectParam].ToString();
-            return Redirect(rd);
+            return Redirect($"/MicrosoftIdentity/Account/SignIn/{OpenIdConnectDefaults.AuthenticationScheme}?redirectUri={HttpUtility.UrlEncode(rd)}");
         }
 
         [AllowAnonymous]
@@ -75,10 +78,10 @@ namespace OCP.Msal.Proxy.Web.Controllers
         [AllowAnonymous]
         [Route("msal/auth")]
         public async Task<IActionResult> Auth()
-        {
-            if (!User.Identity.IsAuthenticated) return StatusCode(401, "Not Authenticated");
+        {   
+            if (!User.Identity.IsAuthenticated) return Unauthorized("Not Authenticated");
             
-            Response.Headers.Add("X-OriginalIdToken", await HttpContext.GetTokenAsync(AzureADDefaults.OpenIdScheme, "id_token"));
+            Response.Headers.Add("X-OriginalIdToken", await HttpContext.GetTokenAsync(OpenIdConnectDefaults.AuthenticationScheme, "id_token"));
             AddResponseHeadersFromClaims(User.Claims, Response.Headers);
 
             return StatusCode(202, User.Identity.Name);
@@ -96,10 +99,9 @@ namespace OCP.Msal.Proxy.Web.Controllers
         [AllowAnonymous]
         [Route("msal/logout")]
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
-        public async Task<IActionResult> CookieLogout()
-        {
-            await HttpContext.SignOutAsync(AzureADDefaults.CookieScheme);
-            return Redirect("/msal/auth");
+        public IActionResult Logout()
+        {           
+            return Redirect("/MicrosoftIdentity/Account/SignOut");
         }
 
         internal static void AddResponseHeadersFromClaims(IEnumerable<Claim> claims, IHeaderDictionary headers)

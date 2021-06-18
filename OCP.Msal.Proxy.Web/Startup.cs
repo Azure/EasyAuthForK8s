@@ -1,19 +1,19 @@
 ﻿using System;
 using System.IO;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.AzureAD.UI;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.HttpOverrides;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Identity.Web;
+using Microsoft.Identity.Web.UI;
 using Microsoft.IdentityModel.Logging;
+
 
 namespace OCP.Msal.Proxy.Web
 {
@@ -30,30 +30,26 @@ namespace OCP.Msal.Proxy.Web
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            AzureADOptions azureAdOptions = Configuration.GetSection(AzureAdConfigSection).Get<AzureADOptions>();
-            services.AddSingleton<AzureADOptions>(azureAdOptions);
-            services.Configure<CookiePolicyOptions>(options => { options.MinimumSameSitePolicy = SameSiteMode.None; });
+            MicrosoftIdentityOptions options = Configuration.GetSection(AzureAdConfigSection).Get<MicrosoftIdentityOptions>();
+            services.AddSingleton<MicrosoftIdentityOptions>(options);
 
-            //services.AddHttpContextAccessor();
-
-
-            services.AddAuthentication()
-                // allow Bearer tokens for non-interactive applications
-                .AddAzureADBearer(options => Configuration.Bind(AzureAdConfigSection, options))
-                // web applications
-                .AddAzureAD(options => Configuration.Bind(AzureAdConfigSection, options));
+            //for Api applications
+            services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+                .AddMicrosoftIdentityWebApi(Configuration.GetSection(AzureAdConfigSection));
+            
+            //for Web applications
+            services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
+                .AddMicrosoftIdentityWebApp(Configuration.GetSection(AzureAdConfigSection));
 
             //configure bearer options
-            services.Configure<JwtBearerOptions>(AzureADDefaults.JwtBearerAuthenticationScheme, (configureOptions) =>
+            services.Configure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, (configureOptions) =>
             {
-                configureOptions.Authority += "/v2.0";
                 configureOptions.SaveToken = true;
             });
 
             //configure OIDC options
-            services.Configure<OpenIdConnectOptions>(AzureADDefaults.OpenIdScheme, (configureOptions) =>
+            services.Configure<OpenIdConnectOptions>(OpenIdConnectDefaults.AuthenticationScheme, (configureOptions) =>
             {
-                configureOptions.Authority += "/v2.0";
                 configureOptions.ResponseType = "code";
                 configureOptions.SaveTokens = true;
             });
@@ -63,12 +59,12 @@ namespace OCP.Msal.Proxy.Web
             {
                 options.AddPolicy("api", policy =>
                 {
-                    policy.AuthenticationSchemes.Add(AzureADDefaults.JwtBearerAuthenticationScheme);
+                    policy.AuthenticationSchemes.Add(JwtBearerDefaults.AuthenticationScheme);
                     policy.RequireAuthenticatedUser();
                 });
                 options.AddPolicy("web", policy =>
                 {
-                    policy.AuthenticationSchemes.Add(AzureADDefaults.OpenIdScheme);
+                    policy.AuthenticationSchemes.Add(OpenIdConnectDefaults.AuthenticationScheme);
                     policy.RequireAuthenticatedUser();
                 });
             });
@@ -77,9 +73,7 @@ namespace OCP.Msal.Proxy.Web
             services.AddDataProtection()
                 .PersistKeysToFileSystem(new DirectoryInfo(Configuration["DataProtectionFileLocation"]));
 
-            
-            services.AddMvc(options => options.EnableEndpointRouting = false)
-                .SetCompatibilityVersion(CompatibilityVersion.Version_3_0);
+            services.AddControllers();
 
             services.Configure<ForwardedHeadersOptions>(options =>
             {
@@ -89,7 +83,8 @@ namespace OCP.Msal.Proxy.Web
                 options.KnownProxies.Clear();
             });
 
-
+            services.AddRazorPages()
+                .AddMicrosoftIdentityUI();
 
         }
 
@@ -123,10 +118,16 @@ namespace OCP.Msal.Proxy.Web
                     await next.Invoke();
                 });
             }
+            app.UseRouting();
 
-            app.UseCookiePolicy();
             app.UseAuthentication();
-            app.UseMvc();
+            app.UseAuthorization();
+
+            app.UseEndpoints(endpoints =>
+            {
+                endpoints.MapRazorPages();
+                endpoints.MapControllers();
+            });
 
         }
 
