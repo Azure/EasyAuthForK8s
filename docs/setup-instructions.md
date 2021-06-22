@@ -22,7 +22,7 @@ Review these very carefully and modify.
     CLUSTER_RG=msal-proxy-rg
     
     # Set the email address for the cluster certificate issuer
-    EMAIL=dakondra@microsoft.com
+    EMAIL=example@microsoft.com
     
     # Region to create resources
     LOCATION=southcentralus
@@ -50,17 +50,20 @@ Note: It takes several minutes to create the AKS cluster. Complete these steps b
 ## Install Helm
 
     #Add stable repo to Helm 3
-    helm repo add stable https://kubernetes-charts.storage.googleapis.com
+    helm repo add stable https://charts.helm.sh/stable
 
 ## Install NGINX Ingress
 
     # Add ingress-controllers namespace
     kubectl create namespace ingress-controllers
+    # Add Nginx to the helm repo
+    helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+    helm repo update
     # Install the ingress controller
-    helm install nginx-ingress stable/nginx-ingress --namespace ingress-controllers --set rbac.create=true
+    helm install nginx-ingress ingress-nginx/ingress-nginx --namespace ingress-controllers --set rbac.create=true
     
     # Important! It take a few minutes for Azure to assign a public IP address to the ingress. Run this command until it returns a public IP address.
-    kubectl get services/nginx-ingress-controller -n ingress-controllers -o jsonpath="{.status.loadBalancer.ingress[0].ip}"
+    kubectl get services/nginx-ingress-ingress-nginx-controller -n ingress-controllers -o jsonpath="{.status.loadBalancer.ingress[0].ip}"
 
 ## Configure DNS for the cluster public IP
 
@@ -71,7 +74,7 @@ To use AAD authentication for your application, you must use a FQDN with HTTPS. 
 NODE_RG=$(az aks show -n $CLUSTER_NAME -g $CLUSTER_RG -o json | jq -r '.nodeResourceGroup')
 echo $NODE_RG
 
-INGRESS_IP=$(kubectl get services/nginx-ingress-controller -n ingress-controllers -o jsonpath="{.status.loadBalancer.ingress[0].ip}")
+INGRESS_IP=$(kubectl get services/nginx-ingress-ingress-nginx-controller -n ingress-controllers -o jsonpath="{.status.loadBalancer.ingress[0].ip}")
 echo $INGRESS_IP
 
 IP_NAME=$(az network public-ip list -g $NODE_RG -o json | jq -c ".[] | select(.ipAddress | contains(\"$INGRESS_IP\"))" | jq '.name' -r)
@@ -110,14 +113,16 @@ EOF
 cat manifest.json
 
 # Create the Azure AD SP for our application and save the Client ID to a variable
-APP_ID=$(az ad sp create-for-rbac --skip-assignment --name "http://$AD_APP_NAME" -o json | jq -r '.appId')
-echo $APP_ID
+CLIENT_ID=$(az ad app create --display-name $AD_APP_NAME --homepage $HOMEPAGE --reply-urls $REPLY_URLS --required-resource-accesses @manifest.json -o json | jq -r '.appId')
+echo $CLIENT_ID
 
-# Update the Azure AD App Registration
-az ad app update --id $APP_ID --homepage $HOMEPAGE --reply-urls $REPLY_URLS --required-resource-accesses @manifest.json
+OBJECT_ID=$(az ad app show --id $CLIENT_ID -o json | jq '.objectId' -r)
+echo $OBJECT_ID
+
+az ad app update --id $OBJECT_ID --set oauth2Permissions=[]
 
 # The newly registered app does not have a password.  Use "az ad app credential reset" to add password and save to a variable.
-CLIENT_SECRET=$(az ad app credential reset --id $APP_ID -o json | jq '.password' -r)
+CLIENT_SECRET=$(az ad app credential reset --id $CLIENT_ID -o json | jq '.password' -r)
 echo $CLIENT_SECRET
 
 # Get your Azure AD tenant ID and save to variable
@@ -130,9 +135,12 @@ echo $AZURE_TENANT_ID
 ```
 kubectl create secret generic aad-secret \
   --from-literal=AZURE_TENANT_ID=$AZURE_TENANT_ID \
-  --from-literal=CLIENT_ID=$APP_ID \
+  --from-literal=CLIENT_ID=$CLIENT_ID \
   --from-literal=CLIENT_SECRET=$CLIENT_SECRET
 helm install msal-proxy ./charts/msal-proxy 
+
+# Confirm everything was deployed.
+kubectl get svc,deploy,pod
 ```
 
 
@@ -151,9 +159,6 @@ TLS_SECRET_NAME=$APP_HOSTNAME-tls
 # Create the namespace 
 kubectl create namespace cert-manager
 
-# Deploy the jetpack CRD, role bindings
-kubectl apply -f https://raw.githubusercontent.com/jetstack/cert-manager/release-0.11/deploy/manifests/00-crds.yaml --validate=false
-
 # Add the Jetstack Helm repository
 helm repo add jetstack https://charts.jetstack.io
 
@@ -161,13 +166,19 @@ helm repo add jetstack https://charts.jetstack.io
 helm repo update
 
 # Install the cert manager
-helm install cert-manager --namespace cert-manager --set ingressShim.defaultIssuerName=letsencrypt-prod --set ingressShim.defaultIssuerKind=ClusterIssuer jetstack/cert-manager --version v0.11.0
+helm install \
+  cert-manager jetstack/cert-manager \
+  --namespace cert-manager \
+  --version v1.3.1 \
+  --set installCRDs=true \
+  --set ingressShim.defaultIssuerName=letsencrypt-prod \
+  --set ingressShim.defaultIssuerKind=ClusterIssuer
 
 # Make sure the cert-manager pods have started BEFORE proceeding. It can take 2-3 min for the cert-manager-webhook container to start up
 kubectl get pods -n cert-manager
 
 # Copy/paste the entire snippet BELOW (and then press ENTER) to create the cluster-issuer-prod.yaml file
-cat << EOF > cluster-issuer-prod.yaml
+cat << EOF > ./cluster-issuer-prod.yaml
 apiVersion: cert-manager.io/v1alpha2
 kind: ClusterIssuer
 metadata:
@@ -188,10 +199,10 @@ EOF
 # End of snippet to copy/paste
 
 # Important! Review the file and check the values.
-cat cluster-issuer-prod.yaml
+cat ./cluster-issuer-prod.yaml
 
 # Deploy the issuer config to the cluster
-kubectl apply -f cluster-issuer-prod.yaml
+kubectl apply -f ./cluster-issuer-prod.yaml
 ```
 
 ## Deploy the Application
@@ -205,8 +216,8 @@ To enable MSAL, the application will need two ingress rules.
 ```
 kubectl run kuard-pod --image=gcr.io/kuar-demo/kuard-amd64:1 --expose --port=8080
 
-cat << EOF > kuard-ingress.yaml
-apiVersion: extensions/v1beta1
+cat << EOF > ./kuard-ingress.yaml
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: kuard
@@ -214,11 +225,11 @@ metadata:
     nginx.ingress.kubernetes.io/auth-url: "https://\$host/msal/auth"
     nginx.ingress.kubernetes.io/auth-signin: "https://\$host/msal/index?rd=\$escaped_request_uri"
     nginx.ingress.kubernetes.io/auth-response-headers: "x-injected-aio,x-injected-name,x-injected-nameidentifier,x-injected-objectidentifier,x-injected-preferred_username,x-injected-tenantid,x-injected-uti"
-    kubernetes.io/ingress.class: nginx
     kubernetes.io/tls-acme: "true"
     certmanager.k8s.io/cluster-issuer: letsencrypt-prod
     nginx.ingress.kubernetes.io/rewrite-target: /\$1
 spec:
+  ingressClassName: nginx
   tls:
   - hosts:
     - $APP_HOSTNAME
@@ -228,11 +239,14 @@ spec:
     http:
       paths:
       - backend:
-          serviceName: kuard-pod
-          servicePort: 8080
+          service:
+            name: kuard-pod
+            port:
+              number: 8080
         path: /(.*)
+        pathType: ImplementationSpecific
 ---
-apiVersion: extensions/v1beta1
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: msal-proxy
@@ -242,9 +256,12 @@ spec:
     http:
       paths:
       - backend:
-          serviceName: msal-proxy
-          servicePort: 80
+          service:
+            name: msal-proxy
+            port: 
+              number: 80
         path: /msal
+        pathType: ImplementationSpecific
   tls:
   - hosts:
     - $APP_HOSTNAME
@@ -254,10 +271,10 @@ EOF
 # End of snippet to copy/paste
 
 # Important! Review the file and check the values.
-cat kuard-ingress.yaml
+cat ./kuard-ingress.yaml
 
 # Deploy the ingress config to the cluster
-kubectl apply -f kuard-ingress.yaml
+kubectl apply -f ./kuard-ingress.yaml
 ```
 
 ## Verify Production Certificate works
@@ -281,13 +298,25 @@ It should look something like this:
 
 ## Clean-up (optional)
 
-    az ad app delete --id $APP_ID
+    az ad app delete --id $CLIENT_ID
     helm delete nginx-ingress --purge
     helm delete cert-manager --purge
     helm delete msal-proxy --purge
     kubectl delete secret ingress-tls-prod
     kubectl delete -f https://raw.githubusercontent.com/jetstack/cert-manager/release-0.11/deploy/manifests/00-crds.yaml
     kubectl delete ns cert-manager
+
+## Automated Scripts [Azure Cloud Shell] (optional)
+
+- Go to the root folder
+- Run bash command
+```
+# Run -h for all required and optional flags
+bash main.sh -h
+
+# Example Command
+bash main.sh -a msal-test -c cluster-test -r easy-auth -e email@microsoft.com -d microsoft.com -l eastus
+```
 
 # References
 
