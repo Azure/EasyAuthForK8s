@@ -63,7 +63,7 @@ Note: It takes several minutes to create the AKS cluster. Complete these steps b
     helm install nginx-ingress ingress-nginx/ingress-nginx --namespace ingress-controllers --set rbac.create=true
     
     # Important! It take a few minutes for Azure to assign a public IP address to the ingress. Run this command until it returns a public IP address.
-    kubectl get services/nginx-ingress-controller -n ingress-controllers -o jsonpath="{.status.loadBalancer.ingress[0].ip}"
+    kubectl get services/nginx-ingress-ingress-nginx-controller -n ingress-controllers -o jsonpath="{.status.loadBalancer.ingress[0].ip}"
 
 ## Configure DNS for the cluster public IP
 
@@ -117,9 +117,8 @@ CLIENT_ID=$(az ad app create --display-name $AD_APP_NAME --homepage $HOMEPAGE --
 echo $CLIENT_ID
 
 OBJECT_ID=$(az ad app show --id $CLIENT_ID -o json | jq '.objectId' -r)
-echo "OBJECT_ID: " $OBJECT_ID
+echo $OBJECT_ID
 
-az ad app update --id $OBJECT_ID --set oauth2Permissions[0].isEnabled=false
 az ad app update --id $OBJECT_ID --set oauth2Permissions=[]
 
 # The newly registered app does not have a password.  Use "az ad app credential reset" to add password and save to a variable.
@@ -179,7 +178,7 @@ helm install \
 kubectl get pods -n cert-manager
 
 # Copy/paste the entire snippet BELOW (and then press ENTER) to create the cluster-issuer-prod.yaml file
-cat << EOF > ./K8s-Config/cluster-issuer-prod.yaml
+cat << EOF > ./cluster-issuer-prod.yaml
 apiVersion: cert-manager.io/v1alpha2
 kind: ClusterIssuer
 metadata:
@@ -200,10 +199,10 @@ EOF
 # End of snippet to copy/paste
 
 # Important! Review the file and check the values.
-cat ./K8s-Config/cluster-issuer-prod.yaml
+cat ./cluster-issuer-prod.yaml
 
 # Deploy the issuer config to the cluster
-kubectl apply -f ./K8s-Config/cluster-issuer-prod.yaml
+kubectl apply -f ./cluster-issuer-prod.yaml
 ```
 
 ## Deploy the Application
@@ -217,7 +216,7 @@ To enable MSAL, the application will need two ingress rules.
 ```
 kubectl run kuard-pod --image=gcr.io/kuar-demo/kuard-amd64:1 --expose --port=8080
 
-cat << EOF > ./K8s-Config/kuard-ingress.yaml
+cat << EOF > ./kuard-ingress.yaml
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -272,10 +271,10 @@ EOF
 # End of snippet to copy/paste
 
 # Important! Review the file and check the values.
-cat ./K8s-Config/kuard-ingress.yaml
+cat ./kuard-ingress.yaml
 
 # Deploy the ingress config to the cluster
-kubectl apply -f ./K8s-Config/kuard-ingress.yaml
+kubectl apply -f ./kuard-ingress.yaml
 ```
 
 ## Verify Production Certificate works
