@@ -2,14 +2,16 @@
 
 echo "BEGIN @ $(date +"%T"): Installing the ingress controller..."
 kubectl create ns ingress-controllers
-helm install nginx-ingress stable/nginx-ingress --namespace ingress-controllers --set rbac.create=true
+helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+helm repo update
+helm install nginx-ingress ingress-nginx/ingress-nginx --namespace ingress-controllers --set rbac.create=true
 
-INGRESS_IP=$(kubectl get services/nginx-ingress-controller -n ingress-controllers -o jsonpath="{.status.loadBalancer.ingress[0].ip}")
+INGRESS_IP=$(kubectl get services/nginx-ingress-ingress-nginx-controller -n ingress-controllers -o jsonpath="{.status.loadBalancer.ingress[0].ip}")
 
 while [ "$INGRESS_IP" = "" ]
 do
   echo "UPDATE @ $(date +"%T"): Checking for INGRESS_IP from Azure..."
-  INGRESS_IP=$(kubectl get services/nginx-ingress-controller -n ingress-controllers -o jsonpath="{.status.loadBalancer.ingress[0].ip}")
+  INGRESS_IP=$(kubectl get services/nginx-ingress-ingress-nginx-controller -n ingress-controllers -o jsonpath="{.status.loadBalancer.ingress[0].ip}")
   echo "UPDATE @ $(date +"%T"): Sleeping for 5 seconds..."
   sleep 5
 done
@@ -19,7 +21,7 @@ echo "BEGIN @ $(date +"%T"): Configure DNS for the cluster public IP..."
 NODE_RG=$(az aks show -n $CLUSTER_NAME -g $CLUSTER_RG -o json | jq -r '.nodeResourceGroup')
 echo "UPDATE @ $(date +"%T"): " $NODE_RG
 
-INGRESS_IP=$(kubectl get services/nginx-ingress-controller -n ingress-controllers -o jsonpath="{.status.loadBalancer.ingress[0].ip}")
+INGRESS_IP=$(kubectl get services/nginx-ingress-ingress-nginx-controller -n ingress-controllers -o jsonpath="{.status.loadBalancer.ingress[0].ip}")
 echo "UPDATE @ $(date +"%T"): " $INGRESS_IP
 
 IP_NAME=$(az network public-ip list -g $NODE_RG -o json | jq -c ".[] | select(.ipAddress | contains(\"$INGRESS_IP\"))" | jq '.name' -r)
