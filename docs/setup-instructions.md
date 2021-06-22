@@ -307,6 +307,18 @@ It should look something like this:
     kubectl delete -f https://raw.githubusercontent.com/jetstack/cert-manager/release-0.11/deploy/manifests/00-crds.yaml
     kubectl delete ns cert-manager
 
+## Automated Scripts [Azure Cloud Shell] (optional)
+
+- Go to the root folder
+- Run bash command
+```
+# Run -h for all required and optional flags
+bash main.sh -h
+
+# Example Command
+bash main.sh -a msal-test -c cluster-test -r easy-auth -e email@microsoft.com -d microsoft.com -l eastus
+```
+
 # References
 
 - [https://github.com/kubernetes-up-and-running/kuard](https://github.com/kubernetes-up-and-running/kuard)
