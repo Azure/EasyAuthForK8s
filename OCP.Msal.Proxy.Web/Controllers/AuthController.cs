@@ -86,7 +86,13 @@ namespace OCP.Msal.Proxy.Web.Controllers
 
             return StatusCode(202, User.Identity.Name);
         }
-
+        [AllowAnonymous]
+        [Route("/")]
+        public IActionResult HealthProbe()
+        {
+            //TODO
+            return StatusCode(200, "Healthy");
+        }
 
         [AllowAnonymous]
         [Route("msal/error")]
