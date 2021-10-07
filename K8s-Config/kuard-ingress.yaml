@@ -13,10 +13,10 @@ spec:
   ingressClassName: nginx
   tls:
   - hosts:
-    - dakondra-msal-two.eastus.cloudapp.azure.com
-    secretName: dakondra-msal-two.eastus.cloudapp.azure.com-tls
+    - {{APP_HOSTNAME}}
+    secretName: {{TLS_SECRET_NAME}}
   rules:
-  - host: dakondra-msal-two.eastus.cloudapp.azure.com
+  - host: {{APP_HOSTNAME}}
     http:
       paths:
       - backend:
@@ -33,7 +33,7 @@ metadata:
   name: msal-proxy
 spec:
   rules:
-  - host: dakondra-msal-two.eastus.cloudapp.azure.com
+  - host: {{APP_HOSTNAME}}
     http:
       paths:
       - backend:
@@ -45,5 +45,5 @@ spec:
         pathType: ImplementationSpecific
   tls:
   - hosts:
-    - dakondra-msal-two.eastus.cloudapp.azure.com
-    secretName: dakondra-msal-two.eastus.cloudapp.azure.com-tls
+    - {{APP_HOSTNAME}}
+    secretName: {{TLS_SECRET_NAME}}

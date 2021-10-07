@@ -35,26 +35,11 @@ do
   read INPUT_STRING
 done
 
-cat << EOF > ./K8s-Config/cluster-issuer-prod.yaml
-apiVersion: cert-manager.io/v1alpha2
-kind: ClusterIssuer
-metadata:
-  name: letsencrypt-prod
-  namespace: cert-manager
-spec:
-  acme:
-    server: https://acme-v02.api.letsencrypt.org/directory
-    email: $EMAIL
-    privateKeySecretRef:
-      name: letsencrypt-prod
-    # Add a single challenge solver, HTTP01 using nginx
-    solvers:
-    - http01:
-        ingress:
-          class: nginx
-EOF
-
-cat ./K8s-Config/cluster-issuer-prod.yaml
+cluster_issuer_prod_yaml=$(<./K8s-Config/cluster-issuer-prod.yaml)
+#replace values
+cluster_issuer_prod_yaml=${cluster_issuer_prod_yaml//"{{EMAIL}}"/$EMAIL}
+#write file - must use double quotes to preserve white space
+echo "$cluster_issuer_prod_yaml" > ./K8s-Config/cluster-issuer-prod.yaml
 
 kubectl apply -f ./K8s-Config/cluster-issuer-prod.yaml
 
