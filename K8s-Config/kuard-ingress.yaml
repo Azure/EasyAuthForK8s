@@ -1,14 +1,13 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: kuard
+  name: kuard-ingress
   annotations:
-    nginx.ingress.kubernetes.io/auth-url: "https:///msal/auth"
-    nginx.ingress.kubernetes.io/auth-signin: "https:///msal/index?rd="
+    nginx.ingress.kubernetes.io/auth-url: "https://$host/msal/auth"
+    nginx.ingress.kubernetes.io/auth-signin: "https://$host/msal/index?rd=$escaped_request_uri"
     nginx.ingress.kubernetes.io/auth-response-headers: "x-injected-aio,x-injected-name,x-injected-nameidentifier,x-injected-objectidentifier,x-injected-preferred_username,x-injected-tenantid,x-injected-uti"
-    kubernetes.io/tls-acme: "true"
-    certmanager.k8s.io/cluster-issuer: letsencrypt-prod
-    nginx.ingress.kubernetes.io/rewrite-target: /
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/rewrite-target: /$1
 spec:
   ingressClassName: nginx
   tls:
@@ -19,30 +18,34 @@ spec:
   - host: {{APP_HOSTNAME}}
     http:
       paths:
-      - backend:
+      - path: /(.*)
+        pathType: Prefix
+        backend:
           service:
             name: kuard-pod
             port:
               number: 8080
-        path: /(.*)
-        pathType: ImplementationSpecific
+        
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: msal-proxy
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: letsencrypt-prod
 spec:
   rules:
   - host: {{APP_HOSTNAME}}
     http:
       paths:
-      - backend:
+      - path: /msal(/|$)(.*)
+        pathType: Prefix
+        backend:
           service:
             name: msal-proxy
             port:
               number: 80
-        path: /msal
-        pathType: ImplementationSpecific
   tls:
   - hosts:
     - {{APP_HOSTNAME}}
