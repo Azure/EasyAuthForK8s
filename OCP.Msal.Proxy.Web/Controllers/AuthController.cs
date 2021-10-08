@@ -53,7 +53,7 @@ namespace OCP.Msal.Proxy.Web.Controllers
             var rd = "/";
             if (Request.Query.ContainsKey(redirectParam) && !string.IsNullOrEmpty(Request.Query[redirectParam].ToString()))
                 rd = Request.Query[redirectParam].ToString();
-            return Redirect($"/MicrosoftIdentity/Account/SignIn/{OpenIdConnectDefaults.AuthenticationScheme}?redirectUri={HttpUtility.UrlEncode(rd)}");
+            return Redirect($"/msal/MicrosoftIdentity/Account/SignIn/{OpenIdConnectDefaults.AuthenticationScheme}?redirectUri={HttpUtility.UrlEncode(rd)}");
         }
 
         [AllowAnonymous]
@@ -107,7 +107,7 @@ namespace OCP.Msal.Proxy.Web.Controllers
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult Logout()
         {           
-            return Redirect("/MicrosoftIdentity/Account/SignOut");
+            return Redirect("/msal/MicrosoftIdentity/Account/SignOut");
         }
 
         internal static void AddResponseHeadersFromClaims(IEnumerable<Claim> claims, IHeaderDictionary headers)

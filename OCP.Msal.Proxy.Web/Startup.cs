@@ -31,6 +31,7 @@ namespace OCP.Msal.Proxy.Web
         public void ConfigureServices(IServiceCollection services)
         {
             MicrosoftIdentityOptions options = Configuration.GetSection(AzureAdConfigSection).Get<MicrosoftIdentityOptions>();
+            
             services.AddSingleton<MicrosoftIdentityOptions>(options);
 
             //for Api applications
@@ -118,6 +119,21 @@ namespace OCP.Msal.Proxy.Web
                     await next.Invoke();
                 });
             }
+            //rewriting the url so that we don't have to add an ingress route for the MicrosoftIdentity area
+            app.Use(async (context, next) =>
+            {
+                var url = context.Request.Path.Value;
+
+                // Rewrite to index
+                if (url.StartsWith("/msal/MicrosoftIdentity"))
+                {
+                    // rewrite and continue processing
+                    context.Request.Path = url.Substring(5);
+                }
+
+                await next();
+            });
+
             app.UseRouting();
 
             app.UseAuthentication();
@@ -127,7 +143,8 @@ namespace OCP.Msal.Proxy.Web
             {
                 endpoints.MapRazorPages();
                 endpoints.MapControllers();
-            });
+
+                });
 
         }
 
