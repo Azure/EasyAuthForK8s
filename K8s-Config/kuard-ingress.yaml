@@ -18,7 +18,7 @@ spec:
   - host: {{APP_HOSTNAME}}
     http:
       paths:
-      - path: /(.*)
+      - path: /
         pathType: Prefix
         backend:
           service:
@@ -39,7 +39,7 @@ spec:
   - host: {{APP_HOSTNAME}}
     http:
       paths:
-      - path: /msal(/|$)(.*)
+      - path: /msal
         pathType: Prefix
         backend:
           service:

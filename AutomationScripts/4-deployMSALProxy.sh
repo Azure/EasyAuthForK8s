@@ -20,8 +20,8 @@ echo "COMPLETE @ $(date +"%T"): Deploying secret"
 echo "BEGIN @ $(date +"%T"): Calling Helm..."
 echo ""
 
-helm install msal-proxy ./charts/msal-proxy 
-
+#helm install msal-proxy ./charts/msal-proxy 
+kubectl apply -f ./K8s-Config/msal-net-proxy.yaml
 echo ""
 echo "COMPLETE @ $(date +"%T"): Calling Helm"
 

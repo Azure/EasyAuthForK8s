@@ -39,7 +39,7 @@ cluster_issuer_prod_yaml=$(<./K8s-Config/cluster-issuer-prod.yaml)
 #replace values
 cluster_issuer_prod_yaml=${cluster_issuer_prod_yaml//"{{EMAIL}}"/$EMAIL}
 #write file - must use double quotes to preserve white space
-echo "$cluster_issuer_prod_yaml" > ./K8s-Config/cluster-issuer-prod.yaml
+cat <<< "$cluster_issuer_prod_yaml" > ./K8s-Config/cluster-issuer-prod.yaml
 
 kubectl apply -f ./K8s-Config/cluster-issuer-prod.yaml
 

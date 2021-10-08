@@ -1,21 +1,19 @@
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
-  labels:
-    k8s-app: msal-net-proxy
-  name: msal-net-proxy
+  name: msal-proxy
 spec:
   replicas: 2
   selector:
     matchLabels:
-      k8s-app: msal-net-proxy
+      app: msal-proxy
   template:
     metadata:
       labels:
-        k8s-app: msal-net-proxy
+        app: msal-proxy
     spec:
       containers:
-      -  image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+      -  image: "lesterjt/easyauthfork8s:latest"
          imagePullPolicy: Always
          name: msal-net-proxy
          env:
@@ -59,14 +57,10 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  labels:
-    k8s-app: msal-net-proxy
-  name: msal-net-proxy
+  name: msal-proxy
 spec:
+  type: ClusterIP
   ports:
-  - name: http
-    port: 80
-    protocol: TCP
-    targetPort: 80
+  - port: 80
   selector:
-    k8s-app: msal-net-proxy
+    app: msal-proxy
