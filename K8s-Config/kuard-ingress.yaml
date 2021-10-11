@@ -6,19 +6,22 @@ metadata:
     nginx.ingress.kubernetes.io/auth-url: "https://$host/msal/auth"
     nginx.ingress.kubernetes.io/auth-signin: "https://$host/msal/index?rd=$escaped_request_uri"
     nginx.ingress.kubernetes.io/auth-response-headers: "x-injected-aio,x-injected-name,x-injected-nameidentifier,x-injected-objectidentifier,x-injected-preferred_username,x-injected-tenantid,x-injected-uti"
+    nginx.ingress.kubernetes.io/proxy-buffering: "on"
+    nginx.ingress.kubernetes.io/proxy-buffers-number: "8"
+    nginx.ingress.kubernetes.io/proxy-buffer-size: "256k"
     cert-manager.io/cluster-issuer: letsencrypt-prod
     nginx.ingress.kubernetes.io/rewrite-target: /$1
 spec:
   ingressClassName: nginx
   tls:
   - hosts:
-    - {{APP_HOSTNAME}}
-    secretName: {{TLS_SECRET_NAME}}
+    - msalrichter.eastus.cloudapp.azure.com
+    secretName: msalrichter-tls
   rules:
-  - host: {{APP_HOSTNAME}}
+  - host: msalrichter.eastus.cloudapp.azure.com
     http:
       paths:
-      - path: /
+      - path: /(.*)
         pathType: Prefix
         backend:
           service:
@@ -36,7 +39,7 @@ metadata:
     cert-manager.io/cluster-issuer: letsencrypt-prod
 spec:
   rules:
-  - host: {{APP_HOSTNAME}}
+  - host: msalrichter.eastus.cloudapp.azure.com
     http:
       paths:
       - path: /msal
@@ -48,5 +51,5 @@ spec:
               number: 80
   tls:
   - hosts:
-    - {{APP_HOSTNAME}}
-    secretName: {{TLS_SECRET_NAME}}
+    - msalrichter.eastus.cloudapp.azure.com
+    secretName: msalrichter-tls

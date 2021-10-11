@@ -13,7 +13,7 @@ spec:
         app: msal-proxy
     spec:
       containers:
-      -  image: "lesterjt/easyauthfork8s:latest"
+      -  image: "richtercloud/msal-net-proxy-opt"
          imagePullPolicy: Always
          name: msal-net-proxy
          env:
