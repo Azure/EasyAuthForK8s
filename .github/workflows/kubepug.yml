@@ -14,8 +14,8 @@ jobs:
 
       - name: Install Helm and Kubepug binaries
         run: |
-          mkdir -p ~/bin
-          curl -sSL https://github.com/rikatz/kubepug/archive/refs/tags/v1.2.1.tar.gz | tar xvfz - --overwrite -C ~/bin/
+          mkdir -p bin
+          curl -sSL https://github.com/rikatz/kubepug/archive/refs/tags/v1.2.1.tar.gz | tar xvfz - --overwrite -C bin/
           curl -sSL https://get.helm.sh/helm-${HELM_VERSION}-linux-amd64.tar.gz | tar xvfz - -C ~/bin/ --wildcards --strip 1 '*/helm'
       # nothing
       - name: Run Kubepug with your Helm Charts Repository
@@ -24,4 +24,4 @@ jobs:
           pwd
           echo "directory files:" 
           ls
-          find charts -type d | xargs -t -n1 -I% /bin/bash -c '~/bin/helm template % --api-versions ${K8S_TARGET_VERSION} | ~/bin/kubepug --error-on-deprecated --error-on-deleted --k8s-version ${K8S_TARGET_VERSION} --input-file /dev/stdin'
+          find charts -type d | xargs -t -n1 -I% /bin/bash -c 'bin/helm template % --api-versions ${K8S_TARGET_VERSION} | bin/kubepug --error-on-deprecated --error-on-deleted --k8s-version ${K8S_TARGET_VERSION} --input-file /dev/stdin'
