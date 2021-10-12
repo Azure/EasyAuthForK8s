@@ -1,4 +1,4 @@
-#!/bin/sh -x
+#!/bin/bash
 
 echo "BEGIN @ $(date +"%T"): Install Cert Manager..."
 TLS_SECRET_NAME=$APP_HOSTNAME-tls
@@ -35,12 +35,8 @@ do
   read INPUT_STRING
 done
 
-cluster_issuer_prod_yaml=$(<./K8s-Config/cluster-issuer-prod.yaml)
-#replace values
-cluster_issuer_prod_yaml=${cluster_issuer_prod_yaml//"{{EMAIL}}"/$EMAIL}
-#write file - must use double quotes to preserve white space
-cat <<< "$cluster_issuer_prod_yaml" > ./K8s-Config/cluster-issuer-prod.yaml
+sed "s/{{EMAIL}}/$EMAIL/g" ./K8s-Config/cluster-issuer-prod.yaml > ./user/cluster-issuer-prod.yaml
 
-kubectl apply -f ./K8s-Config/cluster-issuer-prod.yaml
+kubectl apply -f ./user/cluster-issuer-prod.yaml
 
 echo "COMPLETE @ $(date +"%T"): Install Cert Manager"

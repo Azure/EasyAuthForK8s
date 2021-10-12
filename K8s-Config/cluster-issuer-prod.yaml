@@ -6,7 +6,7 @@ metadata:
 spec:
   acme:
     server: https://acme-v02.api.letsencrypt.org/directory
-    email: mrichter@microsoft.com
+    email: {{EMAIL}}
     privateKeySecretRef:
       name: letsencrypt-prod
     # Add a single challenge solver, HTTP01 using nginx
