@@ -96,3 +96,7 @@ env:
   AzureAdClientIdKeyRefKey: CLIENT_ID
   AzureAdClientSecretKeyRefName: aad-secret
   AzureAdClientSecretKeyRefKey: CLIENT_SECRET
+
+claimName: msalproxyazurefilepvclaim
+
+volumeName: msal
