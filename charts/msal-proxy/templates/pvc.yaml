@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-    name: msal-net-proxy-az-file-pv-claim
+    name: {{ .Values.claimName }}
 spec:
     accessModes:
     - ReadWriteMany
