@@ -31,12 +31,14 @@ jobs:
       run: dotnet test OCP.Msal.Proxy.Tests/OCP.Msal.Proxy.Tests.csproj --no-build --verbosity normal 
   
   push_to_registries:
+  
     needs: build
     name: Push Docker image to multiple registries
     runs-on: ubuntu-latest
     permissions:
       packages: write
       contents: read
+    
     steps:
       - name: Check out the repo
         uses: actions/checkout@v2
@@ -54,13 +56,14 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set metadata (tags, labels) for Docker
+      - name: Extract metadata (tags, labels) for Docker
         id: meta
         uses: docker/metadata-action@98669ae865ea3cffbcbaa878cf57c20bbf1c6c38
         with:
           images: |
             ghcr.io/${{ github.repository }}/msal-net-proxy-opt
             easyauthfork8s/msal-net-proxy-opt
+      
       - name: Build and push Docker images
         uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
         with:
