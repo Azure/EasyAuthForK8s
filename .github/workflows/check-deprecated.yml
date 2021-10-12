@@ -21,5 +21,4 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - run: brew install FairwindsOps/tap/pluto 
-      - run: pluto detect-files ./charts/msal-proxy
       - run: pluto detect-files -d ./
