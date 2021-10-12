@@ -17,6 +17,8 @@ jobs:
           mkdir -p ~/bin
           curl -sSL https://github.com/rikatz/kubepug/archive/refs/tags/v1.2.1.tar.gz | tar xvfz - --overwrite -C ~/bin/
           curl -sSL https://get.helm.sh/helm-${HELM_VERSION}-linux-amd64.tar.gz | tar xvfz - -C ~/bin/ --wildcards --strip 1 '*/helm'
+          pwd
+          ls
       # nothing
       - name: Run Kubepug with your Helm Charts Repository
         run: |
