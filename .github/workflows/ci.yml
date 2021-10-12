@@ -17,6 +17,7 @@ jobs:
   build:
 
     runs-on: ubuntu-latest
+    name: .NET restore, build & test
 
     steps:
     - uses: actions/checkout@v2
