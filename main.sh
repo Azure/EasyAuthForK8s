@@ -83,7 +83,7 @@ do
             # Change to how others show it like az
             echo "HELP: Here are the flags and their variables"
 			echo "REQUIRED: -a is for AD_APP_NAME"
-            echo "REQUIRED: -c is for CLUSTER_NAME *Note: Cluster Name must be globally unique*" 
+            echo "REQUIRED: -c is for CLUSTER_NAME *Note: Cluster Name must be unique*" 
             echo "REQUIRED: -r is for CLUSTER_RG"
             echo "REQUIRED: -e is for EMAIL"
             echo "REQUIRED: -d is for EMAIL_DOMAIN"

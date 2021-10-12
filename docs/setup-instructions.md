@@ -9,7 +9,7 @@
 bash main.sh -h
 
 # Example command
-# Note: Cluster name (-c) must be globally unique
+# Note: Cluster name (-c) must be unique
 bash main.sh -a msal-test -c cluster-test -r easy-auth -e email@microsoft.com -d microsoft.com -l eastus
 ```
 
