@@ -20,4 +20,4 @@ jobs:
       
       - name: Run Kubepug with your Helm Charts Repository
         run: |
-          find charts -mindepth 1 -maxdepth 1 -type d | xargs -t -n1 -I% /bin/bash -c '~/bin/helm template % --api-versions ${K8S_TARGET_VERSION} | ~/bin/kubepug --error-on-deprecated --error-on-deleted --k8s-version ${K8S_TARGET_VERSION} --input-file /dev/stdin'
+          find ~/charts/msal-proxy -mindepth 1 -maxdepth 1 -type d | xargs -t -n1 -I% /bin/bash -c '~/bin/helm template % --api-versions ${K8S_TARGET_VERSION} | ~/bin/kubepug --error-on-deprecated --error-on-deleted --k8s-version ${K8S_TARGET_VERSION} --input-file /dev/stdin'
