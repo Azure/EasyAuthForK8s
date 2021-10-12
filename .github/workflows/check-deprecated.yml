@@ -20,4 +20,4 @@ jobs:
     runs-on: macos-latest
     steps:
       - run: brew install FairwindsOps/tap/pluto 
-      - run: pluto detect-files -d ./
+      - run: pluto detect-files -d ${{ github.workspace }}
