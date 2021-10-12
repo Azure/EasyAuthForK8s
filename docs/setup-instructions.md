@@ -55,7 +55,7 @@ Review these very carefully and modify.
 Note: It takes several minutes to create the AKS cluster. Complete these steps before proceeding to the next section.
 
     az group create -n $CLUSTER_RG -l $LOCATION
-    az aks create -g $CLUSTER_RG -n $CLUSTER_NAME --vm-set-type VirtualMachineScaleSets --generate-ssh-keys --enable-managed-identity
+    az aks create -g $CLUSTER_RG -n $CLUSTER_NAME --generate-ssh-keys --node-count 1
     az aks get-credentials -g $CLUSTER_RG -n $CLUSTER_NAME
     
     # Important! Wait for the steps above to complete before proceeding.
@@ -151,6 +151,9 @@ kubectl create secret generic aad-secret \
   --from-literal=AZURE_TENANT_ID=$AZURE_TENANT_ID \
   --from-literal=CLIENT_ID=$CLIENT_ID \
   --from-literal=CLIENT_SECRET=$CLIENT_SECRET
+
+
+# Go to the root of the repo before running this command
 helm install msal-proxy ./charts/msal-proxy 
 
 # Confirm everything was deployed.
@@ -240,11 +243,11 @@ kind: Ingress
 metadata:
   name: kuard
   annotations:
-    nginx.ingress.kubernetes.io/auth-url: "https://$host/msal/auth"
-    nginx.ingress.kubernetes.io/auth-signin: "https://$host/msal/index?rd=\$escaped_request_uri"
+    nginx.ingress.kubernetes.io/auth-url: "https://\$host/msal/auth"
+    nginx.ingress.kubernetes.io/auth-signin: "https://\$host/msal/index?rd=\$escaped_request_uri"
     nginx.ingress.kubernetes.io/auth-response-headers: "x-injected-aio,x-injected-name,x-injected-nameidentifier,x-injected-objectidentifier,x-injected-preferred_username,x-injected-tenantid,x-injected-uti"
     certmanager.k8s.io/cluster-issuer: letsencrypt-prod
-    nginx.ingress.kubernetes.io/rewrite-target: /$1
+    nginx.ingress.kubernetes.io/rewrite-target: /\$1
 spec:
   ingressClassName: nginx
   tls:
@@ -267,6 +270,9 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: msal-proxy
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: letsencrypt-prod
 spec:
   rules:
   - host: $APP_HOSTNAME
