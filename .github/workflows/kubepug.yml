@@ -24,4 +24,4 @@ jobs:
           echo "current directory:" pwd
           echo "directory files:" ls
           echo "------------------------"
-          find ~/work/EasyAuthForK8s/EasyAuthForK8s/charts -type d | xargs -t -n1 -I% /bin/bash -c '~/bin/helm template % --api-versions ${K8S_TARGET_VERSION} | ~/bin/kubepug --error-on-deprecated --error-on-deleted --k8s-version ${K8S_TARGET_VERSION} --input-file /dev/stdin'
+          find ~/work/EasyAuthForK8s/EasyAuthForK8s/charts -type d | xargs -t -n1 -I% /bin/bash -c '~/bin/helm template % --api-versions ${K8S_TARGET_VERSION} | ~/bin/kubepug-1.2.1 --error-on-deprecated --error-on-deleted --k8s-version ${K8S_TARGET_VERSION} --input-file /dev/stdin'
