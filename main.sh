@@ -83,7 +83,7 @@ do
             # Change to how others show it like az
             echo "HELP: Here are the flags and their variables"
 			echo "REQUIRED: -a is for AD_APP_NAME"
-            echo "REQUIRED: -c is for CLUSTER_NAME"
+            echo "REQUIRED: -c is for CLUSTER_NAME *Note: Cluster Name must be globally unique*" 
             echo "REQUIRED: -r is for CLUSTER_RG"
             echo "REQUIRED: -e is for EMAIL"
             echo "REQUIRED: -d is for EMAIL_DOMAIN"
@@ -110,14 +110,6 @@ else
     ITERATION=''
 fi
 
-# ITERATION=34
-# AD_APP_NAME="$1$ITERATION"
-# CLUSTER_NAME=$2$ITERATION
-# CLUSTER_RG=$3$ITERATION
-# EMAIL=$4
-# EMAIL_DOMAIN=$5
-# LOCATION=$6
-# NAMESPACE=$7
 APP_HOSTNAME="$AD_APP_NAME.$LOCATION.cloudapp.azure.com"
 HOMEPAGE=https://$APP_HOSTNAME
 IDENTIFIER_URIS=$HOMEPAGE

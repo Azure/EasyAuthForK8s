@@ -2,7 +2,7 @@
 
 echo "BEGIN @ $(date +"%T"): Register AAD Application..."
 
-CLIENT_ID=$(az ad app create --display-name $AD_APP_NAME --homepage $HOMEPAGE --reply-urls $REPLY_URLS --required-resource-accesses @manifest.json -o json | jq -r '.appId')
+CLIENT_ID=$(az ad app create --display-name $AD_APP_NAME --homepage $HOMEPAGE --reply-urls $REPLY_URLS --required-resource-accesses @./TemplateFiles/manifest.json -o json | jq -r '.appId')
 echo "CLIENT_ID: " $CLIENT_ID
 
 # AAD core store is eventually consistent.  Usually we can retrieve the object on the first try after creation,

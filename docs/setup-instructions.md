@@ -1,6 +1,19 @@
-# K8 Auth Inject - Documentation Duplicate
+# EasyAuthForK8s - Setup Instructions
 
-## Prerequisites
+## Quickstart Demo [Azure Cloud Shell]
+
+- Go to the root folder of the repo
+- Run bash command
+```
+# Run -h for all required and optional flags
+bash main.sh -h
+
+# Example command
+# Note: Cluster name (-c) must be globally unique
+bash main.sh -a msal-test -c cluster-test -r easy-auth -e email@microsoft.com -d microsoft.com -l eastus
+```
+
+## Standard Walkthrough
 
 These are **critical dependencies to install prior** to running the commands below.
 
@@ -305,30 +318,6 @@ It should look something like this:
     kubectl delete secret ingress-tls-prod
     kubectl delete -f https://raw.githubusercontent.com/jetstack/cert-manager/release-0.11/deploy/manifests/00-crds.yaml
     kubectl delete ns cert-manager
-    
-## Automated Scripts [Azure Cloud Shell] (optional)
-
-- Go to the root folder
-- Run bash command
-```
-# Run -h for all required and optional flags
-bash main.sh -h
-
-# Example Command
-bash main.sh -a msal-test -c cluster-test -r easy-auth -e email@microsoft.com -d microsoft.com -l eastus
-```
-
-## Automated Scripts [Azure Cloud Shell] (optional)
-
-- Go to the root folder
-- Run bash command
-```
-# Run -h for all required and optional flags
-bash main.sh -h
-
-# Example Command
-bash main.sh -a msal-test -c cluster-test -r easy-auth -e email@microsoft.com -d microsoft.com -l eastus
-```
 
 # References
 
