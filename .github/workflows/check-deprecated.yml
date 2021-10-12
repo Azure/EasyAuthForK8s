@@ -19,5 +19,6 @@ jobs:
   mac:
     runs-on: macos-latest
     steps:
+      - uses: actions/checkout@v2
       - run: brew install FairwindsOps/tap/pluto 
-      - run: pluto detect-files -d ${{ github.workspace }}/K8s-Config
+      - run: pluto detect-files -d ./
