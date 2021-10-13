@@ -32,7 +32,6 @@ do
   kubectl get pods -n cert-manager
   if [ "$(kubectl get pods -n cert-manager -o=jsonpath='{.items[0].status.containerStatuses[0].ready}')" == "$(kubectl get pods -n cert-manager -o=jsonpath='{.items[1].status.containerStatuses[0].ready}')" ] && [ "$(kubectl get pods -n cert-manager -o=jsonpath='{.items[2].status.containerStatuses[0].ready}')" == "true" ]; then
     INPUT_STRING=true
-    echo test0
   fi
 done
 
