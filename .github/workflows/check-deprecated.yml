@@ -3,17 +3,7 @@
 name: Check deprecated APIs
 
 on:
-  push:
-    # Publish `master` as Docker `latest` image.
-    branches:
-      - master
-      - dev
-
-    # Publish `v1.2.3` tags as releases.
-    tags:
-      - v*
-  release:
-    types: [published]
+  workflow_dispatch:
 
 jobs:
   mac:
