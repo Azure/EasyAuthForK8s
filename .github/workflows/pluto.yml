@@ -3,6 +3,7 @@
 name: Check deprecated APIs
 
 on:
+  push:
   workflow_dispatch:
 
 jobs:
