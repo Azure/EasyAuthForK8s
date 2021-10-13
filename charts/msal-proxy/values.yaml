@@ -66,6 +66,12 @@ resources: {}
   #   cpu: 100m
   #   memory: 128Mi
 
+secret:
+  name: aad-secret
+  azureadtenantid: tenantid
+  azureadclientid: clientid
+  azureclientsecret: clientsecret
+
 autoscaling:
   enabled: false
   minReplicas: 1
