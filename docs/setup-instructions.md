@@ -102,7 +102,7 @@ echo $INGRESS_HOST
 # This should be the same as the $APP_HOSTNAME
 ```
 
-## Register AAD Application
+## Register AAD Application (Skip if you are registering AAD B2C)
 
 ```
 # The default app created has permissions we don't need and can cause problem if you are in a more restricted tenant environment
@@ -144,7 +144,7 @@ AZURE_TENANT_ID=$(az account show -o json | jq '.tenantId' -r)
 echo $AZURE_TENANT_ID
 ```
 
-## Register AAD B2C Application
+## Register AAD B2C Application (Skip if you have registered an AAD Application)
 
 ```
 # Create an Azure AD B2C tenant
@@ -185,15 +185,9 @@ echo $CLIENT_SECRET
 ## Deploy MSAL Proxy
 
 ```
-kubectl delete secret aad-secret --ignore-not-found
-kubectl create secret generic aad-secret \
-  --from-literal=AZURE_TENANT_ID=$AZURE_TENANT_ID \
-  --from-literal=CLIENT_ID=$CLIENT_ID \
-  --from-literal=CLIENT_SECRET=$CLIENT_SECRET
-
 
 # Go to the root of the repo before running this command
-helm install msal-proxy ./charts/msal-proxy 
+helm install --set secret.azureadtenantid=$AZURE_TENANT_ID --set secret.azureadclientid=$CLIENT_ID --set secret.azureclientsecret=$CLIENT_SECRET msal-proxy ./charts/msal-proxy
 
 # Confirm everything was deployed.
 kubectl get svc,deploy,pod
