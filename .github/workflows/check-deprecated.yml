@@ -20,5 +20,8 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v2
-      - run: brew install FairwindsOps/tap/pluto 
-      - run: pluto detect-files -d ./
+      - run: brew install FairwindsOps/tap/pluto
+      - run: brew install helm 
+      - run: helm template ./charts/msal-proxy | pluto detect -
+      
+      #pluto detect-files -d ./
