@@ -37,8 +37,9 @@ jobs:
     
     steps:
       - uses: actions/checkout@v2
-      - run: brew install FairwindsOps/tap/pluto 
-      - run: pluto detect-files -d ./charts/msal-proxy
+      - run: brew install FairwindsOps/tap/pluto
+      - run: helm template ./charts/msal-proxy | pluto detect -
+      #- run: pluto detect-files -d ./charts/msal-proxy
       
   push_to_registries:
   
