@@ -28,17 +28,17 @@ These are **critical dependencies to install prior** to running the commands bel
 Review these very carefully and modify.
 
     # Important! Set the name for your Azure AD App Registration. This will also be used for the Ingress DNS hostname.
-    AD_APP_NAME="$USER-msal-proxy"
+    AD_APP_NAME="$USER-easy-auth-proxy"
     
     # Set your AKS cluster name and resource group
-    CLUSTER_NAME=msal-proxy-aks
-    CLUSTER_RG=msal-proxy-rg
+    CLUSTER_NAME=easy-auth-proxy-aks
+    CLUSTER_RG=easy-auth-proxy-rg
     
     # Set the email address for the cluster certificate issuer
     EMAIL=example@microsoft.com
     
     # Region to create resources
-    LOCATION=southcentralus
+    LOCATION=eastus
     
     APP_HOSTNAME="$AD_APP_NAME.$LOCATION.cloudapp.azure.com"
     HOMEPAGE=https://$APP_HOSTNAME
@@ -55,7 +55,7 @@ Review these very carefully and modify.
 Note: It takes several minutes to create the AKS cluster. Complete these steps before proceeding to the next section.
 
     az group create -n $CLUSTER_RG -l $LOCATION
-    az aks create -g $CLUSTER_RG -n $CLUSTER_NAME --vm-set-type VirtualMachineScaleSets --generate-ssh-keys --enable-managed-identity
+    az aks create -g $CLUSTER_RG -n $CLUSTER_NAME --generate-ssh-keys --node-count 1
     az aks get-credentials -g $CLUSTER_RG -n $CLUSTER_NAME
     
     # Important! Wait for the steps above to complete before proceeding.
@@ -132,6 +132,7 @@ echo $CLIENT_ID
 OBJECT_ID=$(az ad app show --id $CLIENT_ID -o json | jq '.objectId' -r)
 echo $OBJECT_ID
 
+az ad app update --id $OBJECT_ID --set oauth2Permissions[0].isEnabled=false
 az ad app update --id $OBJECT_ID --set oauth2Permissions=[]
 
 # The newly registered app does not have a password.  Use "az ad app credential reset" to add password and save to a variable.
@@ -150,6 +151,9 @@ kubectl create secret generic aad-secret \
   --from-literal=AZURE_TENANT_ID=$AZURE_TENANT_ID \
   --from-literal=CLIENT_ID=$CLIENT_ID \
   --from-literal=CLIENT_SECRET=$CLIENT_SECRET
+
+
+# Go to the root of the repo before running this command
 helm install msal-proxy ./charts/msal-proxy 
 
 # Confirm everything was deployed.
@@ -192,7 +196,7 @@ kubectl get pods -n cert-manager
 
 # Copy/paste the entire snippet BELOW (and then press ENTER) to create the cluster-issuer-prod.yaml file
 cat << EOF > ./cluster-issuer-prod.yaml
-apiVersion: cert-manager.io/v1alpha2
+apiVersion: cert-manager.io/v1
 kind: ClusterIssuer
 metadata:
   name: letsencrypt-prod
@@ -208,6 +212,10 @@ spec:
     - http01:
         ingress:
           class: nginx
+          podTemplate:
+            spec:
+              nodeSelector:
+                "kubernetes.io/os": linux
 EOF
 # End of snippet to copy/paste
 
@@ -238,7 +246,6 @@ metadata:
     nginx.ingress.kubernetes.io/auth-url: "https://\$host/msal/auth"
     nginx.ingress.kubernetes.io/auth-signin: "https://\$host/msal/index?rd=\$escaped_request_uri"
     nginx.ingress.kubernetes.io/auth-response-headers: "x-injected-aio,x-injected-name,x-injected-nameidentifier,x-injected-objectidentifier,x-injected-preferred_username,x-injected-tenantid,x-injected-uti"
-    kubernetes.io/tls-acme: "true"
     certmanager.k8s.io/cluster-issuer: letsencrypt-prod
     nginx.ingress.kubernetes.io/rewrite-target: /\$1
 spec:
@@ -251,30 +258,33 @@ spec:
   - host: $APP_HOSTNAME
     http:
       paths:
-      - backend:
+      - path: /(.*)
+        pathType: Prefix
+        backend:
           service:
             name: kuard-pod
             port:
               number: 8080
-        path: /(.*)
-        pathType: ImplementationSpecific
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: msal-proxy
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: letsencrypt-prod
 spec:
   rules:
   - host: $APP_HOSTNAME
     http:
       paths:
-      - backend:
+      - path: /msal
+        pathType: Prefix
+        backend:
           service:
             name: msal-proxy
-            port: 
+            port:
               number: 80
-        path: /msal
-        pathType: ImplementationSpecific
   tls:
   - hosts:
     - $APP_HOSTNAME

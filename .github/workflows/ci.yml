@@ -30,9 +30,19 @@ jobs:
     - name: Test
       run: dotnet test OCP.Msal.Proxy.Tests/OCP.Msal.Proxy.Tests.csproj --no-build --verbosity normal 
   
+  check_for_depreciated_APIs:
+    name: Check Depreciated K8s APIs
+    runs-on: macos-latest
+    needs: build
+    
+    steps:
+      - uses: actions/checkout@v2
+      - run: brew install FairwindsOps/tap/pluto 
+      - run: pluto detect-files -d ./charts/msal-proxy
+      
   push_to_registries:
   
-    needs: build
+    needs: check_for_depreciated_APIs
     name: Push Docker image to multiple registries
     runs-on: ubuntu-latest
     permissions:
