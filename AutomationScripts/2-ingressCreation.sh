@@ -25,6 +25,13 @@ INGRESS_IP=$(kubectl get services/nginx-ingress-ingress-nginx-controller -n ingr
 echo "UPDATE @ $(date +"%T"): " $INGRESS_IP
 
 IP_NAME=$(az network public-ip list -g $NODE_RG -o json | jq -c ".[] | select(.ipAddress | contains(\"$INGRESS_IP\"))" | jq '.name' -r)
+while [ "$IP_NAME" = "" ]
+do
+  echo "UPDATE @ $(date +"%T"): Checking for IP_NAME..."
+  IP_NAME=$(az network public-ip list -g $NODE_RG -o json | jq -c ".[] | select(.ipAddress | contains(\"$INGRESS_IP\"))" | jq '.name' -r)
+  echo "UPDATE @ $(date +"%T"): Sleeping for 5 seconds..."
+  sleep 5
+done
 echo "UPDATE @ $(date +"%T"): " $IP_NAME
 
 az network public-ip update -g $NODE_RG -n $IP_NAME --dns-name $AD_APP_NAME

@@ -26,15 +26,14 @@ echo ""
 echo "COMPLETE @ $(date +"%T"): Calling Helm"
 
 kubectl get svc,deploy,pod
-
-INPUT_STRING=no
-while [ "$INPUT_STRING" != "yes" ]
+  
+INPUT_STRING=false
+while [ "$INPUT_STRING" != "true" ]
 do
   echo ""
   kubectl get svc,deploy,pod
   echo ""
-  echo "Did everything start OK? Type 'yes' or press enter to try again..."
-  read INPUT_STRING
+  INPUT_STRING=$(kubectl get svc,deploy,pod -o=jsonpath='{.items[3].status.containerStatuses[0].ready}')
 done
 
 echo "COMPLETE @ $(date +"%T"): Deploy MSAL Proxy"
