@@ -144,9 +144,48 @@ AZURE_TENANT_ID=$(az account show -o json | jq '.tenantId' -r)
 echo $AZURE_TENANT_ID
 ```
 
+## Register AAD B2C Application
+
+```
+# Create an Azure AD B2C tenant
+Microsoft Docs: https://docs.microsoft.com/en-us/azure/active-directory-b2c/tutorial-create-tenant
+
+# Get the name that will be used during registration 
+echo $AD_APP_NAME
+
+# Get the Redirect URI that will be used during registration
+echo $REPLY_URLS
+
+# Register a web application in your AAD B2C tenant with the variables echoed above
+Microsoft Docs: https://docs.microsoft.com/en-us/azure/active-directory-b2c/tutorial-register-applications?tabs=app-reg-ga
+
+# Enable ID Tokens
+# Go to the 'Authentication' tab, under 'Implicit grant and hybrid flows' check 'ID tokens (used for implicit and hybrid flows)'
+
+# !!NOTE: Replace everything including the { }
+# When you have registered your application, go to the 'Overview' tab of your registered web application and set the current variables
+CLIENT_ID={Replace with copied 'Application (client) ID'}
+OBJECT_ID={Replace with 'Object ID'}
+AZURE_TENANT_ID={Replace with 'Directory (tenant) ID'}
+
+# Create a client secret
+Microsoft Docs: https://docs.microsoft.com/en-us/azure/active-directory-b2c/tutorial-register-applications?tabs=app-reg-ga#create-a-client-secret
+
+# !!NOTE: Replace everything including the { }
+# Record the value into a variable
+CLIENT_SECRET={Replace with copied client secret value}
+
+# Confirm all variables were set
+echo $CLIENT_ID
+echo $OBJECT_ID
+echo $AZURE_TENANT_ID
+echo $CLIENT_SECRET
+```
+
 ## Deploy MSAL Proxy
 
 ```
+kubectl delete secret aad-secret --ignore-not-found
 kubectl create secret generic aad-secret \
   --from-literal=AZURE_TENANT_ID=$AZURE_TENANT_ID \
   --from-literal=CLIENT_ID=$CLIENT_ID \
