@@ -21,6 +21,6 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - run: brew install FairwindsOps/tap/pluto
-      - run: helm template ./charts | pluto detect -
+      - run: helm template ./charts/msal-proxy | pluto detect -
       
       #pluto detect-files -d ./
