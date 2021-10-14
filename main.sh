@@ -159,17 +159,24 @@ echo "****BEGIN @ $(date +"%T"): Call Deploy New Ingress Resource script****"
 . ./AutomationScripts/6-deployNewIngressResource.sh
 echo "****COMPLETE @ $(date +"%T"): Deployed New Ingress Resource script****"
 
-
 echo "BEGIN @ $(date +"%T"): Verify Production Certificate works..."
-kubectl get certificate $TLS_SECRET_NAME
-INPUT_STRING=no
-while [ "$INPUT_STRING" != "yes" ]
+INPUT_STATUS=false
+n=50
+while [[ "$INPUT_STATUS" != "True" || "$INPUT_TYPE" != "Ready" ]]
 do
   echo ""
   kubectl get certificate $TLS_SECRET_NAME
+  INPUT_STATUS=$(kubectl get certificate $TLS_SECRET_NAME -o=jsonpath='{.status.conditions[0].status}')
+  INPUT_TYPE=$(kubectl get certificate $TLS_SECRET_NAME -o=jsonpath='{.status.conditions[0].type}')
+  echo "status: " $INPUT_STATUS
+  echo "type: " $INPUT_TYPE
+  sleep 5
+  if [ "$n" == "0" ]; then
+    echo "ERROR. INFINITE LOOP in main.sh when calling kubectl get certificate."
+    exit 1
+  fi
+  n=$((n-1))
   echo ""
-  echo "Is the certificate showing READY = True? Type 'yes' or press enter to try again..."
-  read INPUT_STRING
 done
 echo "COMPLETE @ $(date +"%T"): Verify Production Certificate works"
 echo "END OF SCRIPT"
