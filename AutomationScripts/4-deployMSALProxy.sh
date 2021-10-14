@@ -4,23 +4,12 @@
 
 echo "BEGIN @ $(date +"%T"): Deploy MSAL Proxy..."
 
-echo "BEGIN @ $(date +"%T"): Deploying secret..."
-echo ""
-
-kubectl create secret generic aad-secret \
-  --from-literal=AZURE_TENANT_ID=$AZURE_TENANT_ID \
-  --from-literal=CLIENT_ID=$CLIENT_ID \
-  --from-literal=CLIENT_SECRET=$CLIENT_SECRET
-
-echo ""
-echo "COMPLETE @ $(date +"%T"): Deploying secret"
-
 # kubectl apply -f msal-net-proxy.yaml
 
 echo "BEGIN @ $(date +"%T"): Calling Helm..."
 echo ""
 
-helm install msal-proxy ./charts/msal-proxy 
+helm install --set secret.azureadtenantid=$AZURE_TENANT_ID --set secret.azureadclientid=$CLIENT_ID --set secret.azureclientsecret=$CLIENT_SECRET msal-proxy ./charts/msal-proxy
 
 echo ""
 echo "COMPLETE @ $(date +"%T"): Calling Helm"

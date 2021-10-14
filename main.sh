@@ -34,7 +34,6 @@ echo ""
 echo "BEGIN @ $(date +"%T"): Set variables..."
 
 # Initialize Variables for flags
-ITERATION=''
 AD_APP_NAME=''
 CLUSTER_NAME=''
 CLUSTER_RG=''
@@ -42,8 +41,6 @@ EMAIL=''
 EMAIL_DOMAIN=''
 LOCATION=''
 INPUTIMAGE=''
-NAMESPACE=''
-CLIENTID='' # The only thing I really need is CLIENT ID. With the client ID, we can skip creating the AAD App.
 SKIP_CLUSTER_CREATION=''
 
 while getopts "a:c:r:e:d:l:i:n:s:p:h" OPTION
@@ -51,13 +48,13 @@ do
 	case $OPTION in
 		a)
 			# echo "The value of -a is ${OPTARG} - AD_APP_NAME"
-            AD_APP_NAME=$OPTARG$ITERATION ;;
+            AD_APP_NAME=$OPTARG ;;
 	    c)
 			# echo "The value of -c is ${OPTARG} - CLUSTER_NAME"
-            CLUSTER_NAME=$OPTARG$ITERATION ;;
+            CLUSTER_NAME=$OPTARG ;;
         r)
 			# echo "The value of -r is ${OPTARG} - CLUSTER_RG"
-            CLUSTER_RG=$OPTARG$ITERATION ;;
+            CLUSTER_RG=$OPTARG ;;
         e)
 			# echo "The value of -e is ${OPTARG} - EMAIL"
             EMAIL=$OPTARG ;;
@@ -70,12 +67,6 @@ do
         i)
 			# echo "The value of -i is ${OPTARG} - INPUTIMAGE"
             INPUTIMAGE=$OPTARG ;;
-        n)
-	         # echo "The value of -n is ${OPTARG} - NAMESPACE"
-            NAMESPACE=$OPTARG ;;
-	    s)
-	        # echo "The value of -s is ${OPTARG} - CLIENTID"
-	        CLIENTID=$OPTARG ;;
         p) 
             # echo "The value of -p is ${OPTARG} - SKIP_CLUSTER_CREATION"
             SKIP_CLUSTER_CREATION=$OPTARG ;;
@@ -89,8 +80,6 @@ do
             echo "REQUIRED: -d is for EMAIL_DOMAIN"
             echo "REQUIRED: -l is for LOCATION"
             echo "OPTOINAL: -i is for INPUTIMAGE"
-            echo "OPTOINAL: -n is for NAMESPACE"
-            echo "OPTOINAL: -s is for CLIENTID"
             echo "OPTOINAL: -p is for SKIP_CLUSTER_CREATION"
 			exit ;;
 	esac
@@ -103,19 +92,10 @@ if [ -z "$AD_APP_NAME" ] || [ -z "$CLUSTER_NAME" ] || [ -z "$CLUSTER_RG" ] || [ 
     exit
 fi 
 
-# If there is no flag set for SKIP_CLUSTER_CREATION, then create a random iteration.
-if [ -z "$SKIP_CLUSTER_CREATION" ]; then
-    ITERATION=$RANDOM
-else
-    ITERATION=''
-fi
-
 APP_HOSTNAME="$AD_APP_NAME.$LOCATION.cloudapp.azure.com"
 HOMEPAGE=https://$APP_HOSTNAME
 IDENTIFIER_URIS=$HOMEPAGE
 REPLY_URLS=https://$APP_HOSTNAME/msal/signin-oidc
-COOKIE_SECRET=$(python -c 'import os,base64; print(base64.b64encode(os.urandom(16)).decode("utf-8"))')
-INGRESS_IP=0
 
 echo "The value of -a is $AD_APP_NAME - AD_APP_NAME"
 echo "The value of -c is $CLUSTER_NAME - CLUSTER_NAME"
@@ -124,10 +104,7 @@ echo "The value of -e is $EMAIL - EMAIL"
 echo "The value of -d is $EMAIL_DOMAIN - EMAIL_DOMAIN"
 echo "The value of -l is $LOCATION - LOCATION"
 echo "The value of -i is $INPUTIMAGE - INPUTIMAGE"
-echo "The value of -n is $NAMESPACE - NAMESPACE"
-echo "The value of -s is $CLIENTID - CLIENTID"
 echo "The value of -p is $SKIP_CLUSTER_CREATION - SKIP_CLUSTER_CREATION"
-echo "COOKIE_SECRET: " $COOKIE_SECRET
 echo "COMPLETE @ $(date +"%T"): Setting variables"
 
 
