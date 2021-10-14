@@ -190,7 +190,7 @@ while [ "$INPUT_STRING" != "true" ]
 do
   echo ""
   kubectl get certificate $TLS_SECRET_NAME
-  INPUT_STRING=$(kubectl get certificate $TLS_SECRET_NAME -o=jsonpath='{.status.conditions[1].status}')
+  INPUT_STRING=$(kubectl get certificate $TLS_SECRET_NAME -o=jsonpath='{.items[0].status.conditions[1].status}')
   echo ""
 done
 echo "COMPLETE @ $(date +"%T"): Verify Production Certificate works"
