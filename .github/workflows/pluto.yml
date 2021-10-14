@@ -3,8 +3,12 @@
 name: Check deprecated APIs
 
 on:
-  push:
   workflow_dispatch:
+    inputs:
+      targetEnv:
+        description: 'Target environment: dev, test, prod'     
+        required: false
+        default: 'dev' 
 
 jobs:
   mac:
@@ -12,6 +16,6 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - run: brew install FairwindsOps/tap/pluto
-      - run: helm template ./charts/msal-proxy | pluto detect -
+      - run: helm template ./charts/msal-proxy --api-versions v1.16.0 | pluto detect -
       
       #pluto detect-files -d ./
