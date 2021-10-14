@@ -24,7 +24,7 @@ jobs:
     name: Run main.sh script
 
     steps:
-    
+    # nothing
     - name: 'Login via Azure CLI'
       uses: azure/login@v1
       with:
