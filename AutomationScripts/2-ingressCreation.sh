@@ -12,6 +12,7 @@ while [ "$INGRESS_IP" = "" ]
 do
   echo "UPDATE @ $(date +"%T"): Checking for INGRESS_IP from Azure..."
   INGRESS_IP=$(kubectl get services/nginx-ingress-ingress-nginx-controller -n ingress-controllers -o jsonpath="{.status.loadBalancer.ingress[0].ip}")
+  echo "Ingress IP: " $INGRESS_IP
   echo "UPDATE @ $(date +"%T"): Sleeping for 5 seconds..."
   sleep 5
 done

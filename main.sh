@@ -159,15 +159,16 @@ echo "****BEGIN @ $(date +"%T"): Call Deploy New Ingress Resource script****"
 . ./AutomationScripts/6-deployNewIngressResource.sh
 echo "****COMPLETE @ $(date +"%T"): Deployed New Ingress Resource script****"
 
-
 echo "BEGIN @ $(date +"%T"): Verify Production Certificate works..."
-kubectl get certificate $TLS_SECRET_NAME
-INPUT_STRING=false
-while [ "$INPUT_STRING" != "True" ]
+INPUT_STATUS=false
+while [[ "$INPUT_STATUS" != "True" || "$INPUT_TYPE" != "Ready" ]]
 do
   echo ""
   kubectl get certificate $TLS_SECRET_NAME
-  INPUT_STRING=$(kubectl get certificate $TLS_SECRET_NAME -o=jsonpath='{.items[0].status.conditions[1].status}')
+  INPUT_STATUS=$(kubectl get certificate $TLS_SECRET_NAME -o=jsonpath='{.status.conditions[0].status}')
+  INPUT_TYPE=$(kubectl get certificate $TLS_SECRET_NAME -o=jsonpath='{.status.conditions[0].type}')
+  echo "status: " $INPUT_STATUS
+  echo "type: " $INPUT_TYPE
   sleep 5
   echo ""
 done
