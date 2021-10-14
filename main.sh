@@ -186,7 +186,7 @@ echo "****COMPLETE @ $(date +"%T"): Deployed New Ingress Resource script****"
 echo "BEGIN @ $(date +"%T"): Verify Production Certificate works..."
 kubectl get certificate $TLS_SECRET_NAME
 INPUT_STRING=false
-while [ "$INPUT_STRING" != "true" ]
+while [ "$INPUT_STRING" != "True" ]
 do
   echo ""
   kubectl get certificate $TLS_SECRET_NAME
