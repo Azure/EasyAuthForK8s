@@ -4,6 +4,11 @@ name: Check deprecated APIs
 
 on:
   workflow_dispatch:
+    inputs:
+      targetEnv:
+        description: 'Target environment: dev, test, prod'     
+        required: false
+        default: 'dev' 
 
 jobs:
   mac:
