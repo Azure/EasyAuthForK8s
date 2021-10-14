@@ -161,6 +161,7 @@ echo "****COMPLETE @ $(date +"%T"): Deployed New Ingress Resource script****"
 
 echo "BEGIN @ $(date +"%T"): Verify Production Certificate works..."
 INPUT_STATUS=false
+n=50
 while [[ "$INPUT_STATUS" != "True" || "$INPUT_TYPE" != "Ready" ]]
 do
   echo ""
@@ -170,6 +171,11 @@ do
   echo "status: " $INPUT_STATUS
   echo "type: " $INPUT_TYPE
   sleep 5
+  if [ "$n" == "0" ]; then
+    echo "ERROR. INFINITE LOOP in main.sh when calling kubectl get certificate."
+    exit 1
+  fi
+  n=$((n-1))
   echo ""
 done
 echo "COMPLETE @ $(date +"%T"): Verify Production Certificate works"

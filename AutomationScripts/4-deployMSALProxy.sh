@@ -17,6 +17,7 @@ echo "COMPLETE @ $(date +"%T"): Calling Helm"
 kubectl get svc,deploy,pod
   
 INPUT_STRING=false
+n=50
 while [ "$INPUT_STRING" != "true" ]
 do
   echo ""
@@ -24,6 +25,11 @@ do
   echo ""
   INPUT_STRING=$(kubectl get svc,deploy,pod -o=jsonpath='{.items[3].status.containerStatuses[0].ready}')
   sleep 10
+  if [ "$n" == "0" ]; then
+    echo "ERROR. INFINITE LOOP in 4-deployMSALProxy.sh."
+    exit 1
+  fi
+  n=$((n-1))
 done
 
 echo "COMPLETE @ $(date +"%T"): Deploy MSAL Proxy"
