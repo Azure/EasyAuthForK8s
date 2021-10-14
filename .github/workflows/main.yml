@@ -2,6 +2,9 @@
 
 name: CI
 
+env:
+  iteration: ${{github.run_number}}
+  
 # Controls when the workflow will run
 on:
   # Triggers the workflow on push or pull request events but only for the master branch
@@ -21,8 +24,14 @@ jobs:
     name: Run main.sh script
 
     steps:
+    
+    - name: 'Login via Azure CLI'
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.KGATES_AZURE_SP }}
+          
     - uses: actions/checkout@v2
     - name: Call the script
-      run: bash ./main.sh -a msal-test-kgates2 -c easyauth-kgates2 -r easy-auth2 -e kgates@microsoft.com -d microsoft.com -l eastus
+      run: bash ./main.sh -a msal-test-kgates$iteration -c easyauth-kgates$iteration -r easy-auth$iteration -e kgates@microsoft.com -d microsoft.com -l eastus
       
     
