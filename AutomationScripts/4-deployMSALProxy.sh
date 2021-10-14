@@ -34,6 +34,7 @@ do
   kubectl get svc,deploy,pod
   echo ""
   INPUT_STRING=$(kubectl get svc,deploy,pod -o=jsonpath='{.items[3].status.containerStatuses[0].ready}')
+  sleep 5
 done
 
 echo "COMPLETE @ $(date +"%T"): Deploy MSAL Proxy"

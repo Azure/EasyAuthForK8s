@@ -191,6 +191,7 @@ do
   echo ""
   kubectl get certificate $TLS_SECRET_NAME
   INPUT_STRING=$(kubectl get certificate $TLS_SECRET_NAME -o=jsonpath='{.items[0].status.conditions[1].status}')
+  sleep 5
   echo ""
 done
 echo "COMPLETE @ $(date +"%T"): Verify Production Certificate works"
