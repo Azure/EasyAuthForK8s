@@ -37,6 +37,7 @@ while [ "$IP_NAME" = "" ]
 do
   echo "UPDATE @ $(date +"%T"): Checking for IP_NAME..."
   IP_NAME=$(az network public-ip list -g $NODE_RG -o json | jq -c ".[] | select(.ipAddress | contains(\"$INGRESS_IP\"))" | jq '.name' -r)
+  echo "IP_NAME: " $IP_NAME
   echo "UPDATE @ $(date +"%T"): Sleeping for 5 seconds..."
   sleep 5
   if [ "$n" == "0" ]; then
