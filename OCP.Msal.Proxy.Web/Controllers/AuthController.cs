@@ -6,7 +6,9 @@ using System.Security.Claims;
 using System.Threading.Tasks;
 using System.Web;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authentication.OAuth;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -30,7 +32,7 @@ namespace OCP.Msal.Proxy.Web.Controllers
         }
         private AuthController() { }
 
-        [Route("api/auth")]
+        [Route("msal/bearertoken")]
         [Authorize(Policy = "api")]
         [AllowAnonymous]
         public async Task<IActionResult> ApiAuth()
@@ -47,13 +49,22 @@ namespace OCP.Msal.Proxy.Web.Controllers
             return StatusCode(202, User.Identity.Name);
         }
         [Route("msal/login")]
-        [AllowAnonymous]
+        [Authorize(Policy = "web")]
         public IActionResult Login()
         {
-            var rd = "/";
-            if (Request.Query.ContainsKey(redirectParam) && !string.IsNullOrEmpty(Request.Query[redirectParam].ToString()))
-                rd = Request.Query[redirectParam].ToString();
-            return Redirect($"/msal/MicrosoftIdentity/Account/SignIn/{OpenIdConnectDefaults.AuthenticationScheme}?redirectUri={HttpUtility.UrlEncode(rd)}");
+            return Content("The user was logged in successfully and should have been redirected to the backend application");
+            //var rd = "/";
+            //if (Request.Query.ContainsKey(redirectParam) && !string.IsNullOrEmpty(Request.Query[redirectParam].ToString()))
+            //    rd = Request.Query[redirectParam].ToString();
+            //return Redirect(rd);
+
+            //OAuthChallengeProperties challengeProperties = new OAuthChallengeProperties();
+            //if (!string.IsNullOrWhiteSpace(_identityOptions.SignUpSignInPolicyId))
+            //    challengeProperties.Items.Add("policy", _identityOptions.SignUpSignInPolicyId);
+            //if (!string.IsNullOrWhiteSpace(_identityOptions.Domain))
+            //    challengeProperties.Parameters.Add("domain_hint", _identityOptions.Domain);
+            //challengeProperties.RedirectUri = rd;
+            //return Challenge(challengeProperties, OpenIdConnectDefaults.AuthenticationScheme);
         }
 
         [AllowAnonymous]
@@ -78,13 +89,16 @@ namespace OCP.Msal.Proxy.Web.Controllers
         [AllowAnonymous]
         [Route("msal/auth")]
         public async Task<IActionResult> Auth()
-        {   
-            if (!User.Identity.IsAuthenticated) return Unauthorized("Not Authenticated");
-            
-            Response.Headers.Add("X-OriginalIdToken", await HttpContext.GetTokenAsync(OpenIdConnectDefaults.AuthenticationScheme, "id_token"));
-            AddResponseHeadersFromClaims(User.Claims, Response.Headers);
+        {
+            if (!User.Identity.IsAuthenticated)
+                return Unauthorized("Not Authenticated");
+            else
+            {
+                Response.Headers.Add("X-OriginalIdToken", await HttpContext.GetTokenAsync(OpenIdConnectDefaults.AuthenticationScheme, "id_token"));
+                AddResponseHeadersFromClaims(User.Claims, Response.Headers);
 
-            return StatusCode(202, User.Identity.Name);
+                return StatusCode(202, User.Identity.Name);
+            }
         }
         [AllowAnonymous]
         [Route("/")]
@@ -92,6 +106,18 @@ namespace OCP.Msal.Proxy.Web.Controllers
         {
             //TODO
             return StatusCode(200, "Healthy");
+        }
+        [AllowAnonymous]
+        [Route("msal/debug")]
+        public IActionResult Debug()
+        {
+            System.Text.StringBuilder sb = new System.Text.StringBuilder();
+
+            foreach(var header in Request.Headers)
+            {
+                sb.AppendLine($"{header.Key}: {header.Value}");
+            }
+            return StatusCode(200, sb.ToString());
         }
 
         [AllowAnonymous]
@@ -106,8 +132,11 @@ namespace OCP.Msal.Proxy.Web.Controllers
         [Route("msal/logout")]
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult Logout()
-        {           
-            return Redirect("/msal/MicrosoftIdentity/Account/SignOut");
+        {
+            var rd = Request.Query[redirectParam].ToString();
+            return SignOut(new AuthenticationProperties() { RedirectUri = rd }, 
+                CookieAuthenticationDefaults.AuthenticationScheme, 
+                OpenIdConnectDefaults.AuthenticationScheme);
         }
 
         internal static void AddResponseHeadersFromClaims(IEnumerable<Claim> claims, IHeaderDictionary headers)
@@ -132,7 +161,6 @@ namespace OCP.Msal.Proxy.Web.Controllers
                 }
             }
         }
-
         internal static bool IsValidHeaderValue(string value)
         {
             return value.All(c => c >= 32 && c < 127);

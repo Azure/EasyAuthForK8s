@@ -1,6 +1,8 @@
 ﻿using System;
 using System.IO;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Builder;
@@ -11,7 +13,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Identity.Web;
-using Microsoft.Identity.Web.UI;
 using Microsoft.IdentityModel.Logging;
 
 
@@ -23,29 +24,28 @@ namespace OCP.Msal.Proxy.Web
         {
             Configuration = configuration;
         }
-
+        private string redirectParam { get { return Configuration["RedirectParam"]; } }
         public IConfiguration Configuration { get; }
         public const string AzureAdConfigSection = "AzureAd";
 
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            MicrosoftIdentityOptions options = Configuration.GetSection(AzureAdConfigSection).Get<MicrosoftIdentityOptions>();
+            var configSection = Configuration.GetSection(AzureAdConfigSection);
+            MicrosoftIdentityOptions options = new MicrosoftIdentityOptions();
+            configSection.Bind(options);
             
             services.AddSingleton<MicrosoftIdentityOptions>(options);
 
-            //for Api applications
-            services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-                .AddMicrosoftIdentityWebApi(Configuration.GetSection(AzureAdConfigSection));
-            
             //for Web applications
             services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
-                .AddMicrosoftIdentityWebApp(Configuration.GetSection(AzureAdConfigSection));
+                //.AddMicrosoftIdentityWebApp(Configuration.GetSection(AzureAdConfigSection));
+                .AddMicrosoftIdentityWebApp(o => configSection.Bind(o), c => c.Cookie.Name = "AzAD.EasyAuthForK8s");
 
-            //configure bearer options
-            services.Configure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, (configureOptions) =>
+            //configure cookie options
+            services.Configure<CookieAuthenticationOptions>(OpenIdConnectDefaults.AuthenticationScheme, (configureOptions) =>
             {
-                configureOptions.SaveToken = true;
+                configureOptions.Cookie.Name = "AzAD.EasyAuthForK8s";
             });
 
             //configure OIDC options
@@ -53,6 +53,27 @@ namespace OCP.Msal.Proxy.Web
             {
                 configureOptions.ResponseType = "code";
                 configureOptions.SaveTokens = true;
+                configureOptions.Events.OnRedirectToIdentityProvider += async context =>
+                {
+                    RedirectContext f;
+                    if (context.HttpContext.Request.Query.ContainsKey(redirectParam))
+                        context.Properties.Items[".redirect"] = context.HttpContext.Request.Query[redirectParam].ToString();
+                    context.ProtocolMessage.DomainHint = options.Domain;
+                    await Task.FromResult(0);
+                    //Microsoft.AspNetCore.Authentication.OpenIdConnect.
+                };
+                
+ 
+            });
+
+            //for Api applications
+            services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+                .AddMicrosoftIdentityWebApi(Configuration.GetSection(AzureAdConfigSection));
+
+            //configure bearer options
+            services.Configure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, (configureOptions) =>
+            {
+                configureOptions.SaveToken = true;
             });
 
             //add authz policies to distinguish between application types
@@ -83,10 +104,6 @@ namespace OCP.Msal.Proxy.Web
                 options.KnownNetworks.Clear();
                 options.KnownProxies.Clear();
             });
-
-            services.AddRazorPages()
-                .AddMicrosoftIdentityUI();
-
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -99,7 +116,7 @@ namespace OCP.Msal.Proxy.Web
             }
             else
             {
-                app.UseExceptionHandler("/Msal/Error");
+                app.UseStatusCodePages();
                 // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
                 app.UseHsts();
             }
@@ -119,20 +136,20 @@ namespace OCP.Msal.Proxy.Web
                     await next.Invoke();
                 });
             }
-            //rewriting the url so that we don't have to add an ingress route for the MicrosoftIdentity area
-            app.Use(async (context, next) =>
-            {
-                var url = context.Request.Path.Value;
 
-                // Rewrite to index
-                if (url.StartsWith("/msal/MicrosoftIdentity"))
-                {
-                    // rewrite and continue processing
-                    context.Request.Path = url.Substring(5);
-                }
+            //rewriting the url to the preferred vanity path
+            //app.Use(async (context, next) =>
+            //{
+            //    var url = context.Request.Path.Value;
 
-                await next();
-            });
+            //    if (url.StartsWith("/msal"))
+            //    {
+            //        // rewrite and continue processing
+            //        context.Request.Path = $"{Configuration["EasyAuthUrlPath"]}{url[5..]}";
+            //    }
+
+            //    await next();
+            //});
 
             app.UseRouting();
 
@@ -141,10 +158,8 @@ namespace OCP.Msal.Proxy.Web
 
             app.UseEndpoints(endpoints =>
             {
-                endpoints.MapRazorPages();
                 endpoints.MapControllers();
-
-                });
+            });
 
         }
 

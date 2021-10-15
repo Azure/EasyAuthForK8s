@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/sdk:5.0 AS build-env
+FROM mcr.microsoft.com/dotnet/sdk:6.0 AS build-env
 WORKDIR /app
 
 COPY ./OCP.Msal.Proxy.sln ./OCP.Msal.Proxy.sln
@@ -22,7 +22,7 @@ RUN ls -la /testresults/coverage/reports
 RUN dotnet publish ./OCP.Msal.Proxy.Web/OCP.Msal.Proxy.Web.csproj -c Release -r linux-musl-x64 --self-contained true /p:PublishTrimmed=true -o out 
 
 # Build runtime image
-FROM mcr.microsoft.com/dotnet/aspnet:5.0-alpine
+FROM mcr.microsoft.com/dotnet/aspnet:6.0-alpine
 WORKDIR /app
 COPY --from=build-env /app/out .
 
