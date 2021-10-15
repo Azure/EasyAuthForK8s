@@ -30,3 +30,4 @@ jobs:
     - name: Call the script
       run: bash test.sh -a auth-proxy-dakondra$iteration -c auth-proxy-dakondra$iteration -r auth-proxy-dakondra$iteration -e dakondra@microsoft.com -d microsoft.com -l eastus
       
+      
