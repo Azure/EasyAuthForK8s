@@ -43,7 +43,7 @@ LOCATION=''
 INPUTIMAGE=''
 SKIP_CLUSTER_CREATION=''
 
-while getopts "a:c:r:e:d:l:i:n:s:p:h" OPTION
+while getopts "a:c:r:e:d:l:i:n:s:ph" OPTION
 do
 	case $OPTION in
 		a)
@@ -69,7 +69,7 @@ do
             INPUTIMAGE=$OPTARG ;;
         p) 
             # echo "The value of -p is ${OPTARG} - SKIP_CLUSTER_CREATION"
-            SKIP_CLUSTER_CREATION=$OPTARG ;;
+            SKIP_CLUSTER_CREATION="True" ;;
 		h)
             # Change to how others show it like az
             echo "HELP: Here are the flags and their variables"
@@ -106,7 +106,6 @@ echo "The value of -l is $LOCATION - LOCATION"
 echo "The value of -i is $INPUTIMAGE - INPUTIMAGE"
 echo "The value of -p is $SKIP_CLUSTER_CREATION - SKIP_CLUSTER_CREATION"
 echo "COMPLETE @ $(date +"%T"): Setting variables"
-
 
 echo "****BEGIN @ $(date +"%T"): Call AKS Cluster Creation script...****"
 # If there is no flag set for SKIP_CLUSTER_CREATION, then create the AKS cluster.
