@@ -5,7 +5,6 @@ A=''
 C=''
 R=''
 E=''
-D=''
 L=''
 I=''
 P=''
@@ -25,9 +24,6 @@ do
         e)
 			# echo "The value of -e is ${OPTARG} - EMAIL"
             E=$OPTARG ;;
-        d)
-			# echo "The value of -d is ${OPTARG} - EMAIL_DOMAIN"
-            D=$OPTARG ;;
         l)
 			# echo "The value of -l is ${OPTARG} - LOCATION"
             L=$OPTARG ;;
@@ -44,7 +40,6 @@ do
             echo "REQUIRED: -c is for CLUSTER_NAME *Note: Cluster Name must be unique*" 
             echo "REQUIRED: -r is for CLUSTER_RG"
             echo "REQUIRED: -e is for EMAIL"
-            echo "REQUIRED: -d is for EMAIL_DOMAIN"
             echo "REQUIRED: -l is for LOCATION"
             echo "OPTOINAL: -i is for INPUTIMAGE"
             echo "OPTOINAL: -p is for SKIP_CLUSTER_CREATION"
@@ -54,7 +49,7 @@ done
 
 echo ""
 echo "BEGIN @ $(date +"%T"): START OF END-TO-END TEST"
-bash ./main.sh -a $A -c $C -r $R -e $E -d $D -l $L
+bash ./main.sh -a $A -c $C -r $R -e $E -l $L
 
 APP_NAME="$A.$L.cloudapp.azure.com"
 WEBPAGE=https://$APP_NAME

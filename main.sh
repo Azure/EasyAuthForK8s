@@ -38,7 +38,6 @@ AD_APP_NAME=''
 CLUSTER_NAME=''
 CLUSTER_RG=''
 EMAIL=''
-EMAIL_DOMAIN=''
 LOCATION=''
 INPUTIMAGE=''
 SKIP_CLUSTER_CREATION=''
@@ -58,9 +57,6 @@ do
         e)
 			# echo "The value of -e is ${OPTARG} - EMAIL"
             EMAIL=$OPTARG ;;
-        d)
-			# echo "The value of -d is ${OPTARG} - EMAIL_DOMAIN"
-            EMAIL_DOMAIN=$OPTARG ;;
         l)
 			# echo "The value of -l is ${OPTARG} - LOCATION"
             LOCATION=$OPTARG ;;
@@ -77,7 +73,6 @@ do
             echo "REQUIRED: -c is for CLUSTER_NAME *Note: Cluster Name must be unique*" 
             echo "REQUIRED: -r is for CLUSTER_RG"
             echo "REQUIRED: -e is for EMAIL"
-            echo "REQUIRED: -d is for EMAIL_DOMAIN"
             echo "REQUIRED: -l is for LOCATION"
             echo "OPTOINAL: -i is for INPUTIMAGE"
             echo "OPTOINAL: -p is for SKIP_CLUSTER_CREATION"
@@ -87,7 +82,7 @@ done
 
 
 # Force required flags.
-if [ -z "$AD_APP_NAME" ] || [ -z "$CLUSTER_NAME" ] || [ -z "$CLUSTER_RG" ] || [ -z "$EMAIL" ] || [ -z "$EMAIL_DOMAIN" ] || [ -z "$LOCATION" ]; then
+if [ -z "$AD_APP_NAME" ] || [ -z "$CLUSTER_NAME" ] || [ -z "$CLUSTER_RG" ] || [ -z "$EMAIL" ] || [ -z "$LOCATION" ]; then
     echo "*****ERROR. Please enter all required flags.*****"
     exit
 fi 
@@ -101,7 +96,6 @@ echo "The value of -a is $AD_APP_NAME - AD_APP_NAME"
 echo "The value of -c is $CLUSTER_NAME - CLUSTER_NAME"
 echo "The value of -r is $CLUSTER_RG - CLUSTER_RG"
 echo "The value of -e is $EMAIL - EMAIL"
-echo "The value of -d is $EMAIL_DOMAIN - EMAIL_DOMAIN"
 echo "The value of -l is $LOCATION - LOCATION"
 echo "The value of -i is $INPUTIMAGE - INPUTIMAGE"
 echo "The value of -p is $SKIP_CLUSTER_CREATION - SKIP_CLUSTER_CREATION"
