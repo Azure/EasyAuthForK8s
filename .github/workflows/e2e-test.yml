@@ -29,6 +29,6 @@ jobs:
           
     - uses: actions/checkout@v2
     - name: Call the script
-      run: bash test.sh -a auth-proxy-dakondra$iteration -c auth-proxy-dakondra$iteration -r auth-proxy-dakondra$iteration -e dakondra@microsoft.com -l eastus -t ${{ secrets.ALT_TENANT }} 
+      run: bash test.sh -a auth-proxy-dakondra$iteration -c auth-proxy-dakondra$iteration -r auth-proxy-dakondra$iteration -e dakondra@microsoft.com -l eastus -t bb53b7c1-2c98-4065-96a1-fb4593088505 
       
       
