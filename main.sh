@@ -29,6 +29,7 @@ echo ""
 # Show the subscription we will be deploying to.
 echo "******We will be deploying to this subscription******"
 az account show
+az account list
 
 echo ""
 echo "BEGIN @ $(date +"%T"): Set variables..."
