@@ -2,7 +2,14 @@
 
 echo "BEGIN @ $(date +"%T"): Register AAD Application..."
 
-CLIENT_ID=$(az ad app create --display-name $AD_APP_NAME --homepage $HOMEPAGE --reply-urls $REPLY_URLS --required-resource-accesses @./TemplateFiles/manifest.json --debug -o json | jq -r '.appId')
+if [ -n "$ALT_TENANT_ID" ]; then
+    echo "SETTING ALT_TENANT_ID: " $ALT_TENANT_ID
+    SUBSCRIPTION_ID=$(az account show | jq -r '.id')
+    echo "ORIGINAL SUBSCRIPTION_ID: " $SUBSCRIPTION_ID
+    az account set -s $ALT_TENANT_ID
+fi
+
+CLIENT_ID=$(az ad app create --display-name $AD_APP_NAME --homepage $HOMEPAGE --reply-urls $REPLY_URLS --required-resource-accesses @./TemplateFiles/manifest.json -o json | jq -r '.appId')
 echo "CLIENT_ID: " $CLIENT_ID
 
 # AAD core store is eventually consistent.  Usually we can retrieve the object on the first try after creation,
@@ -42,5 +49,10 @@ done
 
 AZURE_TENANT_ID=$(az account show -o json | jq '.tenantId' -r)
 echo "AZURE_TENANT_ID: " $AZURE_TENANT_ID
+
+if [ -n "$ALT_TENANT_ID" ]; then
+    echo "SETTING TENANT BACK TO ORIGINAL: " $SUBSCRIPTION_ID
+    az account set -s $SUBSCRIPTION_ID
+fi
 
 echo "COMPLETE @ $(date +"%T"): Register AAD Application"
