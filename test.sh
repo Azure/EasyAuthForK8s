@@ -5,12 +5,12 @@ A=''
 C=''
 R=''
 E=''
-D=''
 L=''
 I=''
+T=''
 P=''
 
-while getopts "a:c:r:e:d:l:i:n:s:p:h" OPTION
+while getopts "a:c:r:e:l:i:t:ph" OPTION
 do
 	case $OPTION in
 		a)
@@ -25,15 +25,15 @@ do
         e)
 			# echo "The value of -e is ${OPTARG} - EMAIL"
             E=$OPTARG ;;
-        d)
-			# echo "The value of -d is ${OPTARG} - EMAIL_DOMAIN"
-            D=$OPTARG ;;
         l)
 			# echo "The value of -l is ${OPTARG} - LOCATION"
             L=$OPTARG ;;
         i)
 			# echo "The value of -i is ${OPTARG} - INPUTIMAGE"
             I=$OPTARG ;;
+        t)
+			# echo "The value of -i is ${OPTARG} - INPUTIMAGE"
+            T=$OPTARG ;;
         p) 
             # echo "The value of -p is ${OPTARG} - SKIP_CLUSTER_CREATION"
             P=$OPTARG ;;
@@ -44,9 +44,9 @@ do
             echo "REQUIRED: -c is for CLUSTER_NAME *Note: Cluster Name must be unique*" 
             echo "REQUIRED: -r is for CLUSTER_RG"
             echo "REQUIRED: -e is for EMAIL"
-            echo "REQUIRED: -d is for EMAIL_DOMAIN"
             echo "REQUIRED: -l is for LOCATION"
             echo "OPTOINAL: -i is for INPUTIMAGE"
+            echo "OPTOINAL: -t is for ALT_TENANT_ID"
             echo "OPTOINAL: -p is for SKIP_CLUSTER_CREATION"
 			exit ;;
 	esac
@@ -54,7 +54,7 @@ done
 
 echo ""
 echo "BEGIN @ $(date +"%T"): START OF END-TO-END TEST"
-bash ./main.sh -a $A -c $C -r $R -e $E -d $D -l $L
+bash ./main.sh -a $A -c $C -r $R -e $E -l $L -t $T
 
 APP_NAME="$A.$L.cloudapp.azure.com"
 WEBPAGE=https://$APP_NAME

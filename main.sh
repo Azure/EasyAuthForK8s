@@ -29,6 +29,7 @@ echo ""
 # Show the subscription we will be deploying to.
 echo "******We will be deploying to this subscription******"
 az account show
+az account list
 
 echo ""
 echo "BEGIN @ $(date +"%T"): Set variables..."
@@ -38,12 +39,12 @@ AD_APP_NAME=''
 CLUSTER_NAME=''
 CLUSTER_RG=''
 EMAIL=''
-EMAIL_DOMAIN=''
 LOCATION=''
 INPUTIMAGE=''
+ALT_TENANT_ID=''
 SKIP_CLUSTER_CREATION=''
 
-while getopts "a:c:r:e:d:l:i:n:s:ph" OPTION
+while getopts "a:c:r:e:l:i:t:ph" OPTION
 do
 	case $OPTION in
 		a)
@@ -58,15 +59,15 @@ do
         e)
 			# echo "The value of -e is ${OPTARG} - EMAIL"
             EMAIL=$OPTARG ;;
-        d)
-			# echo "The value of -d is ${OPTARG} - EMAIL_DOMAIN"
-            EMAIL_DOMAIN=$OPTARG ;;
         l)
 			# echo "The value of -l is ${OPTARG} - LOCATION"
             LOCATION=$OPTARG ;;
         i)
 			# echo "The value of -i is ${OPTARG} - INPUTIMAGE"
             INPUTIMAGE=$OPTARG ;;
+        t)
+			# echo "The value of -i is ${OPTARG} - INPUTIMAGE"
+            ALT_TENANT_ID=$OPTARG ;;
         p) 
             # echo "The value of -p is ${OPTARG} - SKIP_CLUSTER_CREATION"
             SKIP_CLUSTER_CREATION="True" ;;
@@ -77,9 +78,9 @@ do
             echo "REQUIRED: -c is for CLUSTER_NAME *Note: Cluster Name must be unique*" 
             echo "REQUIRED: -r is for CLUSTER_RG"
             echo "REQUIRED: -e is for EMAIL"
-            echo "REQUIRED: -d is for EMAIL_DOMAIN"
             echo "REQUIRED: -l is for LOCATION"
             echo "OPTOINAL: -i is for INPUTIMAGE"
+            echo "OPTOINAL: -t is for ALT_TENANT_ID"
             echo "OPTOINAL: -p is for SKIP_CLUSTER_CREATION"
 			exit ;;
 	esac
@@ -87,7 +88,7 @@ done
 
 
 # Force required flags.
-if [ -z "$AD_APP_NAME" ] || [ -z "$CLUSTER_NAME" ] || [ -z "$CLUSTER_RG" ] || [ -z "$EMAIL" ] || [ -z "$EMAIL_DOMAIN" ] || [ -z "$LOCATION" ]; then
+if [ -z "$AD_APP_NAME" ] || [ -z "$CLUSTER_NAME" ] || [ -z "$CLUSTER_RG" ] || [ -z "$EMAIL" ] || [ -z "$LOCATION" ]; then
     echo "*****ERROR. Please enter all required flags.*****"
     exit
 fi 
@@ -101,9 +102,9 @@ echo "The value of -a is $AD_APP_NAME - AD_APP_NAME"
 echo "The value of -c is $CLUSTER_NAME - CLUSTER_NAME"
 echo "The value of -r is $CLUSTER_RG - CLUSTER_RG"
 echo "The value of -e is $EMAIL - EMAIL"
-echo "The value of -d is $EMAIL_DOMAIN - EMAIL_DOMAIN"
 echo "The value of -l is $LOCATION - LOCATION"
 echo "The value of -i is $INPUTIMAGE - INPUTIMAGE"
+echo "The value of -t is $ALT_TENANT_ID - ALT_TENANT_ID"
 echo "The value of -p is $SKIP_CLUSTER_CREATION - SKIP_CLUSTER_CREATION"
 echo "COMPLETE @ $(date +"%T"): Setting variables"
 
@@ -143,7 +144,6 @@ echo "****BEGIN @ $(date +"%T"): Call Install Cert Manager script****"
 echo "****COMPLETE @ $(date +"%T"): Installed Cert Manager script****"
 
 echo "BEGIN @ $(date +"%T"): Deploy sample app..."
-# INPUTIMAGE=$7 
 # If we have a parameter for an image install a custom image. If not, then we install kuard.
 if [ -z "$INPUTIMAGE" ]; then
     echo "No image input, installing kuard."
