@@ -23,8 +23,8 @@ namespace EasyAuthForK8s.Web
             //configure the path where the user should be redirected after successful sign in
             //this should be provided by the ingress controller as the path they were originally
             //attempting to access before the auth challenge
-            if (context.HttpContext.Request.Query.ContainsKey(configOptions.RedirectParam))
-                context.Properties.Items[".redirect"] = context.HttpContext.Request.Query[configOptions.RedirectParam].ToString();
+            if (context.HttpContext.Request.Query.ContainsKey(Constants.RedirectParameterName))
+                context.Properties.Items[".redirect"] = context.HttpContext.Request.Query[Constants.RedirectParameterName].ToString();
             else
                 context.Properties.Items[".redirect"] = configOptions.DefaultRedirectAfterSignin;
 

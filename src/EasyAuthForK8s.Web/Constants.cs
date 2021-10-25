@@ -7,5 +7,6 @@
         public const string CookieName = "AzAD.EasyAuthForK8s";
         public const string RoleParameterName = "role";
         public const string ScopeParameterName = "scope";
+        public const string RedirectParameterName = "rd";
     }
 }

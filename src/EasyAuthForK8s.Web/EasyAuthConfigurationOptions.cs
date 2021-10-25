@@ -2,9 +2,8 @@
 {
     public class EasyAuthConfigurationOptions
     {
-        public string RedirectParam { get; set; } = "rd";
         public string DataProtectionFileLocation { get; set; } = "C:\\mnt\\dp";
-        public string SigninPath { get; set; } = "/easyauth/login";
+        public string SigninPath { get; set; } = "/easyauth/signin";
         public string AuthPath { get; set; } = "/easyauth/auth";
         public bool AllowBearerToken { get; set; } = false;
         /// <summary>

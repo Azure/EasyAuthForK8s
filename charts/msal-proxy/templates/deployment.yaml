@@ -50,10 +50,20 @@ spec:
               path: /
               port: http
           env:
-             -  name: DataProtectionFileLocation
-                value: {{ .Values.env.DataProtectionFileLocation }}
+             -  name: Logging__LogLevel__Default
+                value: {{ .Values.env.LogLevel }}
              -  name: ForceHttps
                 value: "{{ .Values.env.ForceHttps }}"
+             -  name: EasyAuthForK8s__DataProtectionFileLocation
+                value: {{ .Values.env.EasyAuthForK8sSigninPath }}                
+             -  name: EasyAuthForK8s__SigninPath
+                value: "{{ .Values.env.EasyAuthForK8sSigninPath }}"
+             -  name: EasyAuthForK8s__AuthPath
+                value: {{ .Values.env.EasyAuthForK8sAuthPath }}
+             -  name: EasyAuthForK8s__AllowBearerToken
+                value: "{{ .Values.env.EasyAuthForK8sAllowBearerToken }}"
+             -  name: EasyAuthForK8s__DefaultRedirectAfterSignin
+                value: "{{ .Values.env.EasyAuthForK8sDefaultRedirectAfterSignin }}"                
              -  name: AzureAd__Instance
                 value: {{ .Values.env.AzureAdInstance }}
              -  name: AzureAd__Domain
@@ -61,15 +71,7 @@ spec:
              -  name: AzureAd__CallbackPath
                 value: {{ .Values.env.AzureAdCallbackPath }}
              -  name: AzureAd__SignedOutCallbackPath
-                value: {{ .Values.env.AzureAdSignedOutCallbackPath }}
-             -  name: Logging__LogLevel__Default
-                value: {{ .Values.env.LogLevel }}
-             -  name: AllowedHosts
-                value: "{{ .Values.env.AllowedHosts }}"
-             -  name: RedirectParam
-                value: {{ .Values.env.RedirectParam }}
-             -  name: ShowLogin
-                value: "{{ .Values.env.ShowLogin }}"
+                value: {{ .Values.env.AzureAdSignedOutCallbackPath }}                
              -  name: AzureAd__TenantId
                 valueFrom:
                   secretKeyRef:
