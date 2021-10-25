@@ -1,11 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.29411.108
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31808.319
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OCP.Msal.Proxy.Web", "OCP.Msal.Proxy.Web\OCP.Msal.Proxy.Web.csproj", "{5D2D2FE4-E8EC-4AC0-AA71-9BF1EC88B13A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EasyAuthForK8s.Web", "EasyAuthForK8s.Web\EasyAuthForK8s.Web.csproj", "{5D2D2FE4-E8EC-4AC0-AA71-9BF1EC88B13A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OCP.Msal.Proxy.Tests", "OCP.Msal.Proxy.Tests\OCP.Msal.Proxy.Tests.csproj", "{9A8633A3-B9C4-48C1-B326-530FC1B56C8F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EasyAuthForK8s.Tests.Web", "Tests\EasyAuthForK8s.Tests.Web\EasyAuthForK8s.Tests.Web.csproj", "{9A8633A3-B9C4-48C1-B326-530FC1B56C8F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

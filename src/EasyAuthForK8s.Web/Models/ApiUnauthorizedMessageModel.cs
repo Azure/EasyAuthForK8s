@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-
-namespace OCP.Msal.Proxy.Web.Models
+﻿namespace EasyAuthForK8s.Web.Models
 {
     public class ApiUnauthorizedMessageModel
     {

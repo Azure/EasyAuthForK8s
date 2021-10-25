@@ -1,38 +1,33 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
-using System.Web;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Authentication.OAuth;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Identity.Web;
 
-namespace OCP.Msal.Proxy.Web.Controllers
+namespace EasyAuthForK8s.Web.Controllers
 {
     [ApiController]
     public class AuthController : ControllerBase
     {
         private readonly MicrosoftIdentityOptions _identityOptions;
-        private readonly IConfiguration _configuration;
-        private string redirectParam { get { return this._configuration["RedirectParam"]; }}
+        private readonly EasyAuthConfigurationOptions _easyAuthConfig;
 
-        public AuthController(MicrosoftIdentityOptions options, IConfiguration configuration)
+        public AuthController(MicrosoftIdentityOptions identityOptions, EasyAuthConfigurationOptions easyAuthConfig)
         {
-            _configuration = configuration;
-            _identityOptions = options;
+            _easyAuthConfig = easyAuthConfig;
+            _identityOptions = identityOptions;
         }
         private AuthController() { }
 
-        [Route("msal/bearertoken")]
+        [Route("easyauth/bearertoken")]
         [Authorize(Policy = "api")]
         [AllowAnonymous]
         public async Task<IActionResult> ApiAuth()
@@ -48,50 +43,28 @@ namespace OCP.Msal.Proxy.Web.Controllers
 
             return StatusCode(202, User.Identity.Name);
         }
-        [Route("msal/login")]
+        [Route("easyauth/login")]
         [Authorize(Policy = "web")]
         public IActionResult Login()
         {
             return Content("The user was logged in successfully and should have been redirected to the backend application");
-            //var rd = "/";
-            //if (Request.Query.ContainsKey(redirectParam) && !string.IsNullOrEmpty(Request.Query[redirectParam].ToString()))
-            //    rd = Request.Query[redirectParam].ToString();
-            //return Redirect(rd);
-
-            //OAuthChallengeProperties challengeProperties = new OAuthChallengeProperties();
-            //if (!string.IsNullOrWhiteSpace(_identityOptions.SignUpSignInPolicyId))
-            //    challengeProperties.Items.Add("policy", _identityOptions.SignUpSignInPolicyId);
-            //if (!string.IsNullOrWhiteSpace(_identityOptions.Domain))
-            //    challengeProperties.Parameters.Add("domain_hint", _identityOptions.Domain);
-            //challengeProperties.RedirectUri = rd;
-            //return Challenge(challengeProperties, OpenIdConnectDefaults.AuthenticationScheme);
         }
 
         [AllowAnonymous]
-        [Route("msal/index")]
+        [Route("easyauth/index")]
         public IActionResult Index()
         {
-            if (Convert.ToBoolean(_configuration["ShowLogin"]))
-            {
-                var rd = Request.Query[redirectParam].ToString();
-                var content = $"<html><body><a href='/msal/login?{redirectParam}={rd}'>Login</a></body></html>";
-                return new ContentResult
-                {
-                    Content = content,
-                    ContentType = "text/html"
-                };
-            }
             if (!User.Identity.IsAuthenticated) return RedirectToAction("Login");
             return Content("this page should be handled by your backend application");
         }
         
-        [Authorize(Policy = "web")]
+        //[Authorize(Policy = "web")]
         [AllowAnonymous]
-        [Route("msal/auth")]
+        [Route("easyauth/auth")]
         public async Task<IActionResult> Auth()
         {
             if (!User.Identity.IsAuthenticated)
-                return Unauthorized("Not Authenticated");
+                return StatusCode(401, "Not Authenticated"); 
             else
             {
                 Response.Headers.Add("X-OriginalIdToken", await HttpContext.GetTokenAsync(OpenIdConnectDefaults.AuthenticationScheme, "id_token"));
@@ -100,28 +73,9 @@ namespace OCP.Msal.Proxy.Web.Controllers
                 return StatusCode(202, User.Identity.Name);
             }
         }
-        [AllowAnonymous]
-        [Route("/")]
-        public IActionResult HealthProbe()
-        {
-            //TODO
-            return StatusCode(200, "Healthy");
-        }
-        [AllowAnonymous]
-        [Route("msal/debug")]
-        public IActionResult Debug()
-        {
-            System.Text.StringBuilder sb = new System.Text.StringBuilder();
-
-            foreach(var header in Request.Headers)
-            {
-                sb.AppendLine($"{header.Key}: {header.Value}");
-            }
-            return StatusCode(200, sb.ToString());
-        }
 
         [AllowAnonymous]
-        [Route("msal/error")]
+        [Route("easyauth/error")]
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult Error()
         {
@@ -129,11 +83,11 @@ namespace OCP.Msal.Proxy.Web.Controllers
         }
 
         [AllowAnonymous]
-        [Route("msal/logout")]
+        [Route("easyauth/logout")]
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult Logout()
         {
-            var rd = Request.Query[redirectParam].ToString();
+            var rd = Request.Query[_easyAuthConfig.RedirectParam].ToString();
             return SignOut(new AuthenticationProperties() { RedirectUri = rd }, 
                 CookieAuthenticationDefaults.AuthenticationScheme, 
                 OpenIdConnectDefaults.AuthenticationScheme);

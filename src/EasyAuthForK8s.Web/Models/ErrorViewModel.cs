@@ -1,4 +1,4 @@
-namespace OCP.Msal.Proxy.Web.Models
+namespace EasyAuthForK8s.Web.Models
 {
     public class ErrorViewModel
     {

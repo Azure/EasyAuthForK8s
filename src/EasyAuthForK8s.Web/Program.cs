@@ -3,7 +3,7 @@ using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 
-namespace OCP.Msal.Proxy.Web
+namespace EasyAuthForK8s.Web
 {
     public class Program
     {

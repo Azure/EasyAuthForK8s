@@ -4,12 +4,13 @@ using System.Linq;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
-using OCP.Msal.Proxy.Web.Controllers;
+using EasyAuthForK8s.Web.Controllers;
 using Xunit;
 using Moq;
 using Microsoft.Identity.Web;
+using EasyAuthForK8s.Web;
 
-namespace OCP.Msal.Proxy.Tests
+namespace EasyAuthForK8s.Web.Tests
 {
     public class AuthControllerTests
     {
@@ -31,15 +32,7 @@ namespace OCP.Msal.Proxy.Tests
 
         private AuthController CreateAuthController()
         {
-            var configuration = CreateMockIConfiguration();
-
-            return new AuthController(new MicrosoftIdentityOptions(), configuration);
+            return new AuthController(new MicrosoftIdentityOptions(), new EasyAuthConfigurationOptions());
         }
-
-        private static IConfiguration CreateMockIConfiguration()
-        {
-            return new Mock<IConfiguration>().Object;
-        }
-
     }
 }
