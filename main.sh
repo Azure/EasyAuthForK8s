@@ -43,34 +43,35 @@ LOCATION=''
 INPUTIMAGE=''
 ALT_TENANT_ID=''
 SKIP_CLUSTER_CREATION=''
+E2E_TEST_FLAG=''
+SP=''
+SP_SECRET=''
 
-while getopts "a:c:r:e:l:i:t:ph" OPTION
+while getopts "a:c:r:e:l:i:t:s:z:pgh" OPTION
 do
 	case $OPTION in
 		a)
-			# echo "The value of -a is ${OPTARG} - AD_APP_NAME"
             AD_APP_NAME=$OPTARG ;;
 	    c)
-			# echo "The value of -c is ${OPTARG} - CLUSTER_NAME"
             CLUSTER_NAME=$OPTARG ;;
         r)
-			# echo "The value of -r is ${OPTARG} - CLUSTER_RG"
             CLUSTER_RG=$OPTARG ;;
         e)
-			# echo "The value of -e is ${OPTARG} - EMAIL"
             EMAIL=$OPTARG ;;
         l)
-			# echo "The value of -l is ${OPTARG} - LOCATION"
             LOCATION=$OPTARG ;;
         i)
-			# echo "The value of -i is ${OPTARG} - INPUTIMAGE"
             INPUTIMAGE=$OPTARG ;;
         t)
-			# echo "The value of -i is ${OPTARG} - INPUTIMAGE"
             ALT_TENANT_ID=$OPTARG ;;
+        s)
+            SP=$OPTARG ;;
+        z)
+            SP_SECRET=$OPTARG ;;
         p) 
-            # echo "The value of -p is ${OPTARG} - SKIP_CLUSTER_CREATION"
             SKIP_CLUSTER_CREATION="True" ;;
+        g) 
+            E2E_TEST_FLAG="True" ;;  
 		h)
             # Change to how others show it like az
             echo "HELP: Here are the flags and their variables"
@@ -105,7 +106,10 @@ echo "The value of -e is $EMAIL - EMAIL"
 echo "The value of -l is $LOCATION - LOCATION"
 echo "The value of -i is $INPUTIMAGE - INPUTIMAGE"
 echo "The value of -t is $ALT_TENANT_ID - ALT_TENANT_ID"
+echo "The value of -s is $SP - SP"
+echo "The value of -z is $SP_SECRET - SP_SECRET"
 echo "The value of -p is $SKIP_CLUSTER_CREATION - SKIP_CLUSTER_CREATION"
+echo "The value of -g is $E2E_TEST_FLAG - E2E_TEST_FLAG"
 echo "COMPLETE @ $(date +"%T"): Setting variables"
 
 echo "****BEGIN @ $(date +"%T"): Call AKS Cluster Creation script...****"
