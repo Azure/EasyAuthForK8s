@@ -6,10 +6,10 @@ if [ -n "$ALT_TENANT_ID" ]; then
     echo "SETTING ALT_TENANT_ID: " $ALT_TENANT_ID
     SUBSCRIPTION_ID=$(az account show | jq -r '.id')
     ORIGINAL_TENANT=$(az account show | jq -r '.homeTenantId')
-    echo "ORIGINAL SUBSCRIPTION_ID: " $SUBSCRIPTION_ID
-    echo "ORIGINAL TENANT_ID: " $ORIGINAL_TENANT
 
   if [ -z "$E2E_TEST_FLAG" ]; then
+    echo "ORIGINAL SUBSCRIPTION_ID: " $SUBSCRIPTION_ID
+    echo "ORIGINAL TENANT_ID: " $ORIGINAL_TENANT
     echo "USING AZ ACCOUNT SET"
     az account set -s $ALT_TENANT_ID
   else
@@ -61,10 +61,10 @@ echo "AZURE_TENANT_ID: " $AZURE_TENANT_ID
 
 if [ -n "$ALT_TENANT_ID" ]; then
     echo "SETTING TENANT BACK TO ORIGINAL."
-    echo "ORIGINAL SUBSCRIPTION_ID: " $SUBSCRIPTION_ID
-    echo "ORIGINAL TENANT_ID: " $ORIGINAL_TENANT
   
   if [ -z "$E2E_TEST_FLAG" ]; then
+    echo "ORIGINAL SUBSCRIPTION_ID: " $SUBSCRIPTION_ID
+    echo "ORIGINAL TENANT_ID: " $ORIGINAL_TENANT
     echo "USING AZ ACCOUNT SET"
     az account set -s $SUBSCRIPTION_ID
   else

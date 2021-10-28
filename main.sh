@@ -26,12 +26,6 @@ if ! [ -x "$(command -v az)" ]; then
 fi
 
 echo ""
-# Show the subscription we will be deploying to.
-echo "******We will be deploying to this subscription******"
-az account show
-az account list
-
-echo ""
 echo "BEGIN @ $(date +"%T"): Set variables..."
 
 # Initialize Variables for flags
@@ -87,12 +81,18 @@ do
 	esac
 done
 
-
 # Force required flags.
 if [ -z "$AD_APP_NAME" ] || [ -z "$CLUSTER_NAME" ] || [ -z "$CLUSTER_RG" ] || [ -z "$EMAIL" ] || [ -z "$LOCATION" ]; then
     echo "*****ERROR. Please enter all required flags.*****"
     exit
 fi 
+
+echo ""
+# Show the subscription we will be deploying to.
+if [ -z "$E2E_TEST_FLAG" ]; then
+    echo "******We will be deploying to this subscription******"
+    az account show
+fi
 
 APP_HOSTNAME="$AD_APP_NAME.$LOCATION.cloudapp.azure.com"
 HOMEPAGE=https://$APP_HOSTNAME
