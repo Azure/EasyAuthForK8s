@@ -76,6 +76,8 @@ do
             echo "REQUIRED: -l is for LOCATION"
             echo "OPTOINAL: -i is for INPUTIMAGE"
             echo "OPTOINAL: -t is for ALT_TENANT_ID"
+            echo "OPTOINAL: -s is for SERVICE_PRICIPAL"
+            echo "OPTOINAL: -z is for SP_SECRET"
             echo "OPTOINAL: -p is for SKIP_CLUSTER_CREATION"
 			exit ;;
 	esac
@@ -106,7 +108,7 @@ echo "The value of -e is $EMAIL - EMAIL"
 echo "The value of -l is $LOCATION - LOCATION"
 echo "The value of -i is $INPUTIMAGE - INPUTIMAGE"
 echo "The value of -t is $ALT_TENANT_ID - ALT_TENANT_ID"
-echo "The value of -s is $SP - SP"
+echo "The value of -s is $SP - SERVICE_PRICIPAL"
 echo "The value of -z is $SP_SECRET - SP_SECRET"
 echo "The value of -p is $SKIP_CLUSTER_CREATION - SKIP_CLUSTER_CREATION"
 echo "The value of -g is $E2E_TEST_FLAG - E2E_TEST_FLAG"
