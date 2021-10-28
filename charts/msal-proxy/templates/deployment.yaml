@@ -71,7 +71,9 @@ spec:
              -  name: AzureAd__CallbackPath
                 value: {{ .Values.env.AzureAdCallbackPath }}
              -  name: AzureAd__SignedOutCallbackPath
-                value: {{ .Values.env.AzureAdSignedOutCallbackPath }}                
+                value: {{ .Values.env.AzureAdSignedOutCallbackPath }}      
+             -  name: AzureAd__SignUpSignInPolicyId
+                value: {{ .Values.env.AzureAdSignUpSignInPolicyId }}                            
              -  name: AzureAd__TenantId
                 valueFrom:
                   secretKeyRef:

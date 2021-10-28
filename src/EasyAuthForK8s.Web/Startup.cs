@@ -2,28 +2,25 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-
+using Microsoft.Extensions.Logging;
+using System;
 
 namespace EasyAuthForK8s.Web
 {
     public class Startup
     {
-        public Startup(IConfiguration configuration)
+        public Startup(IConfiguration configuration, ILoggerFactory loggerFactory)
         {
             Configuration = configuration;
+            LoggerFactory = loggerFactory;
         }
         public IConfiguration Configuration { get; }
+        public ILoggerFactory LoggerFactory { get; }
 
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddEasyAuthForK8s(Configuration);
-            
-            //var configSection = Configuration.GetSection(AzureAdConfigSection);
-            //MicrosoftIdentityOptions options = new MicrosoftIdentityOptions();
-            //configSection.Bind(options);
-            
-           
+            services.AddEasyAuthForK8s(Configuration, LoggerFactory);
 
             //services.AddControllers();
             services.AddHealthChecks();
@@ -59,11 +56,9 @@ namespace EasyAuthForK8s.Web
             //        await next.Invoke();
             //    });
             //}
-
             app.UseHealthChecks("/");
-            //app.UseRouting();
-            //app.UseAuthentication();
-            //app.UseAuthorization();
+            
+            //call easyauth after healthchecks since it requires additional security configuration
             app.UseEasyAuthForK8s();
 
             //app.UseEndpoints(endpoints =>

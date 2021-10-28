@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 using Microsoft.Identity.Web;
 using System.Collections.Generic;
@@ -18,8 +19,13 @@ namespace EasyAuthForK8s.Web
         /// </summary>
         /// <param name="context"></param>
         /// <returns></returns>
-        public static Task HandleRedirectToIdentityProvider(RedirectContext context, EasyAuthConfigurationOptions configOptions, MicrosoftIdentityOptions aadOptions)
+        public static Task HandleRedirectToIdentityProvider(RedirectContext context, 
+            EasyAuthConfigurationOptions configOptions, 
+            MicrosoftIdentityOptions aadOptions,
+            ILogger logger)
         {
+            logger.LogInformation($"Redirecting sign-in to endpoint {context.ProtocolMessage.IssuerAddress}");
+            
             //configure the path where the user should be redirected after successful sign in
             //this should be provided by the ingress controller as the path they were originally
             //attempting to access before the auth challenge
@@ -29,8 +35,8 @@ namespace EasyAuthForK8s.Web
                 context.Properties.Items[".redirect"] = configOptions.DefaultRedirectAfterSignin;
 
             //if additional scopes are requested, add them to the redirect
-            if (context.HttpContext.Request.Query.ContainsKey(Constants.ScopeParameterName))
-                context.ProtocolMessage.Scope = BuildScopeString(context.ProtocolMessage.Scope, context.HttpContext.Request.Query[Constants.ScopeParameterName]);
+            var state = context.HttpContext.EasyAuthStateFromHttpContext();
+            context.ProtocolMessage.Scope = BuildScopeString(context.ProtocolMessage.Scope, state.Scopes);
 
             //This simplifies the user sign in by providing the the domain for home realm discovery
             //this is helpful when the user has multiple AAD accounts
@@ -39,7 +45,7 @@ namespace EasyAuthForK8s.Web
             return Task.CompletedTask;
         }
 
-        public static async Task HandleRemoteFailure(RemoteFailureContext context)
+        public static async Task HandleRemoteFailure(RemoteFailureContext context, ILogger logger)
         {
             //TODO switch to compiled razor view for this
             var sb = new StringBuilder();
@@ -52,7 +58,7 @@ namespace EasyAuthForK8s.Web
             await context.Response.WriteAsync(sb.ToString());
             context.HandleResponse();
         }
-        private static string BuildScopeString(string baseScope, StringValues additionalScopes)
+        private static string BuildScopeString(string baseScope, IList<string> additionalScopes)
         {
             return string.Join(' ', (baseScope ?? string.Empty)
                 .Split(' ', System.StringSplitOptions.RemoveEmptyEntries)

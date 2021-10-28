@@ -18,7 +18,9 @@ namespace EasyAuthForK8s.Web
                 {
               
                     builder.AddJsonFile("appsettings.json", false, true);
-                    builder.AddJsonFile($"appsettings.{Environment.MachineName}.json", true, true);
+                #if DEBUG
+                    builder.AddJsonFile($"appsettings.Development.json", true, true);
+                #endif
                     builder.AddEnvironmentVariables();
                 })
                 .UseStartup<Startup>();

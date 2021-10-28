@@ -8,5 +8,7 @@
         public const string RoleParameterName = "role";
         public const string ScopeParameterName = "scope";
         public const string RedirectParameterName = "rd";
+        public const string StateCookieName = "EasyAuthState";
+        public const int StateTtlMinutes = 5;
     }
 }

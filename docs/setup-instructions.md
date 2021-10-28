@@ -73,9 +73,9 @@ Note: It takes several minutes to create the AKS cluster. Complete these steps b
     helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
     helm repo update
     # Install the ingress controller
-    helm install nginx-ingress ingress-nginx/ingress-nginx --namespace ingress-controllers --set rbac.create=true
+    helm install nginx-ingress ingress-nginx/ingress-nginx --namespace ingress-controllers --set rbac.create=true --set controller.config.large-client-header-buffers="8 32k"
     
-    # Important! It take a few minutes for Azure to assign a public IP address to the ingress. Run this command until it returns a public IP address.
+    # Important! It takes a few minutes for Azure to assign a public IP address to the ingress. Run this command until it returns a public IP address.
     kubectl get services/nginx-ingress-ingress-nginx-controller -n ingress-controllers -o jsonpath="{.status.loadBalancer.ingress[0].ip}"
 
 ## Configure DNS for the cluster public IP

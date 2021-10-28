@@ -86,23 +86,24 @@ tolerations: []
 affinity: {}
 
 env:
-  DataProtectionFileLocation: /mnt/dp
   ForceHttps: "true"
+  LogLevel: Debug
+  EasyAuthForK8sSigninPath: "/easyauth/signin"
+  EasyAuthForK8sAuthPath: "/easyauth/auth"   
+  EasyAuthForK8sAllowBearerToken: "false"
+  EasyAuthForK8sDataProtectionFileLocation: "/mnt/dp"    
+  EasyAuthForK8sDefaultRedirectAfterSignin: "/"   
   AzureAdInstance: https://login.microsoftonline.com/
   AzureAdDomain: microsoft.onmicrosoft.com
-  AzureAdCallbackPath: /msal/signin-oidc
-  AzureAdSignedOutCallbackPath: /msal/signout-callback-oidc
-  LogLevel: Debug
-  AllowedHosts: "*"
-  RedirectParam: rd
-  ShowLogin: "false"    
+  AzureAdCallbackPath: /easyauth/signin-oidc
+  AzureAdSignedOutCallbackPath: /easyauth/signout-callback-oidc 
   AzureAdTenantIdKeyRefName: aad-secret
   AzureAdTenantIdKeyRefKey: AZURE_TENANT_ID
   AzureAdClientIdKeyRefName: aad-secret
   AzureAdClientIdKeyRefKey: CLIENT_ID
   AzureAdClientSecretKeyRefName: aad-secret
   AzureAdClientSecretKeyRefKey: CLIENT_SECRET
-
+  AzureAdSignUpSignInPolicyId: ""
 claimName: msalproxyazurefilepvclaim
 
 volumeName: msal
