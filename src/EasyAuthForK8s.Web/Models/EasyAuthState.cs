@@ -12,7 +12,7 @@ namespace EasyAuthForK8s.Web.Models
     {
         public AuthStatus Status { get; set; } = AuthStatus.Unauthenticated;
         public IList<string> Scopes { get; set; } = new List<string>();
-        public IList<string> Queries { get; set; } = new List<string>();
+        public IList<string> GraphQueries { get; set; } = new List<string>();
         public string Msg { get; set; } = string.Empty;
 
         public enum AuthStatus

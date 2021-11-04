@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using EasyAuthForK8s.Web.Helpers;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
@@ -7,7 +8,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Identity.Web;
+using System;
 using System.IO;
+using System.Threading.Tasks;
 
 namespace EasyAuthForK8s.Web
 {
@@ -33,24 +36,29 @@ namespace EasyAuthForK8s.Web
 
             //for Web applications
             services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
-                .AddMicrosoftIdentityWebApp(o => azureAdConfigSection.Bind(o), c =>
+                .AddMicrosoftIdentityWebApp(async o =>
                 {
-                    c.Cookie.Name = "AzAD.EasyAuthForK8s";
+                    azureAdConfigSection.Bind(o);
+                },
+                async c => 
+                {
+                    c.Cookie.Name = Constants.CookieName;
+                    c.Events.OnSigningIn += async context => await EventHelper.CookieSigningIn(context, easyAuthConfig);
                 });
 
             //configure OIDC options
             services.Configure<OpenIdConnectOptions>(OpenIdConnectDefaults.AuthenticationScheme, (OpenIdConnectOptions configureOptions) =>
             {
-                var logger = loggerFactory.CreateLogger("EasyAuthForK8s.Web.OIDC-Message-Handler");
+                var logger = loggerFactory.CreateLogger<EventHelper>();
                 
                 configureOptions.ResponseType = "code";
                 configureOptions.SaveTokens = true;
                 
                 configureOptions.Events.OnRedirectToIdentityProvider +=
-                    context => OidcHelper.HandleRedirectToIdentityProvider(context, easyAuthConfig, microsoftIdentityOptions, logger);
+                    async context => await EventHelper.HandleRedirectToIdentityProvider(context, easyAuthConfig, microsoftIdentityOptions, logger);
                 
                 configureOptions.Events.OnRemoteFailure += 
-                    context => OidcHelper.HandleRemoteFailure(context, logger);
+                    async context => await EventHelper.HandleRemoteFailure(context, logger);
             });
 
 
@@ -88,7 +96,7 @@ namespace EasyAuthForK8s.Web
                 options.ForwardLimit = 2;
                 options.KnownNetworks.Clear();
                 options.KnownProxies.Clear();
-            });
+            });         
         }
         public static IApplicationBuilder UseEasyAuthForK8s(
              this IApplicationBuilder builder)

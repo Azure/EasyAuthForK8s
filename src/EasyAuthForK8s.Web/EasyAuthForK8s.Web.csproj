@@ -22,6 +22,7 @@
     <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
         <_Parameter1>EasyAuthForK8s.Tests.Web</_Parameter1>
     </AssemblyAttribute>
+    <PackageReference Include="MessagePack" Version="2.3.85" />
   <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="6.0.0-rc.2.21480.10" />
   <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="6.0.0-rc.2.21480.10" />
   <PackageReference Include="Microsoft.Identity.Web" Version="1.18.0" />

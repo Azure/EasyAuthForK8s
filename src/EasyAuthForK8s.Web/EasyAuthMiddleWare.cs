@@ -13,6 +13,7 @@ using System.Text;
 using EasyAuthForK8s.Web.Models;
 using System.Linq;
 using System.Security.Claims;
+using System.Net.Http;
 
 namespace EasyAuthForK8s.Web
 {
@@ -21,8 +22,8 @@ namespace EasyAuthForK8s.Web
         private readonly RequestDelegate _next;
         private readonly EasyAuthConfigurationOptions _configureOptions;
         private readonly MicrosoftIdentityOptions _aadOptions;
-        private IAuthorizationService _authService;
-        private ILogger _logger;
+        private readonly IAuthorizationService _authService;
+        private readonly ILogger _logger;
         public EasyAuthMiddleWare(RequestDelegate next, 
             EasyAuthConfigurationOptions configureOptions, 
             MicrosoftIdentityOptions aadOptions, 
@@ -91,10 +92,10 @@ namespace EasyAuthForK8s.Web
                 scopes.AddRange(context.Request.Query[Constants.ScopeParameterName]);
 
             var authN = await context.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-
+            
             if (!authN.Succeeded)
             {
-                message += authN.Failure?.Message ?? " Cookie authentication failed.";
+                message += authN.Failure?.Message ?? "Cookie authentication failed. ";
                 if (_configureOptions.AllowBearerToken)
                 {
                     {
@@ -102,14 +103,8 @@ namespace EasyAuthForK8s.Web
                         authN = await context.AuthenticateAsync(JwtBearerDefaults.AuthenticationScheme);
 
                         if (!authN.Succeeded)
-                            message += authN.Failure?.Message ?? " Bearer token authentication failed.";
-
+                            message += authN.Failure?.Message ?? "Bearer token authentication failed. ";
                     }
-                }
-                else
-                {
-                    message += " Bearer tokens are disabled.";
-                    _logger.LogInformation($"User not authenticated. {message}");
                 }
             }
 
@@ -121,6 +116,7 @@ namespace EasyAuthForK8s.Web
                 // e.g. "?role=foo|foo2
                 // multiple query parameters for roles will require *all* to succeed
                 // e.g. "?role=foo&role=foo2"
+                // roles are CASE SENSITIVE!!
                 foreach (var item in query[Constants.RoleParameterName])
                 {
                     if (!string.IsNullOrEmpty(item))
@@ -140,9 +136,9 @@ namespace EasyAuthForK8s.Web
                 //in our parlance Forbbiden is a terminal failure and we only return 401
                 //so that nginx can redirect to a friendly error for the user
                 authStatus = EasyAuthState.AuthStatus.Forbidden;
-
                 StringBuilder messageBuilder = new StringBuilder();
-                messageBuilder.Append($"User {authN.Principal.GetObjectId()} is forbidden. ");
+
+                messageBuilder.Append($"Access denied for subject {(authN.Principal?.Identity.Name ?? "[anonymous]" )}. ");
 
                 foreach (var reason in authZ.Failure?.FailedRequirements)
                 {
@@ -152,9 +148,9 @@ namespace EasyAuthForK8s.Web
                     messageBuilder.Append($"{reason.ToString()}. ");
                 }
 
-                message = messageBuilder.ToString();
+                message += messageBuilder.ToString();
 
-                _logger.LogInformation($"AuthZ failure: {message}");
+                _logger.LogInformation($"AuthX failure: {message}");
 
                 //build the state so we can have it after the redirect
                 EasyAuthState state = new EasyAuthState
@@ -163,15 +159,24 @@ namespace EasyAuthForK8s.Web
                     Scopes = scopes.SelectMany(x => x.Split("|", System.StringSplitOptions.RemoveEmptyEntries)).ToList(),
                     Msg = message
                 };
+
+                if (context.Request.Query.ContainsKey(Constants.GraphParameterName))
+                {
+                    state.GraphQueries = context.Request.Query[Constants.GraphParameterName]
+                        .SelectMany(x => x.Split("|", System.StringSplitOptions.RemoveEmptyEntries))
+                        .ToList();
+                }
+
                 state.AddCookieToResponse(context);
             }
             else
             {
                 context.Response.StatusCode = StatusCodes.Status202Accepted;
-                message = $"User {authN.Principal.GetObjectId()} is authorized.";
+                message = $"Subject {authN.Principal.Identity.Name} is authorized.";
 
                 _logger.LogInformation($"Returning Status202Accepted. AuthZ success: {message}");
 
+                var info = authN.Principal.UserInfoPayloadFromPrincipal(_configureOptions);
                 //TODO set the headers
             }
             await response.WriteAsync(message);
