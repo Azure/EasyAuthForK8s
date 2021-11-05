@@ -1,17 +1,15 @@
-﻿using System;
+﻿using MessagePack;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Identity.Web;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using EasyAuthForK8s.Web.Models;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.DataProtection;
-using System.Text.Json;
-using Microsoft.AspNetCore.Authentication;
-using System.IO.Compression;
-using System.IO;
-using MessagePack;
+using System.Net;
 using System.Security.Claims;
+using System.Text;
+using System.Text.Json;
 
 namespace EasyAuthForK8s.Web.Models
 {
@@ -21,7 +19,9 @@ namespace EasyAuthForK8s.Web.Models
         {
             //see if state exists in property bag, and return it
             if (context.Items.ContainsKey(Constants.StateCookieName))
+            {
                 return context.Items[Constants.StateCookieName] as EasyAuthState;
+            }
 
             //see if cookie exists, read, delete cookie, and save to property bag
             else
@@ -30,10 +30,10 @@ namespace EasyAuthForK8s.Web.Models
 
                 if (context.Request.Cookies.ContainsKey(Constants.StateCookieName))
                 {
-                    var encodedString = context.Request.Cookies[Constants.StateCookieName];
+                    string encodedString = context.Request.Cookies[Constants.StateCookieName];
                     if (encodedString != null)
                     {
-                        var dp = context.RequestServices.GetDataProtector(Constants.StateCookieName);
+                        IDataProtector dp = context.RequestServices.GetDataProtector(Constants.StateCookieName);
 
                         easyAuthState = JsonSerializer.Deserialize<EasyAuthState>(dp.Unprotect(encodedString));
                     }
@@ -47,10 +47,10 @@ namespace EasyAuthForK8s.Web.Models
         }
         public static void AddCookieToResponse(this EasyAuthState state, HttpContext httpContext)
         {
-            var dp = httpContext.RequestServices.GetDataProtector(Constants.StateCookieName);
-            var cookieValue = dp.Protect(state.ToJsonString());
+            IDataProtector dp = httpContext.RequestServices.GetDataProtector(Constants.StateCookieName);
+            string cookieValue = dp.Protect(state.ToJsonString());
 
-            var cookieBuilder = new RequestPathBaseCookieBuilder
+            RequestPathBaseCookieBuilder cookieBuilder = new RequestPathBaseCookieBuilder
             {
                 SameSite = SameSiteMode.Lax,
                 HttpOnly = true,
@@ -59,7 +59,7 @@ namespace EasyAuthForK8s.Web.Models
                 Expiration = TimeSpan.FromMinutes(Constants.StateTtlMinutes)
             };
 
-            var options = cookieBuilder.Build(httpContext, DateTimeOffset.Now);
+            CookieOptions options = cookieBuilder.Build(httpContext, DateTimeOffset.Now);
 
             httpContext.Response.Cookies.Append(Constants.StateCookieName, cookieValue, options);
         }
@@ -78,8 +78,8 @@ namespace EasyAuthForK8s.Web.Models
         public static Claim ToPayloadClaim(this UserInfoPayload payload, EasyAuthConfigurationOptions options)
         {
             if (options.CompressCookieClaims)
-            { 
-                var bytes = MessagePackSerializer.Serialize<UserInfoPayload>(payload,
+            {
+                byte[] bytes = MessagePackSerializer.Serialize<UserInfoPayload>(payload,
                     MessagePackSerializerOptions.Standard.WithCompression(MessagePackCompression.Lz4BlockArray));
 
                 return new Claim(
@@ -97,7 +97,9 @@ namespace EasyAuthForK8s.Web.Models
         {
             //see if info claim exists, and return empty if not
             if (principal.Claims == null || !principal.HasClaim(x => x.Type == Constants.UserInfoClaimType))
+            {
                 return new();
+            }
 
             //re-hydrate the info object
             else
@@ -111,45 +113,139 @@ namespace EasyAuthForK8s.Web.Models
                         MessagePackSerializerOptions.Standard.WithCompression(MessagePackCompression.Lz4BlockArray));
                 }
                 else
-                    return JsonSerializer.Deserialize<UserInfoPayload> (claim.Value);
+                {
+                    return JsonSerializer.Deserialize<UserInfoPayload>(claim.Value);
+                }
             }
         }
         public static void PopulateFromClaims(this UserInfoPayload payload, IEnumerable<Claim> claims)
         {
-            foreach(var claim in claims)
+            foreach (Claim claim in claims)
             {
-                switch(claim.Type)
+                switch (claim.Type)
                 {
-                    case "name":
+                    case ClaimConstants.Name:
                         payload.name = claim.Value;
                         break;
-                    case "oid":
+                    case ClaimConstants.Oid:
+                    case ClaimConstants.ObjectId:
                         payload.oid = claim.Value;
                         break;
-                    //case "preferred_username":
-                    //    payload.preferred_username = claim.Value;
-                    //    break;
-                    case "roles":
+                    case ClaimConstants.PreferredUserName:
+                        payload.preferred_username = claim.Value;
+                        break;
+                    case ClaimConstants.Roles:
+                    case ClaimConstants.Role:
                         payload.roles.Add(claim.Value);
                         break;
-                    case "sub":
+                    case ClaimConstants.Sub:
                         payload.sub = claim.Value;
                         break;
-                    case "tid":
+                    case ClaimConstants.Tid:
+                    case ClaimConstants.TenantId:
                         payload.tid = claim.Value;
                         break;
                     case "email":
                         payload.email = claim.Value;
                         break;
+                    case ClaimConstants.Scp:
+                    case ClaimConstants.Scope:
+                        payload.email = claim.Value;
+                        break;
                     default:
                         {
-                            if(!Constants.IgnoredClaims.Any(x => x == claim.Type))
-                                payload.otherClaims.Add(new KeyValuePair<string, string>(claim.Type, claim.Value));
+                            if (!Constants.IgnoredClaims.Any(x => x == claim.Type))
+                            {
+                                payload.otherClaims.Add(new() { name = claim.Type, value = claim.Value });
+                            }
+
                             break;
                         }
                 }
             }
-            
+        }
+        internal static void AppendResponseHeaders(this UserInfoPayload payload, IHeaderDictionary headers, EasyAuthConfigurationOptions configOptions)
+        {
+            if (headers == null)
+            {
+                return;
+            }
+
+            Action<string, string> addHeader = (name, value) =>
+             {
+                 string headerName = SanitizeHeaderName($"{configOptions.ResponseHeaderPrefix}{name}");
+                 string encodedValue = EncodeValue(value, configOptions.ClaimEncodingMethod);
+
+                 if (headers.ContainsKey(headerName))
+                 {
+                     headers[headerName].Append(encodedValue);
+                 }
+                 else
+                 {
+                     headers.Add(headerName, encodedValue);
+                 }
+             };
+
+            if (configOptions.HeaderFormatOption == EasyAuthConfigurationOptions.HeaderFormat.Combined)
+            {
+                string serialized = JsonSerializer.Serialize<UserInfoPayload>(payload);
+                addHeader("userinfo", serialized);
+            }
+
+            else
+            {
+                addHeader("name", payload.name);
+                addHeader("oid", payload.oid);
+                addHeader("preferred-username", payload.preferred_username);
+                addHeader("sub", payload.sub);
+                addHeader("tid", payload.tid);
+                addHeader("email", payload.email);
+                addHeader("groups", payload.groups);
+                addHeader("scp", payload.scp);
+
+                foreach (ClaimValue claim in payload.otherClaims)
+                {
+                    addHeader(claim.name, claim.value);
+                }
+
+                foreach (string role in payload.roles)
+                {
+                    addHeader("roles", role);
+                }
+
+                foreach (string graph in payload.graph)
+                {
+                    addHeader("graph", graph);
+                }
+            }
+        }
+
+        private static string EncodeValue(string value, EasyAuthConfigurationOptions.EncodingMethod method)
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                return string.Empty;
+            }
+
+            return method switch
+            {
+                EasyAuthConfigurationOptions.EncodingMethod.UrlEncode => WebUtility.UrlEncode(value),
+                EasyAuthConfigurationOptions.EncodingMethod.Base64 => Convert.ToBase64String(Encoding.UTF8.GetBytes(value)),
+                EasyAuthConfigurationOptions.EncodingMethod.NoneWithReject => value.All(c => c >= 32 && c < 127) ? value : "encoding_error",
+                //None
+                _ => value,
+            };
+        }
+        private static string SanitizeHeaderName(string name)
+        {
+            if (string.IsNullOrEmpty(name))
+            {
+                throw new ArgumentNullException("name");
+            }
+
+            string clean = new string(name.Where(c => c >= 32 && c < 127).ToArray());
+
+            return clean.Replace('_', '-').ToLower();
         }
 
     }

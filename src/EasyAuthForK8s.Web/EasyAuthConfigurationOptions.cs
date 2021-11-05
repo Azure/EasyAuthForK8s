@@ -29,8 +29,71 @@
         /// </summary>
         public bool CompressCookieClaims { get; set; } = true;
 
-        //endpoint should be updated for other clouds as required, or to specify a different 
-        //api version
+        /// <summary>
+        /// Default assumes public Azure cloud and beta API version.  Endpoint should be updated for other clouds 
+        /// as required, or to specify a different api version
+        /// </summary>
+
         public string GraphEndpoint { get; set; } = "https://graph.microsoft.com/beta";
+
+        /// <summary>
+        /// Prefix of the header names sent in the reponse after authorization.  Any unsafe
+        /// characters are removed, and "_" is replaced with "-" to avoid problems with nginx.
+        /// Default is "x-injected-", but this can be changed to avoid name collisions
+        /// or if multiple ingresses are used and you need to discern where the headers
+        /// came from.  Header names are always sent as lower case.
+        /// </summary>
+        public string ResponseHeaderPrefix { get; set; } = "x-injected-";
+
+        /// <summary>
+        /// Sets the encoding of the response header values.  The unfortunate reality is that 
+        /// claim values may contain characters that are not valid in HTTP headers.  Encoding
+        /// ensures that values are transmitted using valid characters, with the consequence that 
+        /// they values must be decoded by the app.  Default is UrlEncoding, but choose the type
+        /// works best for your application.
+        /// </summary>
+        public EncodingMethod ClaimEncodingMethod { get; set; } = EncodingMethod.UrlEncode;
+
+        public enum EncodingMethod
+        {
+            /// <summary>
+            /// Invalid characters are escaped according to IETF RFC 3986
+            /// </summary>
+            UrlEncode,
+            /// <summary>
+            /// The full string value is encoded from UTF-8 bytes to base64 text
+            /// </summary>
+            Base64,
+            /// <summary>
+            /// Value is not encoded, and the original string value is sent.
+            /// This may cause errors for downstream web servers, especially 
+            /// on older platforms
+            /// </summary>
+            None,
+            /// <summary>
+            /// No encoding is applied, but any value containing an unsafe 
+            /// character is rejected, and the value "encoding_error" is sent 
+            /// in its place.
+            /// </summary>
+            NoneWithReject
+        }
+        public HeaderFormat HeaderFormatOption { get; set; } = HeaderFormat.Separate;
+
+        public enum HeaderFormat
+        {
+            /// <summary>
+            /// Default. Each claim is sent in a separate response header
+            /// </summary>
+            Separate,
+            /// <summary>
+            /// The entire claim object graph is serialized as JSON 
+            /// and sent as a single header "{ResponseHeaderPrefix}userinfo".  This would be most useful
+            /// combined with the Base64 encoding method where the application
+            /// would be better suited to decoding and deserializing the
+            /// entire object in one step
+            /// </summary>
+            Combined
+        }
     }
+
 }

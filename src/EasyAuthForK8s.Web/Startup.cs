@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using System;
 
 namespace EasyAuthForK8s.Web
 {
@@ -57,7 +56,7 @@ namespace EasyAuthForK8s.Web
             //    });
             //}
             app.UseHealthChecks("/");
-            
+
             //call easyauth after healthchecks since it requires additional security configuration
             app.UseEasyAuthForK8s();
 

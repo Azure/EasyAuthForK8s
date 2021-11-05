@@ -8,15 +8,14 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
-using System.Web;
 
 namespace EasyAuthForK8s.Web.Helpers
 {
     internal class GraphHelper
     {
-        static Lazy<HttpClient> _httpClient = new Lazy<HttpClient>(() =>
+        private static readonly Lazy<HttpClient> _httpClient = new Lazy<HttpClient>(() =>
             {
-                var client = new HttpClient();
+                HttpClient client = new HttpClient();
                 client.DefaultRequestHeaders.Accept.TryParseAdd("application/json;odata.metadata=none");
                 client.DefaultRequestHeaders.Add("ConsistencyLevel", "eventual");
                 return client;
@@ -24,7 +23,7 @@ namespace EasyAuthForK8s.Web.Helpers
 
         public static async Task<List<string>> ExecuteQueryAsync(string endpoint, string accessToken, string[] queries)
         {
-            var data = new List<string>();
+            List<string> data = new List<string>();
             if (queries != null && queries.Length > 0)
             {
                 HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, $"{endpoint}/$batch");
@@ -32,21 +31,23 @@ namespace EasyAuthForK8s.Web.Helpers
 
                 dynamic body = new ExpandoObject();
                 body.requests = new List<dynamic>();
-                for (var i = 0; i < queries.Length; i++)
+                for (int i = 0; i < queries.Length; i++)
+                {
                     body.requests.Add(new { url = queries[i], method = "GET", id = i });
+                }
 
                 request.Content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
 
                 try
                 {
-                    using (var response = await _httpClient.Value.SendAsync(request))
+                    using (HttpResponseMessage response = await _httpClient.Value.SendAsync(request))
                     {
                         if (response.IsSuccessStatusCode)
                         {
-                            var document = await JsonDocument.ParseAsync(response.Content.ReadAsStream());
-                            
-                            var responseCollection = document.RootElement.GetProperty("responses");
-                            
+                            JsonDocument document = await JsonDocument.ParseAsync(response.Content.ReadAsStream());
+
+                            JsonElement responseCollection = document.RootElement.GetProperty("responses");
+
                             //we have to order the reponses back into the order they were sent
                             //since the order is non-determistic
                             foreach (JsonElement element in responseCollection.EnumerateArray()
@@ -54,7 +55,7 @@ namespace EasyAuthForK8s.Web.Helpers
                                 .ToArray())
                             {
                                 using MemoryStream stream = new MemoryStream();
-                                using var writer = new Utf8JsonWriter(stream);
+                                using Utf8JsonWriter writer = new Utf8JsonWriter(stream);
                                 {
                                     writer.WriteStartObject();
                                     JsonElement bodyElement = element.GetProperty("body");
@@ -75,7 +76,7 @@ namespace EasyAuthForK8s.Web.Helpers
                                         //but since it wasn't the error will be encoded.
                                         if (hasError && bodyElement.ValueKind == JsonValueKind.String)
                                         {
-                                            var s = bodyElement.GetRawText();
+                                            string s = bodyElement.GetRawText();
                                             bodyElement = JsonDocument.Parse(Encoding.UTF8.GetString(Convert.FromBase64String(bodyElement.GetString()))).RootElement;
                                         }
 
@@ -87,10 +88,12 @@ namespace EasyAuthForK8s.Web.Helpers
                                         else
                                         {
                                             //graph responses tend to be quite verbose, so remove metadata
-                                            foreach (var property in bodyElement.EnumerateObject())
+                                            foreach (JsonProperty property in bodyElement.EnumerateObject())
                                             {
                                                 if (!property.Name.StartsWith("@odata"))
+                                                {
                                                     property.WriteTo(writer);
+                                                }
                                             }
                                         }
                                     }
@@ -98,7 +101,7 @@ namespace EasyAuthForK8s.Web.Helpers
                                     else
                                     {
                                         writer.WritePropertyName("$value");
-                                        var foo = bodyElement.GetRawText();
+                                        string foo = bodyElement.GetRawText();
                                         bodyElement.WriteTo(writer);
                                     }
 
@@ -108,10 +111,12 @@ namespace EasyAuthForK8s.Web.Helpers
                                     data.Add(await new StreamReader(stream, Encoding.UTF8).ReadToEndAsync());
                                 }
                             }
-                            
-                        }                        
+
+                        }
                         else
+                        {
                             data.Add($"{{\"error_status\":{(int)(response.StatusCode)},\"error_message\":\"Graph API failure: {JsonEncodedText.Encode(response.ReasonPhrase)}\"}}");
+                        }
                     };
                 }
                 catch (Exception ex)
@@ -119,12 +124,12 @@ namespace EasyAuthForK8s.Web.Helpers
                     //We don't really want to the signin process to fail, especially for a transient issue
                     //so just return the error message as data
                     data.Add($"{{\"error_status\":500,\"error_message\":\"Graph API failure: {JsonEncodedText.Encode(ex.Message)}\"}}");
-                }  
+                }
             }
             return data;
         }
 
-        static bool IsSuccessStatus(int status)
+        private static bool IsSuccessStatus(int status)
         {
             return status >= 200 && status < 300;
         }

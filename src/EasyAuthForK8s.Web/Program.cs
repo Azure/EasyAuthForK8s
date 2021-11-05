@@ -1,5 +1,4 @@
-﻿using System;
-using Microsoft.AspNetCore;
+﻿using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 
@@ -16,11 +15,11 @@ namespace EasyAuthForK8s.Web
         {
             return WebHost.CreateDefaultBuilder(args).ConfigureAppConfiguration((ctx, builder) =>
                 {
-              
+
                     builder.AddJsonFile("appsettings.json", false, true);
-                #if DEBUG
+#if DEBUG
                     builder.AddJsonFile($"appsettings.Development.json", true, true);
-                #endif
+#endif
                     builder.AddEnvironmentVariables();
                 })
                 .UseStartup<Startup>();

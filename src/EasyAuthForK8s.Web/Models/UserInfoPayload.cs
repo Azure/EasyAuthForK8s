@@ -1,5 +1,4 @@
 ﻿using MessagePack;
-using System;
 using System.Collections.Generic;
 
 namespace EasyAuthForK8s.Web.Models
@@ -28,8 +27,18 @@ namespace EasyAuthForK8s.Web.Models
         [Key(7)]
         public string groups { get; set; } = string.Empty;
         [Key(8)]
-        public List<KeyValuePair<string, string>> otherClaims { get; set; } = new List<KeyValuePair<string, string>>();
+        public string scp { get; set; } = string.Empty;
         [Key(9)]
+        public List<ClaimValue> otherClaims { get; set; } = new List<ClaimValue>();
+        [Key(10)]
         public List<string> graph { get; set; } = new List<string>();
+    }
+    [MessagePackObject]
+    public struct ClaimValue
+    {
+        [Key(0)]
+        public string name { get; set; }
+        [Key(1)]
+        public string value { get; set; }
     }
 }
