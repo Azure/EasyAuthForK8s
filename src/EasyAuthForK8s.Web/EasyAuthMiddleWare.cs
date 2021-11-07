@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Identity.Web;
+using Microsoft.Net.Http.Headers;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -98,7 +99,11 @@ public class EasyAuthMiddleware
         string message = "";
         EasyAuthState.AuthStatus authStatus = EasyAuthState.AuthStatus.Unauthenticated;
 
+        _logger.LogInformation($"Invoke HandleAuth - Path:{context.Request.Path}, Query:{context.Request.QueryString}, " +
+            $"AuthCookie: {context.Request.Cookies.Any(x => x.Key == Constants.CookieName)}, AuthHeader: {context.Request.Headers.ContainsKey(HeaderNames.Authorization)}");
+#if DEBUG
         LogRequestHeaders("HandleAuth", context.Request);
+#endif
 
         HttpResponse response = context.Response;
         response.Clear();

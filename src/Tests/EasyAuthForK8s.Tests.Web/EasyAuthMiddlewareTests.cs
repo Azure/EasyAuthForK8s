@@ -19,18 +19,99 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication;
 using System.Security.Principal;
 using EasyAuthForK8s.Tests.Web.Helpers;
+using System.Net.Http;
+using System;
+using System.Net;
+using System.Runtime.InteropServices;
 
 namespace EasyAuthForK8s.Tests.Web;
 
 public class EasyAuthMiddlewareTests
 {
     [Theory]
-    [InlineData("/testauth", "", "Requires an authenticated user.")]
-    [InlineData("/testauth", "?role=foo", "User.IsInRole must be true for one of the following roles: (foo)")]
-    public async Task Invoke_HandleAuth_Unauthenticated(string path, string query, string containsMessage)
+    [InlineData("/")]
+    [InlineData("/foo")]
+    [InlineData("/foo/")]
+    [InlineData("/foo/foo/foo/foo/foo")]
+    public void Invoke_HandleAuth_ResponseFromConfiguredPath(string path)
     {
-        EasyAuthConfigurationOptions options = new EasyAuthConfigurationOptions() { AuthPath = path };
+        EasyAuthConfigurationOptions options = new EasyAuthConfigurationOptions() { AuthPath = path};
+
+        var response = GetResponseForAuthN(options, "", out var logs, out var stateResolver);
+
+        Assert.Equal(path, response.RequestMessage.RequestUri.LocalPath);
+        Assert.Contains(logs, l => l.Message.StartsWith($"Invoke HandleAuth - Path:{path},"));
+    }
+
+    [Theory]
+    [InlineData("", "Requires an authenticated user.")]
+    [InlineData("?role=foo", "User.IsInRole must be true for one of the following roles: (foo)")]
+    [InlineData("?scope=foo", "is one of the following values: (foo)")]
+    public async Task Invoke_HandleAuth_Unauthenticated(string query, string containsMessage)
+    {
+        EasyAuthConfigurationOptions options = new EasyAuthConfigurationOptions();
+
+        var response = GetResponseForAuthN(options, query, out var logs, out var stateResolver);
+
+        Assert.Equal(System.Net.HttpStatusCode.Unauthorized, response.StatusCode);
+
+        EasyAuthState state = stateResolver(response);
+
+        Assert.Equal(EasyAuthState.AuthStatus.Unauthenticated, state.Status);
+        await EvaluateMessagesWithAsserts(containsMessage, response.Content, state, logs);
+    }
+
+    [Theory]
+    [InlineData("?scope=foo", "ScopeAuthorizationRequirement:Scope= and `scp` or `http://schemas.microsoft.com/identity/claims/scope` is one of the following values: (foo)", new string[] { "foo" })]
+    [InlineData("?scope=foo|foo2", "is one of the following values: (foo|foo2)", new string[] { "foo", "foo2" })]
+    [InlineData("?scope=foo&scope=foo2", "is one of the following values: (foo)", new string[] { "foo", "foo2" })]
+    public async Task Invoke_HandleAuth_UnauthorizedWithScopes(string query, string containsMessage, string[] scopes)
+    {
+        EasyAuthConfigurationOptions options = new EasyAuthConfigurationOptions();
+
+        var response = GetResponseForAuthZ(options, query, out var logs, out var stateResolver);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+
+        EasyAuthState state = stateResolver(response);
+
+        Assert.Equal(EasyAuthState.AuthStatus.Unauthorized, state.Status);
+        Assert.Equal(state.Scopes, scopes.ToList());
+
+        await EvaluateMessagesWithAsserts(containsMessage, response.Content, state, logs);
+    }
+
+    [Theory]
+    [InlineData("?role=foo", "RolesAuthorizationRequirement:User.IsInRole must be true for one of the following roles: (foo) ")]
+    [InlineData("?role=foo|foo2", "RolesAuthorizationRequirement:User.IsInRole must be true for one of the following roles: (foo|foo2)")]
+    [InlineData("?role=foo&scope=foo2", "RolesAuthorizationRequirement:User.IsInRole must be true for one of the following roles: (foo)")]
+    public async Task Invoke_HandleAuth_ForbiddenWithRoles(string query, string containsMessage)
+    {
+        EasyAuthConfigurationOptions options = new EasyAuthConfigurationOptions();
+
+        var response = GetResponseForAuthZ(options, query, out var logs, out var stateResolver);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+       
+        EasyAuthState state = stateResolver(response);
+
+        Assert.Equal(EasyAuthState.AuthStatus.Forbidden, state.Status);
+
+        await EvaluateMessagesWithAsserts(containsMessage, response.Content, state, logs);
+    }
+
+    private IConfiguration GetConfiguration(EasyAuthConfigurationOptions options)
+    {
+        return new ConfigurationBuilder()
+            .AddJsonFile("testsettings.json", false, true)
+            .Add(new EasyAuthOptionsConfigurationSource(options))
+            .Build();
+    }
+    private HttpResponseMessage GetResponseForAuthN(EasyAuthConfigurationOptions options, string query,
+       out IReadOnlyList<TestLogger.LoggedMessage> logs, [Optional] out Func<HttpResponseMessage, EasyAuthState> stateResolver)
+    {
         TestLogger.TestLoggerFactory loggerFactory = new TestLogger.TestLoggerFactory();
+        logs = loggerFactory.Logger.Messages;
 
         using IHost host = new HostBuilder()
             .ConfigureServices(services =>
@@ -48,39 +129,18 @@ public class EasyAuthMiddlewareTests
                 });
             }).Build();
 
-        await host.StartAsync();
+        host.StartAsync().Wait();
 
-        System.Net.Http.HttpResponseMessage response = await host.GetTestServer().CreateClient().GetAsync(string.Concat(path, query));
+        IDataProtector dp = host.Services.GetService<IDataProtectionProvider>().CreateProtector(Constants.StateCookieName);
+        stateResolver = new Func<HttpResponseMessage, EasyAuthState>((response) => GetStateFromResponseWithAsserts(dp, response));
 
-        Assert.Equal(System.Net.HttpStatusCode.Unauthorized, response.StatusCode);
-
-        string responseBody = await response.Content.ReadAsStringAsync();
-
-        Assert.Contains(containsMessage, responseBody);
-        Assert.True(response.Headers.Contains(HeaderNames.SetCookie));
-        Assert.True(CookieHeaderValue.TryParseList(response.Headers.GetValues(HeaderNames.SetCookie).ToList(), out IList<CookieHeaderValue> cookieValues));
-        Assert.Contains(cookieValues, cookieValues => cookieValues.Name == Constants.StateCookieName);
-
-        CookieHeaderValue cookieHeader = cookieValues.First(x => x.Name == Constants.StateCookieName);
-        Assert.True(cookieHeader.Value.HasValue);
-
-        IDataProtector dp = host.Services.GetService<IDataProtectionProvider>()
-            .CreateProtector(Constants.StateCookieName);
-
-        EasyAuthState state = JsonSerializer.Deserialize<EasyAuthState>(dp.Unprotect(cookieHeader.Value.Value));
-        Assert.NotNull(state);
-        Assert.Equal(EasyAuthState.AuthStatus.Unauthenticated, state.Status);
-        Assert.Contains(containsMessage, state.Msg);
-
-        Assert.Contains(loggerFactory.Logger.Messages, x => x.Message.Contains(containsMessage));
+        return host.GetTestServer().CreateClient().GetAsync(string.Concat(options.AuthPath, query)).Result;
     }
-
-    [Theory]
-    [InlineData("/testauth", "?scope=foo", "ScopeAuthorizationRequirement:Scope= and `scp` or `http://schemas.microsoft.com/identity/claims/scope` is one of the following values: (foo)", new string[] { "foo" })]
-    public async Task Invoke_HandleAuth_UnauthorizedWithScopes(string path, string query, string containsMessage, string[] scopes)
+    private HttpResponseMessage GetResponseForAuthZ(EasyAuthConfigurationOptions options, string query, 
+        out IReadOnlyList<TestLogger.LoggedMessage> logs, out Func<HttpResponseMessage, EasyAuthState> stateResolver)
     {
-        EasyAuthConfigurationOptions options = new EasyAuthConfigurationOptions() { AuthPath = path };
         TestLogger.TestLoggerFactory loggerFactory = new TestLogger.TestLoggerFactory();
+        logs = loggerFactory.Logger.Messages;
 
         using IHost host = new HostBuilder()
             .ConfigureServices(services =>
@@ -88,8 +148,8 @@ public class EasyAuthMiddlewareTests
                 services.AddSingleton<ILogger<EasyAuthMiddleware>>(loggerFactory.CreateLogger<EasyAuthMiddleware>());
                 services.AddEasyAuthForK8s(GetConfiguration(options), loggerFactory);
 
-                    //swap out the cookiehandler with one that will do what we tell it
-                    services.Configure<AuthenticationOptions>(options =>
+                //swap out the cookiehandler with one that will do what we tell it
+                services.Configure<AuthenticationOptions>(options =>
                 {
                     var schemes = options.Schemes as List<AuthenticationSchemeBuilder>;
                     schemes.First(c => c.Name == CookieAuthenticationDefaults.AuthenticationScheme).HandlerType = typeof(TestAuthenticationHandler);
@@ -105,15 +165,15 @@ public class EasyAuthMiddlewareTests
                 });
             }).Build();
 
-        await host.StartAsync();
+        host.StartAsync().Wait();
 
-        System.Net.Http.HttpResponseMessage response = await host.GetTestServer().CreateClient().GetAsync(string.Concat(path, query));
+        IDataProtector dp = host.Services.GetService<IDataProtectionProvider>().CreateProtector(Constants.StateCookieName);
+        stateResolver = new Func<HttpResponseMessage, EasyAuthState>((response) => GetStateFromResponseWithAsserts(dp, response));
 
-        Assert.Equal(System.Net.HttpStatusCode.Unauthorized, response.StatusCode);
-
-        string responseBody = await response.Content.ReadAsStringAsync();
-
-        Assert.Contains(containsMessage, responseBody);
+        return host.GetTestServer().CreateClient().GetAsync(string.Concat(options.AuthPath, query)).Result;
+    }
+    private EasyAuthState GetStateFromResponseWithAsserts(IDataProtector dp, HttpResponseMessage response)
+    {
         Assert.True(response.Headers.Contains(HeaderNames.SetCookie));
         Assert.True(CookieHeaderValue.TryParseList(response.Headers.GetValues(HeaderNames.SetCookie).ToList(), out IList<CookieHeaderValue> cookieValues));
         Assert.Contains(cookieValues, cookieValues => cookieValues.Name == Constants.StateCookieName);
@@ -121,24 +181,17 @@ public class EasyAuthMiddlewareTests
         CookieHeaderValue cookieHeader = cookieValues.First(x => x.Name == Constants.StateCookieName);
         Assert.True(cookieHeader.Value.HasValue);
 
-        IDataProtector dp = host.Services.GetService<IDataProtectionProvider>()
-            .CreateProtector(Constants.StateCookieName);
-
         EasyAuthState state = JsonSerializer.Deserialize<EasyAuthState>(dp.Unprotect(cookieHeader.Value.Value));
         Assert.NotNull(state);
-        Assert.Equal(EasyAuthState.AuthStatus.Unauthorized, state.Status);
-        Assert.Contains(containsMessage, state.Msg);
-        Assert.Equal(state.Scopes, scopes.ToList());
 
-        Assert.Contains(loggerFactory.Logger.Messages, x => x.Message.Contains(containsMessage));
+        return state;
     }
-
-    private IConfiguration GetConfiguration(EasyAuthConfigurationOptions options)
+    private async Task EvaluateMessagesWithAsserts(string containsMessage, HttpContent body, EasyAuthState state, IReadOnlyList<TestLogger.LoggedMessage> logs )
     {
-        return new ConfigurationBuilder()
-            .AddJsonFile("testsettings.json", false, true)
-            .Add(new EasyAuthOptionsConfigurationSource(options))
-            .Build();
+        string responseBody = await body.ReadAsStringAsync();
+        Assert.Contains(containsMessage, responseBody);
+        Assert.Contains(containsMessage, state.Msg);
+        Assert.Contains(logs, x => x.Message.Contains(containsMessage));
     }
 }
 
