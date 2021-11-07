@@ -5,27 +5,26 @@ using Microsoft.Extensions.Hosting;
 using System;
 using Xunit;
 
-namespace EasyAuthForK8s.Tests.Web
+namespace EasyAuthForK8s.Tests.Web;
+
+public class AppBuilderExtensionsTests
 {
-    public class AppBuilderExtensionsTests
+    [Fact]
+    public void ThrowWhenRequiredServicesNotRegistered()
     {
-        [Fact]
-        public void ThrowWhenRequiredServicesNotRegistered()
-        {
-            using IHost host = new HostBuilder()
-                .ConfigureWebHost(webHostBuilder =>
+        using IHost host = new HostBuilder()
+            .ConfigureWebHost(webHostBuilder =>
+            {
+                webHostBuilder
+                .UseTestServer()
+                .Configure(app =>
                 {
-                    webHostBuilder
-                    .UseTestServer()
-                    .Configure(app =>
-                    {
-                        app.UseEasyAuthForK8s();
-                    });
-                }).Build();
+                    app.UseEasyAuthForK8s();
+                });
+            }).Build();
 
-            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => host.Start());
+        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => host.Start());
 
-            Assert.Equal("IAuthorization service was not found in the service collection. Call to servcies.AddEasyAuthForK8s() is required in ConfigureServices.", ex.Message);
-        }
+        Assert.Equal("IAuthorization service was not found in the service collection. Call to servcies.AddEasyAuthForK8s() is required in ConfigureServices.", ex.Message);
     }
 }

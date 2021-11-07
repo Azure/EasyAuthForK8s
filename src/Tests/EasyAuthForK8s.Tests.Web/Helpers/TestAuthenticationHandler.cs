@@ -12,7 +12,7 @@ namespace EasyAuthForK8s.Tests.Web.Helpers;
 /// <summary>
 /// AuthN always succeeds to allow us to test AuthZ
 /// </summary>
-public class TestAuthenticationHandler : IAuthenticationHandler
+internal class TestAuthenticationHandler : IAuthenticationHandler
 {
     public Task<AuthenticateResult> AuthenticateAsync()
     {
