@@ -1,9 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace EasyAuthForK8s.Tests.Web
 {
@@ -33,7 +30,7 @@ namespace EasyAuthForK8s.Tests.Web
 
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
         {
-            var message = formatter(state, exception);
+            string message = formatter(state, exception);
             _messages.Add(new LoggedMessage(logLevel, eventId, exception, message));
         }
 

@@ -158,22 +158,27 @@ namespace EasyAuthForK8s.Web
             {
                 context.Response.StatusCode = StatusCodes.Status401Unauthorized;
 
-                //in our parlance Forbbiden is a terminal failure and we only return 401
-                //so that nginx can redirect to a friendly error for the user
-                authStatus = EasyAuthState.AuthStatus.Forbidden;
+                authStatus = EasyAuthState.AuthStatus.Unauthorized;
                 StringBuilder messageBuilder = new StringBuilder();
 
                 messageBuilder.Append($"Access denied for subject {(authN.Principal?.Identity.Name ?? "[anonymous]")}. ");
 
                 foreach (IAuthorizationRequirement reason in authZ.Failure?.FailedRequirements)
                 {
-                    //if authZ fails because of a missing scope or identiry, we can round-trip and ask for it
-                    if (reason is ScopeAuthorizationRequirement || reason is DenyAnonymousAuthorizationRequirement)
+                    //if AuthN fails the result is always Unauthenticated
+                    //if AuthN succeeds, but AuthZ role is missing, there's nothing more we can do: Forbidden
+                    //if AuthN succeeds, but AuthZ scope is missing, we can do a new challenge to get it
+                    if (authStatus != EasyAuthState.AuthStatus.Unauthenticated)
                     {
-                        authStatus = EasyAuthState.AuthStatus.Unauthorized;
+                        if (reason is DenyAnonymousAuthorizationRequirement)
+                            authStatus = EasyAuthState.AuthStatus.Unauthenticated;
+                        //in our parlance Forbidden is a terminal failure which would normally return 403,
+                        //but we must return 401 so that nginx can redirect to a friendly error for the user
+                        else if (reason is RolesAuthorizationRequirement)
+                            authStatus = EasyAuthState.AuthStatus.Forbidden;      
                     }
 
-                    messageBuilder.Append($"{reason.ToString()}. ");
+                    messageBuilder.Append($"{reason.ToString()} ");
                 }
 
                 message += messageBuilder.ToString();

@@ -147,7 +147,12 @@ namespace EasyAuthForK8s.Web.Helpers
                 userInfo.graph = await GraphHelper.ExecuteQueryAsync(configOptions.GraphEndpoint, context.Properties.GetTokenValue("access_token"), queries);
             }
 
-            JwtSecurityToken jwtSecurityToken = new JwtSecurityToken(context.Properties.GetTokenValue("id_token"));
+            var id_token = context.Properties.GetTokenValue("id_token");
+            //TODO we should log a warning here instead throwing if the id_token is missing
+            if (!string.IsNullOrEmpty(id_token))
+                throw new InvalidOperationException("id_token is missing from authentication properties.  Ensure that SaveTokens option is 'true'.");
+            
+            JwtSecurityToken jwtSecurityToken = new JwtSecurityToken(id_token);
             userInfo.PopulateFromClaims(jwtSecurityToken.Claims);
             claimsToKeep.Add(userInfo.ToPayloadClaim(configOptions));
 

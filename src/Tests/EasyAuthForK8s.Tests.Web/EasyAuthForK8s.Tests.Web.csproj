@@ -29,4 +29,10 @@
     <ProjectReference Include="..\..\EasyAuthForK8s.Web\EasyAuthForK8s.Web.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="testsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
