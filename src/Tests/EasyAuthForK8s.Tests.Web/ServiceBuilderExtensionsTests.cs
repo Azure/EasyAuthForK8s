@@ -40,8 +40,8 @@ public class ServiceBuilderExtensionsTests
 
         services.PostConfigure<KeyManagementOptions>((KeyManagementOptions configureOptions) =>
         {
-                //get the downstream config so we can see that the options cascaded properly
-                FileSystemXmlRepository repo = configureOptions.XmlRepository as FileSystemXmlRepository;
+            //get the downstream config so we can see that the options cascaded properly
+            FileSystemXmlRepository repo = configureOptions.XmlRepository as FileSystemXmlRepository;
             dpPath = repo.Directory.ToString();
         });
 

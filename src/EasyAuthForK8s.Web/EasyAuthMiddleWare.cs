@@ -34,19 +34,29 @@ public class EasyAuthMiddleware
     {
 
         if (next == null)
+        {
             throw new ArgumentNullException(nameof(next));
+        }
 
         if (configureOptions == null)
+        {
             throw new ArgumentNullException(nameof(configureOptions));
+        }
 
         if (aadOptions == null)
+        {
             throw new ArgumentNullException(nameof(aadOptions));
+        }
 
         if (authservice == null)
+        {
             throw new ArgumentNullException(nameof(authservice));
+        }
 
         if (logger == null)
+        {
             throw new ArgumentNullException(nameof(logger));
+        }
 
         _next = next;
         _configureOptions = configureOptions.Value;
@@ -70,7 +80,6 @@ public class EasyAuthMiddleware
 
         // Call the next delegate/middleware in the pipeline
         await _next(context);
-
     }
     public async Task HandleChallenge(HttpContext context)
     {
@@ -176,11 +185,15 @@ public class EasyAuthMiddleware
                 if (authStatus != EasyAuthState.AuthStatus.Unauthenticated)
                 {
                     if (reason is DenyAnonymousAuthorizationRequirement)
+                    {
                         authStatus = EasyAuthState.AuthStatus.Unauthenticated;
+                    }
                     //in our parlance Forbidden is a terminal failure which would normally return 403,
                     //but we must return 401 so that nginx can redirect to a friendly error for the user
                     else if (reason is RolesAuthorizationRequirement)
+                    {
                         authStatus = EasyAuthState.AuthStatus.Forbidden;
+                    }
                 }
 
                 messageBuilder.Append($"{reason.ToString()} ");

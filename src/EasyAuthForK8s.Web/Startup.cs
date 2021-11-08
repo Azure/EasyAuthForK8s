@@ -29,6 +29,10 @@ public class Startup
     {
         app.UseHealthChecks("/");
 
+        // log warnings for size that might cause NGINX problems.  Must add 
+        // this middleware before EasyAuth
+        app.UseLargeSetCookieLogWarning(4096);
+        
         //if (Convert.ToBoolean(Configuration["ForceHttps"]))
         //{
         //    var options = new ForwardedHeadersOptions
@@ -44,7 +48,7 @@ public class Startup
         //    });
         //}
 
-        //call easyauth after healthchecks since it requires additional security configuration
+        
         app.UseEasyAuthForK8s();
 
     }

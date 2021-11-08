@@ -13,9 +13,12 @@ internal class TestAuthenticationHandler : IAuthenticationHandler
 {
     public Task<AuthenticateResult> AuthenticateAsync()
     {
+        ClaimsIdentity identity = new ClaimsIdentity(CookieAuthenticationDefaults.AuthenticationScheme, "name", null);
+        identity.AddClaim(new("name", "Jon"));
+
         return Task.FromResult(AuthenticateResult.Success(
             new AuthenticationTicket(
-                new ClaimsPrincipal(new ClaimsIdentity(CookieAuthenticationDefaults.AuthenticationScheme)),
+                new ClaimsPrincipal(identity),
                 new AuthenticationProperties(),
                 CookieAuthenticationDefaults.AuthenticationScheme)));
     }
@@ -35,4 +38,4 @@ internal class TestAuthenticationHandler : IAuthenticationHandler
         return Task.FromResult(0);
     }
 }
-    
+

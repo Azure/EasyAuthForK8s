@@ -4,14 +4,18 @@ using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Identity.Web;
+using Microsoft.Net.Http.Headers;
 using System;
 using System.IO;
+using System.Linq;
+using System.Text;
 
 namespace EasyAuthForK8s.Web;
 
@@ -125,6 +129,56 @@ public static class EasyAuthBuilderExtensions
         }
 
         return builder.UseMiddleware<EasyAuthMiddleware>();
+    }
+
+    /// <summary>
+    /// Warns if Set-Cookie from OIDC callback is larger than  We have to register this separately so the event callback is created
+    /// before the OIDC handler runs;
+    /// </summary>
+    /// <param name="builder"></param>
+    /// <param name="warnSizeBytes">header size in bytes that will trigger log warning</param>
+    /// <returns></returns>
+    public static IApplicationBuilder UseLargeSetCookieLogWarning(
+         this IApplicationBuilder builder, uint warnSizeBytes)
+    {
+        var loggerFactory = builder.ApplicationServices.GetService<ILoggerFactory>();
+        var aadOptions = builder.ApplicationServices.GetService<IOptions<MicrosoftIdentityOptions>>();
+
+        return builder.Use(async (context, next) =>
+        {
+            //if this is the oidc callback where we set the auth cookie,
+            //calculate the cookie header size and log warning if large
+            if (aadOptions.Value.CallbackPath == context.Request.Path)
+            {
+                var logger = loggerFactory.CreateLogger("EasyAuthForK8s.Web");
+                context.Response.OnCompleted(async (state) =>
+                {
+
+                    var response = state as HttpResponse;
+                    try
+                    {
+                        // this is really just back-of-the-napkin math.  With compression and/or non-ascii encoding,
+                        // and any other run-time unknowns this may not be entirely accurate, but it should serve
+                        // as a useful trouble-shooting tool if the ingress controller starts throwing
+                        if (response.Headers.ContainsKey(HeaderNames.SetCookie))
+                        {
+                            var length = response.Headers[HeaderNames.SetCookie].Sum(c => Encoding.ASCII.GetByteCount(c));
+
+                            if (length >= warnSizeBytes)
+                                logger.LogWarning($"Large Set-Cookie response header detected.  Total size = {length} bytes, " +
+                                    "check the configured limits on the ingress controller to ensure this is acceptable " +
+                                    "or try to reduce the cookie payload");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogError(ex, "Error calculating Set-Cookie response header size");
+                    }
+                }, context.Response);
+            }
+           
+            await next.Invoke();
+        });
     }
 }
 

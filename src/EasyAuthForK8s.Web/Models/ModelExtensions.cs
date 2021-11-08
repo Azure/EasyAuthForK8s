@@ -171,14 +171,14 @@ internal static class ModelExtensions
             return;
         }
 
-        Action<string, string> addHeader = (name, value) =>
+        void addHeader(string name, string value) 
          {
              string headerName = SanitizeHeaderName($"{configOptions.ResponseHeaderPrefix}{name}");
              string encodedValue = EncodeValue(value, configOptions.ClaimEncodingMethod);
 
              if (headers.ContainsKey(headerName))
              {
-                 headers[headerName].Append(encodedValue);
+                 _ = headers[headerName].Append(encodedValue);
              }
              else
              {
