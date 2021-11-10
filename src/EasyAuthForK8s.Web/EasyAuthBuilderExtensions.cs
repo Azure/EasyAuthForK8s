@@ -16,6 +16,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace EasyAuthForK8s.Web;
 
@@ -26,44 +27,47 @@ public static class EasyAuthBuilderExtensions
         ILogger logger = loggerFactory.CreateLogger("EasyAuthForK8s.Web.EasyAuthBuilderExtensions");
 
         IConfigurationSection azureAdConfigSection = configuration.GetSection(Constants.AzureAdConfigSection);
-        MicrosoftIdentityOptions microsoftIdentityOptions = new();
-        azureAdConfigSection.Bind(microsoftIdentityOptions);
-        services.AddSingleton<IOptions<MicrosoftIdentityOptions>>(Options.Create(microsoftIdentityOptions));
 
         EasyAuthConfigurationOptions easyAuthConfig = configuration
             .GetSection(Constants.EasyAuthConfigSection)
             .Get<EasyAuthConfigurationOptions>();
 
         services.AddSingleton<IOptions<EasyAuthConfigurationOptions>>(Options.Create(easyAuthConfig));
+        services.AddSingleton<GraphHelperService>();
 
         logger.LogInformation($"Initializing services and middleware.  Configuration: AuthPath={easyAuthConfig.AuthPath}, SigninPath={easyAuthConfig.SigninPath}, AllowBearerToken={easyAuthConfig.AllowBearerToken}, DataProtectionFileLocation={easyAuthConfig.DataProtectionFileLocation}");
 
+        var eventHelper = new EventHelper(easyAuthConfig);
 
         //for Web applications
         services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
-            .AddMicrosoftIdentityWebApp(async o =>
+            .AddMicrosoftIdentityWebApp(o =>
             {
-                azureAdConfigSection.Bind(o);
+                azureAdConfigSection.Bind(o);                
+
+                var nextRedirectHandler = o.Events.OnRedirectToIdentityProvider;
+                o.Events.OnRedirectToIdentityProvider = async context =>
+                    await eventHelper.HandleRedirectToIdentityProvider(context, nextRedirectHandler);
+
+                var nextFailureHandler = o.Events.OnRemoteFailure;
+                o.Events.OnRemoteFailure = async context =>
+                    await eventHelper.HandleRemoteFailure(context, nextFailureHandler);
             },
-            async c =>
+            c =>
             {
                 c.Cookie.Name = Constants.CookieName;
-                c.Events.OnSigningIn += async context => await EventHelper.CookieSigningIn(context, easyAuthConfig);
+
+                var nextHandler = c.Events.OnSigningIn;
+                c.Events.OnSigningIn = async context => await eventHelper.CookieSigningIn(context, nextHandler);
             });
+            
 
         //configure OIDC options
         services.Configure<OpenIdConnectOptions>(OpenIdConnectDefaults.AuthenticationScheme, (OpenIdConnectOptions configureOptions) =>
         {
-            ILogger<EventHelper> logger = loggerFactory.CreateLogger<EventHelper>();
-
             configureOptions.ResponseType = "code";
             configureOptions.SaveTokens = true;
-
-            configureOptions.Events.OnRedirectToIdentityProvider +=
-                async context => await EventHelper.HandleRedirectToIdentityProvider(context, easyAuthConfig, microsoftIdentityOptions, logger);
-
-            configureOptions.Events.OnRemoteFailure +=
-                async context => await EventHelper.HandleRemoteFailure(context, logger);
+            configureOptions.ReturnUrlParameter = Constants.RedirectParameterName;
         });
 
 
@@ -73,27 +77,15 @@ public static class EasyAuthBuilderExtensions
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddMicrosoftIdentityWebApi(b => b.SaveToken = true, o => azureAdConfigSection.Bind(o));
         }
-        //add authorization
-        services.AddAuthorization();
-        //add authz policies to distinguish between application types
-        //services.AddAuthorization(options =>
-        //{
-        //    options.AddPolicy("api", policy =>
-        //    {
-        //        policy.AuthenticationSchemes.Add(JwtBearerDefaults.AuthenticationScheme);
-        //        policy.RequireAuthenticatedUser();
-        //    });
-        //    options.AddPolicy("web", policy =>
-        //    {
-        //        policy.AuthenticationSchemes.Add(OpenIdConnectDefaults.AuthenticationScheme);
-        //        policy.RequireAuthenticatedUser();
-        //    });
-        //});
+        //add authorization along with our scope handler implementation
+        services.AddAuthorization().AddSingleton<IAuthorizationHandler, Authorization.ScopeHandler>();
 
-        //required to ensure consistency across multiple nodes
+        // required to ensure consistency across multiple nodes
+        // currently, cookies will not remain valid after a new helm deployment
+        // this is "by design" for now as the safest option since we don't know
+        // what might have changed during the deployment
         services.AddDataProtection()
           .PersistKeysToFileSystem(new DirectoryInfo(easyAuthConfig.DataProtectionFileLocation));
-        //TODO .ProtectKeysWithCertificate(thumbprint) if we want cookies to remain valid across helm deployments
 
         services.Configure<ForwardedHeadersOptions>(options =>
         {
@@ -103,15 +95,9 @@ public static class EasyAuthBuilderExtensions
             options.KnownProxies.Clear();
         });
     }
-    public static IApplicationBuilder UseEasyAuthForK8s(
-         this IApplicationBuilder builder)
+    public static IApplicationBuilder UseEasyAuthForK8s(this IApplicationBuilder builder)
     {
-        //needed to ensure redirect to IdP always returns via https
-        ForwardedHeadersOptions options = new ForwardedHeadersOptions
-        {
-            ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
-        };
-        builder.UseForwardedHeaders(options);
+        builder.UseForwardedHeaders();
         builder.Use(async (context, next) =>
         {
             context.Request.Scheme = "https";
@@ -121,11 +107,12 @@ public static class EasyAuthBuilderExtensions
         //the only middleware that is essential is authentication
         builder.UseAuthentication();
 
-        //we don't use the authentication middleware, which would perform its own check here,
+        //we don't use the authorization middleware, which would perform its own check here,
         //so we need to ensure the authorization service was loaded in ConfigureServices
         if (builder.ApplicationServices.GetService(typeof(IAuthorizationService)) == null)
         {
-            throw new InvalidOperationException("IAuthorization service was not found in the service collection. Call to servcies.AddEasyAuthForK8s() is required in ConfigureServices.");
+            throw new InvalidOperationException("IAuthorization service was not found in the service collection. " +
+                "Call to services.AddEasyAuthForK8s() is required in ConfigureServices.");
         }
 
         return builder.UseMiddleware<EasyAuthMiddleware>();
@@ -151,7 +138,7 @@ public static class EasyAuthBuilderExtensions
             if (aadOptions.Value.CallbackPath == context.Request.Path)
             {
                 var logger = loggerFactory.CreateLogger("EasyAuthForK8s.Web");
-                context.Response.OnCompleted(async (state) =>
+                context.Response.OnCompleted((state) =>
                 {
 
                     var response = state as HttpResponse;
@@ -174,7 +161,9 @@ public static class EasyAuthBuilderExtensions
                     {
                         logger.LogError(ex, "Error calculating Set-Cookie response header size");
                     }
+                    return Task.CompletedTask;
                 }, context.Response);
+                
             }
            
             await next.Invoke();

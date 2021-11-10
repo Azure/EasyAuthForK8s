@@ -1,4 +1,5 @@
-﻿using EasyAuthForK8s.Web.Models;
+﻿using EasyAuthForK8s.Web.Helpers;
+using EasyAuthForK8s.Web.Models;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -23,46 +24,27 @@ public class EasyAuthMiddleware
 {
     private readonly RequestDelegate _next;
     private readonly EasyAuthConfigurationOptions _configureOptions;
-    private readonly MicrosoftIdentityOptions _aadOptions;
+    //private readonly IOptionsMonitor<MicrosoftIdentityOptions> _aadOptions;
     private readonly IAuthorizationService _authService;
     private readonly ILogger _logger;
+    private readonly IOptionsMonitor<OpenIdConnectOptions> _openIdConnectOptions;
+    private readonly GraphHelperService _graphHelper;
     public EasyAuthMiddleware(RequestDelegate next,
         IOptions<EasyAuthConfigurationOptions> configureOptions,
-        IOptions<MicrosoftIdentityOptions> aadOptions,
+        //IOptionsMonitor<MicrosoftIdentityOptions> aadOptions,
         IAuthorizationService authservice,
-        ILogger<EasyAuthMiddleware> logger)
+        IOptionsMonitor<OpenIdConnectOptions> openIdConnectOptions,
+        ILogger<EasyAuthMiddleware> logger,
+        GraphHelperService graphHelper)
     {
 
-        if (next == null)
-        {
-            throw new ArgumentNullException(nameof(next));
-        }
-
-        if (configureOptions == null)
-        {
-            throw new ArgumentNullException(nameof(configureOptions));
-        }
-
-        if (aadOptions == null)
-        {
-            throw new ArgumentNullException(nameof(aadOptions));
-        }
-
-        if (authservice == null)
-        {
-            throw new ArgumentNullException(nameof(authservice));
-        }
-
-        if (logger == null)
-        {
-            throw new ArgumentNullException(nameof(logger));
-        }
-
-        _next = next;
-        _configureOptions = configureOptions.Value;
-        _aadOptions = aadOptions.Value;
-        _authService = authservice;
-        _logger = logger;
+        _next = next ?? throw new ArgumentNullException(nameof(next));
+        _configureOptions = configureOptions.Value ?? throw new ArgumentNullException(nameof(configureOptions)); ;
+        //_aadOptions = aadOptions;
+        _authService = authservice ?? throw new ArgumentNullException(nameof(authservice)); 
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger)); ;
+        _openIdConnectOptions = openIdConnectOptions ?? throw new ArgumentNullException(nameof(openIdConnectOptions));
+        _graphHelper = graphHelper ?? throw new ArgumentNullException(nameof(graphHelper));
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -104,6 +86,7 @@ public class EasyAuthMiddleware
     }
     public async Task HandleAuth(HttpContext context)
     {
+        var appRegistration = await _graphHelper.ManifestConfigurationAsync(context.RequestAborted);
         List<string> scopes = new List<string>();
         string message = "";
         EasyAuthState.AuthStatus authStatus = EasyAuthState.AuthStatus.Unauthenticated;
@@ -121,7 +104,8 @@ public class EasyAuthMiddleware
         IQueryCollection query = context.Request.Query;
         if (context.Request.Query.ContainsKey(Constants.ScopeParameterName))
         {
-            scopes.AddRange(context.Request.Query[Constants.ScopeParameterName]);
+            scopes.AddRange(context.Request.Query[Constants.ScopeParameterName]
+                .Where(x => !string.IsNullOrWhiteSpace(x)));
         }
 
         AuthenticateResult authN = await context.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
@@ -152,7 +136,7 @@ public class EasyAuthMiddleware
             // multiple query parameters for roles will require *all* to succeed
             // e.g. "?role=foo&role=foo2"
             // roles are CASE SENSITIVE!!
-            foreach (string item in query[Constants.RoleParameterName])
+            foreach (string item in query[Constants.RoleParameterName].Where(x => !string.IsNullOrWhiteSpace(x)))
             {
                 if (!string.IsNullOrEmpty(item))
                 {
@@ -160,13 +144,15 @@ public class EasyAuthMiddleware
                 }
             }
         }
+
         //same && vs || treatment applies for scopes
         foreach (string item in scopes)
         {
-            requirements.Add(new ScopeAuthorizationRequirement(item.Split("|", System.StringSplitOptions.RemoveEmptyEntries)));
+            requirements.Add(new Authorization.ScopeRequirement(item.Split("|", System.StringSplitOptions.RemoveEmptyEntries)));
         }
 
-        AuthorizationResult authZ = await _authService.AuthorizeAsync(authN.Principal ?? new ClaimsPrincipal(), default, requirements);
+
+        AuthorizationResult authZ = await _authService.AuthorizeAsync(authN.Principal ?? new ClaimsPrincipal(), null, requirements);
 
         if (!authZ.Succeeded)
         {

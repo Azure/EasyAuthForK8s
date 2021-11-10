@@ -1,6 +1,7 @@
 ﻿using EasyAuthForK8s.Tests.Web.Helpers;
 using EasyAuthForK8s.Web;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.DataProtection.KeyManagement;
@@ -33,7 +34,7 @@ public class ServiceBuilderExtensionsTests
 
         //test that essential services are created
         Assert.Contains(services, s => s.ServiceType == typeof(IOptions<EasyAuthConfigurationOptions>));
-        Assert.Contains(services, s => s.ServiceType == typeof(IOptions<MicrosoftIdentityOptions>));
+        Assert.Contains(services, s => s.ServiceType == typeof(IConfigureOptions<OpenIdConnectOptions>));
         Assert.Contains(services, s => s.ServiceType == typeof(IAuthenticationService));
         Assert.Contains(services, s => s.ServiceType == typeof(IDataProtectionProvider));
         Assert.Contains(services, s => s.ServiceType == typeof(IAuthorizationService));

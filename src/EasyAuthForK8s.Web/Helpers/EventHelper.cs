@@ -12,58 +12,59 @@ using System.Linq;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace EasyAuthForK8s.Web.Helpers
 {
     internal class EventHelper
     {
+        private readonly EasyAuthConfigurationOptions _configOptions;
+        public EventHelper(EasyAuthConfigurationOptions configOptions)
+        {
+            _configOptions = configOptions ?? throw new ArgumentNullException(nameof(configOptions));
+        }
+        private static ILogger _logger;
         /// <summary>
         /// Modifies the OIDC message to add additional options
         /// </summary>
         /// <param name="context"></param>
         /// <returns></returns>
-        public static Task HandleRedirectToIdentityProvider(RedirectContext context,
-            EasyAuthConfigurationOptions configOptions,
-            MicrosoftIdentityOptions aadOptions,
-            ILogger logger)
+        public async Task HandleRedirectToIdentityProvider(
+            RedirectContext context,
+            Func<RedirectContext, Task> next)
         {
-            logger.LogInformation($"Redirecting sign-in to endpoint {context.ProtocolMessage.IssuerAddress}");
-
-            //configure the path where the user should be redirected after successful sign in
-            //this should be provided by the ingress controller as the path they were originally
-            //attempting to access before the auth challenge.  We probably could store the 
-            //path of the original request in the state object and use that instead
-            if (context.HttpContext.Request.Query.ContainsKey(Constants.RedirectParameterName))
-            {
-                context.Properties.RedirectUri = context.HttpContext.Request.Query[Constants.RedirectParameterName].ToString();
-            }
-            else
-            {
-                context.Properties.RedirectUri = configOptions.DefaultRedirectAfterSignin;
-            }
+            EnsureLogger(context.HttpContext);
+            _logger!.LogInformation($"Redirecting sign-in to endpoint {context.ProtocolMessage.IssuerAddress}");
 
             //if additional scopes are requested, add them to the redirect
             EasyAuthState state = context.HttpContext.EasyAuthStateFromHttpContext();
-            context.ProtocolMessage.Scope = BuildScopeString(context.ProtocolMessage.Scope, state.Scopes);
+            
+            // there are three ways to determine where to send the user after successful signin
+            // in order of precendence:
+            //  1. if the rd parameter was supplied when they were sent the challenge
+            //  2. The url extracted from the nginx header in the authreq (ie the url they were attempting to access)
+            //  3. Fall back to a predetermined path.  Default is the root "/"
+            if (context.Properties.RedirectUri == context.Options.CallbackPath)
+                context.Properties.RedirectUri = state.Url ?? _configOptions.DefaultRedirectAfterSignin;
 
-            //This simplifies the user sign in by providing the the domain for home realm discovery
-            //this is helpful when the user has multiple AAD accounts
-            context.ProtocolMessage.DomainHint = aadOptions.Domain;
+            context.ProtocolMessage.Scope = BuildScopeString(context.ProtocolMessage.Scope, state.Scopes);
 
             //add the graph queries to the oidc message state so that they can be run after successful login
             context.Properties.Items.Add(Constants.OidcGraphQueryStateBag, string.Join('|', state.GraphQueries));
 
-            return Task.CompletedTask;
+            await next(context).ConfigureAwait(false);
         }
 
         /// <summary>
         /// Handles scenarios where AAD sends back error information
         /// </summary>
         /// <param name="context"></param>
-        /// <param name="logger"></param>
         /// <returns></returns>
-        public static async Task HandleRemoteFailure(RemoteFailureContext context, ILogger logger)
+        public async Task HandleRemoteFailure(RemoteFailureContext context, Func<RemoteFailureContext, Task> next)
         {
+            EnsureLogger(context.HttpContext);
+            _logger!.LogWarning("A remote error was return during signin: {message}", context.Failure.Message);
+
             //TODO switch to compiled razor view for this
             StringBuilder sb = new StringBuilder();
             sb.AppendLine("<html><head><title>Authentication Error</title></head><body>");
@@ -77,6 +78,8 @@ namespace EasyAuthForK8s.Web.Helpers
             context.Response.ContentType = "text/html";
             await context.Response.WriteAsync(sb.ToString());
             context.HandleResponse();
+
+            await next(context).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -86,7 +89,8 @@ namespace EasyAuthForK8s.Web.Helpers
         /// <param name="context"></param>
         /// <param name="configOptions"></param>
         /// <returns></returns>
-        public static async Task CookieSigningIn(CookieSigningInContext context, EasyAuthConfigurationOptions configOptions)
+        public async Task CookieSigningIn(CookieSigningInContext context, 
+            Func<CookieSigningInContext, Task> next)
         {
             /* 
              * after the initial sign in and claims extraction, we only really need
@@ -94,6 +98,8 @@ namespace EasyAuthForK8s.Web.Helpers
              * requirements. From there we can strip everything down to keep the cookie as
              * small as possible, while adding back anything needed by the backend service
             */
+            EnsureLogger(context.HttpContext);
+
             ClaimsIdentity remIdentity = context.Principal.Identity as ClaimsIdentity;
             List<ClaimsIdentity> identities = context.Principal.Identities as List<ClaimsIdentity>;
             identities.Clear();
@@ -119,32 +125,38 @@ namespace EasyAuthForK8s.Web.Helpers
                 {
                     addClaim(claim, Constants.Claims.Subject);
                 }
-                else if (claim.Type == ClaimConstants.Scp || claim.Type == ClaimConstants.Scp)
+            }
+
+            string access_token = context.Properties.GetTokenValue("access_token");
+
+            if (string.IsNullOrEmpty(access_token))
+            {
+                throw new InvalidOperationException("access_token is missing from authentication properties.  Ensure that SaveTokens option is 'true'.");
+            }
+
+            JwtSecurityToken accessToken = new JwtSecurityToken(access_token);
+            
+            //for whatever reason, id_tokens do not contain scp claims, but
+            //the OIDC handler extracts claims from the id_token, and 
+            //discards the scope from the token response, so we are left 
+            //with peeking inside the access_token to get the scopes.
+            foreach (Claim claim in accessToken.Claims)
+            {
+                if (claim.Type == ClaimConstants.Scp)
                 {
                     addClaim(claim, ClaimConstants.Scp);
                 }
             }
-
-            claimsToKeep.AddRange(remIdentity.Claims
-                .Where(x => x.Type == remIdentity.RoleClaimType)
-                .Select(c => new Claim(Constants.Claims.Role, c.Value)));
-
-            claimsToKeep.AddRange(remIdentity.Claims
-                .Where(x => x.Type == remIdentity.NameClaimType)
-                .Select(c => new Claim(Constants.Claims.Name, c.Value)));
-
-            claimsToKeep.AddRange(remIdentity.Claims
-                .Where(x => x.Type == ClaimTypes.NameIdentifier)
-                .Select(c => new Claim(Constants.Claims.Subject, c.Value)));
-
 
             UserInfoPayload userInfo = new UserInfoPayload();
 
             if (context.Properties.Items.ContainsKey(Constants.OidcGraphQueryStateBag))
             {
                 string[] queries = context.Properties.Items[Constants.OidcGraphQueryStateBag].Split('|', StringSplitOptions.RemoveEmptyEntries);
-
-                userInfo.graph = await GraphHelper.ExecuteQueryAsync(configOptions.GraphEndpoint, context.Properties.GetTokenValue("access_token"), queries);
+                var graphService = context.HttpContext.RequestServices.GetService<GraphHelperService>(); 
+                if(graphService != null)
+                    userInfo.graph = await graphService.ExecuteQueryAsync(_configOptions.GraphEndpoint, context.Properties.GetTokenValue("access_token"), queries);
+                    
             }
 
             string id_token = context.Properties.GetTokenValue("id_token");
@@ -156,7 +168,7 @@ namespace EasyAuthForK8s.Web.Helpers
 
             JwtSecurityToken jwtSecurityToken = new JwtSecurityToken(id_token);
             userInfo.PopulateFromClaims(jwtSecurityToken.Claims);
-            claimsToKeep.Add(userInfo.ToPayloadClaim(configOptions));
+            claimsToKeep.Add(userInfo.ToPayloadClaim(_configOptions));
 
             identities.Add(new ClaimsIdentity(claimsToKeep, remIdentity.AuthenticationType, Constants.Claims.Subject, Constants.Claims.Role));
 
@@ -165,13 +177,27 @@ namespace EasyAuthForK8s.Web.Helpers
             context.Properties.Items.Clear();
             context.Properties.ExpiresUtc = expiresUtc;
 
+            await next(context).ConfigureAwait(false);
+
         }
-        private static string BuildScopeString(string baseScope, IList<string> additionalScopes)
+        private string BuildScopeString(string baseScope, IList<string> additionalScopes)
         {
             return string.Join(' ', (baseScope ?? string.Empty)
                 .Split(' ', System.StringSplitOptions.RemoveEmptyEntries)
                 .Union(additionalScopes));
 
+        }
+
+        private void EnsureLogger(HttpContext context)
+        {
+            if (_logger != null)
+                return;
+            
+            if(context == null)
+                throw new ArgumentNullException("context");
+
+            var factory = context.RequestServices.GetRequiredService<ILoggerFactory>();
+            _logger = factory.CreateLogger("EasyAuthEvents");
         }
 
     }

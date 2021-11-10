@@ -25,6 +25,6 @@ public class AppBuilderExtensionsTests
 
         InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => host.Start());
 
-        Assert.Equal("IAuthorization service was not found in the service collection. Call to servcies.AddEasyAuthForK8s() is required in ConfigureServices.", ex.Message);
+        Assert.Equal("IAuthorization service was not found in the service collection. Call to services.AddEasyAuthForK8s() is required in ConfigureServices.", ex.Message);
     }
 }
