@@ -68,16 +68,18 @@ public class EasyAuthMiddleware
         EasyAuthState state = context.EasyAuthStateFromHttpContext();
 
         LogRequestHeaders("HandleChallenge", context.Request);
-        if (context.Request.Cookies.ContainsKey("foo-cookie"))
-        {
-            _logger.LogInformation($"Reading state from cookie: {state.ToJsonString()}");
-        }
         if (state.Status == EasyAuthState.AuthStatus.Forbidden)
         {
             //show error or redirect
             _logger.LogInformation($"Fatal error logging user in: {state.Msg}");
             context.Response.StatusCode = StatusCodes.Status403Forbidden;
-            await context.Response.WriteAsync(state.Msg);
+
+            await ErrorPage.Render(context.Response,
+                await _graphHelper.ManifestConfigurationAsync(context.RequestAborted),
+                "Access Forbidden",
+                state.Msg);
+            
+            return;
         }
         else
         {
@@ -86,7 +88,6 @@ public class EasyAuthMiddleware
     }
     public async Task HandleAuth(HttpContext context)
     {
-        var appRegistration = await _graphHelper.ManifestConfigurationAsync(context.RequestAborted);
         List<string> scopes = new List<string>();
         string message = "";
         EasyAuthState.AuthStatus authStatus = EasyAuthState.AuthStatus.Unauthenticated;

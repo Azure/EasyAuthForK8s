@@ -39,11 +39,11 @@ namespace EasyAuthForK8s.Web.Models
 
         public class Info
         {
-            public object termsOfServiceUrl { get; set; }
-            public object supportUrl { get; set; }
-            public object privacyStatementUrl { get; set; }
-            public object marketingUrl { get; set; }
-            public object logoUrl { get; set; }
+            public string termsOfServiceUrl { get; set; }
+            public string supportUrl { get; set; }
+            public string privacyStatementUrl { get; set; }
+            public string marketingUrl { get; set; }
+            public string logoUrl { get; set; }
         }
 
         public class PublishedPermissionScope

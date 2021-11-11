@@ -41,11 +41,15 @@ namespace EasyAuthForK8s.Web.Helpers
             
             // there are three ways to determine where to send the user after successful signin
             // in order of precendence:
-            //  1. if the rd parameter was supplied when they were sent the challenge
-            //  2. The url extracted from the nginx header in the authreq (ie the url they were attempting to access)
+            //  1. if the rd parameter was supplied when they were sent the challenge it will already be set.  Don't change.
+            //  2. The url extracted from the nginx header in the authreq (ie the url they were attempting to access, state.Url)
             //  3. Fall back to a predetermined path.  Default is the root "/"
-            if (context.Properties.RedirectUri == context.Options.CallbackPath)
-                context.Properties.RedirectUri = state.Url ?? _configOptions.DefaultRedirectAfterSignin;
+            //  4. Never go back to the Login path, since it will just challenge again
+            if (context.Properties.RedirectUri == context.Options.CallbackPath || context.Properties.RedirectUri == _configOptions.SigninPath)
+            {
+                var redirect = state.Url ?? _configOptions.SigninPath;
+                context.Properties.RedirectUri = redirect == _configOptions.SigninPath ? _configOptions.DefaultRedirectAfterSignin : redirect;
+            }
 
             context.ProtocolMessage.Scope = BuildScopeString(context.ProtocolMessage.Scope, state.Scopes);
 
@@ -65,18 +69,15 @@ namespace EasyAuthForK8s.Web.Helpers
             EnsureLogger(context.HttpContext);
             _logger!.LogWarning("A remote error was return during signin: {message}", context.Failure.Message);
 
-            //TODO switch to compiled razor view for this
-            StringBuilder sb = new StringBuilder();
-            sb.AppendLine("<html><head><title>Authentication Error</title></head><body>");
-            sb.AppendLine("<h2>We're Trying to sign you in, but an error occured.</h2><br>");
-            if (context.Failure.Data.Contains("error_description"))
-            {
-                sb.AppendLine(context.Failure.Data["error_description"] as string);
-            }
+            var graphService = context.HttpContext.RequestServices.GetService<GraphHelperService>();
+            
+            var error_detail = context?.Failure?.Data["error_description"] as string ?? context.Failure?.Message;
+            
+            await ErrorPage.Render(context.Response,
+                await graphService?.ManifestConfigurationAsync(context.HttpContext.RequestAborted),
+                "Azure Active Directory Error",
+                error_detail);
 
-            sb.AppendLine("</body></html>");
-            context.Response.ContentType = "text/html";
-            await context.Response.WriteAsync(sb.ToString());
             context.HandleResponse();
 
             await next(context).ConfigureAwait(false);
