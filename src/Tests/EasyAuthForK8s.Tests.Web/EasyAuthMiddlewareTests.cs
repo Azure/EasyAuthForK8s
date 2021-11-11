@@ -30,6 +30,7 @@ using EasyAuthForK8s.Web.Helpers;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Moq;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using System.Threading;
 
 namespace EasyAuthForK8s.Tests.Web;
 
@@ -158,22 +159,23 @@ public class EasyAuthMiddlewareTests
         
         Assert.Equal(expectedStatus, (int)response.StatusCode);
     }
+
     [Theory]
-    [InlineData("/foo", "/bar", 200, false )] //No warn: cookie is large, but isn't set by the callback
-    [InlineData("/foo", "/foo", 200, true)] //Warn: cookie is large and is set by the call back
+    [InlineData("/foo", "/bar", 500, false)] //No warn: cookie is large, but isn't set by the callback
+    [InlineData("/foo", "/foo", 500, true)] //Warn: cookie is large and is set by the call back
     [InlineData("/foo", "/bar", 50, false)] //No warn: cookie is small, and isn't set by the callback
     [InlineData("/foo", "/foo", 50, false)] //No warn: cookie is small, and is set by the callback
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Assertions", "xUnit2012:Do not use Enumerable.Any() to check if a value exists in a collection", 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Assertions", "xUnit2012:Do not use Enumerable.Any() to check if a value exists in a collection",
         Justification = "Race condition prevents Contains() from evaluating determinitistically")]
     public async Task LogWarningForLargeAuthCookie(string callbackPath, string testPath, uint datasize, bool shouldWarn)
     {
-        TestLogger.TestLoggerFactory loggerFactory = new TestLogger.TestLoggerFactory();
+        TestLogger logger = new TestLogger();
         Microsoft.Identity.Web.MicrosoftIdentityOptions options = new() { CallbackPath = callbackPath };
 
         using IHost host = new HostBuilder()
             .ConfigureServices(services =>
             {
-                services.AddSingleton<ILoggerFactory>(loggerFactory);
+                services.AddSingleton<ILoggerFactory>(logger.Factory());
                 services.AddSingleton<IOptions<MicrosoftIdentityOptions>>(Options.Create<MicrosoftIdentityOptions>(options));
             })
             .ConfigureWebHost(webHostBuilder =>
@@ -182,11 +184,12 @@ public class EasyAuthMiddlewareTests
                 .UseTestServer()
                 .Configure(app =>
                 {
-                    app.UseLargeSetCookieLogWarning(100);
+                    app.UseLargeSetCookieLogWarning(250);
                     app.Run(async context =>
                     {
                         context.Response.Cookies.Append("auth", TestUtility.RandomSafeString(datasize));
                         await context.Response.WriteAsync("");
+                        return;
                     });
                 });
             }).Build();
@@ -198,11 +201,15 @@ public class EasyAuthMiddlewareTests
         //it takes a moment for the logs to flush, so block while the host is shut down
         //so the logs get written before we evaluate them
         await host.StopAsync();
+        
+        //it's late, and I still can't force logs to flush before they are evaluated.  So Task.Delay it is for now.
+        await Task.Delay(5000);
 
         if (shouldWarn)
-            Assert.True(loggerFactory.Logger.Messages.Any(m => m.LogLevel == LogLevel.Warning && m.Message.StartsWith("Large Set-Cookie response header detected")));
+            Assert.True(logger.Messages.Any(m => m.LogLevel == LogLevel.Warning && m.Message.Contains("Large Set-Cookie response header detected")));
         else
-            Assert.DoesNotContain(loggerFactory.Logger.Messages, m => m.LogLevel == LogLevel.Warning);
+            Assert.DoesNotContain(logger.Messages, m => m.LogLevel == LogLevel.Warning);
+
     }
     private IConfiguration GetConfiguration(EasyAuthConfigurationOptions options)
     {
@@ -217,14 +224,14 @@ public class EasyAuthMiddlewareTests
         out IReadOnlyList<TestLogger.LoggedMessage> logs, 
         out Func<HttpResponseMessage, EasyAuthState> stateResolver)
     {
-        TestLogger.TestLoggerFactory loggerFactory = new TestLogger.TestLoggerFactory();
-        logs = loggerFactory.Logger.Messages;
+        TestLogger logger = new TestLogger();
+        logs = logger.Messages;
 
         using IHost host = new HostBuilder()
             .ConfigureServices(services =>
             {
-                services.AddSingleton<ILogger<EasyAuthMiddleware>>(loggerFactory.CreateLogger<EasyAuthMiddleware>());
-                services.AddEasyAuthForK8s(GetConfiguration(options), loggerFactory);
+                services.AddSingleton<ILogger<EasyAuthMiddleware>>(logger.Factory().CreateLogger<EasyAuthMiddleware>());
+                services.AddEasyAuthForK8s(GetConfiguration(options), logger.Factory());
                 services.Replace(new ServiceDescriptor(typeof(GraphHelperService), MockGraphHelper()));
             })
             .ConfigureWebHost(webHostBuilder =>
@@ -258,18 +265,18 @@ public class EasyAuthMiddlewareTests
     private HttpResponseMessage GetResponseForAuthZ(
         EasyAuthConfigurationOptions options, 
         string query,
-        out IReadOnlyList<TestLogger.LoggedMessage> logs, 
+        out List<TestLogger.LoggedMessage> logs, 
         out Func<HttpResponseMessage, EasyAuthState> stateResolver,
         TestAuthenticationHandlerOptions handlerOptions = null)
     {
-        TestLogger.TestLoggerFactory loggerFactory = new TestLogger.TestLoggerFactory();
-        logs = loggerFactory.Logger.Messages;
+        TestLogger logger = new TestLogger();
+        logs = logger.Messages;
 
         using IHost host = new HostBuilder()
             .ConfigureServices(services =>
             {
-                services.AddSingleton<ILogger<EasyAuthMiddleware>>(loggerFactory.CreateLogger<EasyAuthMiddleware>());
-                services.AddEasyAuthForK8s(GetConfiguration(options), loggerFactory);
+                services.AddSingleton<ILogger<EasyAuthMiddleware>>(logger.Factory().CreateLogger<EasyAuthMiddleware>());
+                services.AddEasyAuthForK8s(GetConfiguration(options), logger.Factory());
                 if (handlerOptions != null)
                     services.AddSingleton<TestAuthenticationHandlerOptions>(handlerOptions);
 

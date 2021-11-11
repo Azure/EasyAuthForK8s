@@ -26,11 +26,11 @@ public class ServiceBuilderExtensionsTests
     {
         ServiceCollection services = new ServiceCollection();
         IConfiguration configuration = environment ? GetConfigurationFromEnvironment() : GetConfiguration();
-        TestLogger.TestLoggerFactory loggerFactory = new TestLogger.TestLoggerFactory();
+        TestLogger logger = new TestLogger();
 
         string dpPath = "";
 
-        services.AddEasyAuthForK8s(configuration, loggerFactory);
+        services.AddEasyAuthForK8s(configuration, logger.Factory());
 
         //test that essential services are created
         Assert.Contains(services, s => s.ServiceType == typeof(IOptions<EasyAuthConfigurationOptions>));
@@ -55,8 +55,8 @@ public class ServiceBuilderExtensionsTests
         IDataProtectionProvider dp = provider.GetService<IDataProtectionProvider>();
         Assert.Equal("/mnt/foo", dpPath);
 
-        Assert.True(loggerFactory.Logger.Messages.Count > 0);
-        Assert.DoesNotContain(loggerFactory.Logger.Messages, x => x.LogLevel == LogLevel.Warning || x.LogLevel == LogLevel.Error);
+        Assert.True(logger.Messages.Count > 0);
+        Assert.DoesNotContain(logger.Messages, x => x.LogLevel == LogLevel.Warning || x.LogLevel == LogLevel.Error);
     }
 
     private IConfiguration GetConfiguration()

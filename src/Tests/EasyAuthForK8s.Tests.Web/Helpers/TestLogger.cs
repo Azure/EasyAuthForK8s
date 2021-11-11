@@ -11,10 +11,20 @@ namespace EasyAuthForK8s.Tests.Web.Helpers;
 /// <typeparam name="T"></typeparam>
 internal sealed class TestLogger : ILogger, IDisposable
 {
+    private object _lock = new object();
     private readonly List<LoggedMessage> _messages = new List<LoggedMessage>();
 
-    public IReadOnlyList<LoggedMessage> Messages => _messages;
+    public List<LoggedMessage> Messages
+    {
+        get
+        {
+            lock (_lock)
+            {
+                return _messages;
+            }
 
+        }
+    }
     public void Dispose()
     {
     }
@@ -32,9 +42,16 @@ internal sealed class TestLogger : ILogger, IDisposable
     public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
     {
         string message = formatter(state, exception);
-        _messages.Add(new LoggedMessage(logLevel, eventId, exception, message));
+        lock (_lock)
+        {
+            _messages.Add(new LoggedMessage(logLevel, eventId, exception, message));
+        }
     }
 
+    public ILoggerFactory Factory()
+    {
+        return new TestLoggerFactory(this);
+    }
     public sealed class LoggedMessage
     {
         public LogLevel LogLevel { get; }
@@ -52,10 +69,14 @@ internal sealed class TestLogger : ILogger, IDisposable
     }
     public class TestLoggerFactory : ILoggerFactory
     {
-        public TestLogger Logger = new TestLogger();
+        private TestLogger _logger;
+        public TestLoggerFactory(TestLogger logger)
+        {
+            _logger = logger;
+        }
         public ILogger CreateLogger(string name)
         {
-            return Logger;
+            return _logger;
         }
 
         public void AddProvider(ILoggerProvider provider)
