@@ -48,10 +48,6 @@ public static class EasyAuthBuilderExtensions
                 var nextRedirectHandler = o.Events.OnRedirectToIdentityProvider;
                 o.Events.OnRedirectToIdentityProvider = async context =>
                     await eventHelper.HandleRedirectToIdentityProvider(context, nextRedirectHandler);
-
-                var nextFailureHandler = o.Events.OnRemoteFailure;
-                o.Events.OnRemoteFailure = async context =>
-                    await eventHelper.HandleRemoteFailure(context, nextFailureHandler);
             },
             c =>
             {
@@ -97,7 +93,10 @@ public static class EasyAuthBuilderExtensions
     }
     public static IApplicationBuilder UseEasyAuthForK8s(this IApplicationBuilder builder)
     {
+        builder.UseExceptionHandler(new ExceptionHandlerOptions() { AllowStatusCode404Response = true, ExceptionHandler = EventHelper.HandleException });
+        
         builder.UseForwardedHeaders();
+        
         builder.Use(async (context, next) =>
         {
             context.Request.Scheme = "https";

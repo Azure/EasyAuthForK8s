@@ -25,21 +25,15 @@ namespace EasyAuthForK8s.Web.Helpers
     {
         private readonly IOptionsMonitor<OpenIdConnectOptions> _openIdConnectOptions;
         private readonly HttpClient _httpClient;
-        Lazy<Task<ConfigurationManager<AppManifest>>> _configurationManager;
+        ConfigurationManager<AppManifest> _configurationManager;
         ILogger<GraphHelperService> _logger;
 
         public GraphHelperService(IOptionsMonitor<OpenIdConnectOptions> openIdConnectOptions, HttpClient httpClient, ILogger<GraphHelperService> logger )
         {
             _httpClient = httpClient ?? throw new ArgumentNullException("httpClient");
             _openIdConnectOptions = openIdConnectOptions ?? throw new ArgumentNullException("openIdConnectOptions");
-            _configurationManager = new(async () =>
-            {
-                var oidcConfiguration = await OidcOptions()
-                    .ConfigurationManager?.GetConfigurationAsync(CancellationToken.None);
-                
-                return new ConfigurationManager<AppManifest>(oidcConfiguration.TokenEndpoint, 
+            _configurationManager = new ConfigurationManager<AppManifest>("noop",
                     new AppManifestRetriever(_httpClient, OidcOptions, logger));
-            });
             _logger = logger ?? throw new ArgumentNullException("logger");
         }
 
@@ -48,10 +42,21 @@ namespace EasyAuthForK8s.Web.Helpers
             return _openIdConnectOptions.Get(OpenIdConnectDefaults.AuthenticationScheme);
         }
 
-        public virtual async Task<AppManifest> ManifestConfigurationAsync(CancellationToken cancel)
+        public virtual async Task<AppManifestResult> GetManifestConfigurationAsync(CancellationToken cancel)
         {
-            var configManager = await _configurationManager.Value;
-            return await configManager.GetConfigurationAsync(cancel);
+            //we don't necessarily always want to throw if we can't get the configuration
+            //let the caller decide how to handle
+            var result = new AppManifestResult();
+            try
+            {
+                result.AppManifest = await _configurationManager.GetConfigurationAsync(cancel);
+                result.Succeeded = true;
+            }
+            catch (Exception ex)
+            {
+                result.Exception = ex;
+            }
+            return result;
         }
 
         public virtual async Task<List<string>> ExecuteQueryAsync(string endpoint, string accessToken, string[] queries)
@@ -180,15 +185,28 @@ namespace EasyAuthForK8s.Web.Helpers
             HttpClient _client;
             Func<OpenIdConnectOptions> _optionsResolver;
             ILogger _logger;
+
             public AppManifestRetriever(HttpClient client, Func<OpenIdConnectOptions> optionsResolver, ILogger logger)
             {
                 _client = client;
                 _optionsResolver = optionsResolver;
                 _logger = logger;
             }
-            public async Task<AppManifest> GetConfigurationAsync(string address, IDocumentRetriever retriever, CancellationToken cancel)
+            public async Task<AppManifest> GetConfigurationAsync(string ignored, IDocumentRetriever retriever, CancellationToken cancel)
             {
                 var options = _optionsResolver();
+
+                var oidcConfiguration = await options
+                    .ConfigurationManager?.GetConfigurationAsync(cancel);
+
+                if (oidcConfiguration == null)
+                    throw new InvalidOperationException("oidcConfiguration could not be resolved.");
+
+                var tokenEndpoint = oidcConfiguration.TokenEndpoint;
+                var graphEndpoint = new Uri(oidcConfiguration.UserInfoEndpoint)
+                    .GetLeftPart(System.UriPartial.Authority);
+
+
                 string access_token = null;
                 string id = null;
                 AppManifest appManifest = null;
@@ -196,14 +214,14 @@ namespace EasyAuthForK8s.Web.Helpers
                 _logger.LogInformation("Begin GetConfigurationAsync to aquire application manifest.");
                 try
                 {
-                    HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, address)
+                    HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, tokenEndpoint)
                     {
                         Content = new FormUrlEncodedContent(new List<KeyValuePair<string, string>>()
                         {
                             new("client_id", options.ClientId),
                             new("client_secret", options.ClientSecret),
                             new("grant_type", "client_credentials"),
-                            new("scope", "https://graph.microsoft.com/.default")
+                            new("scope", String.Concat(graphEndpoint, "/.default"))
                         })
                     };
                     using (HttpResponseMessage response = await _client.SendAsync(request))
@@ -221,7 +239,7 @@ namespace EasyAuthForK8s.Web.Helpers
                     }
                     if(access_token != null && id != null)
                     {
-                        request = new HttpRequestMessage(HttpMethod.Get, string.Concat("https://graph.microsoft.com/beta/directoryObjects/", id));
+                        request = new HttpRequestMessage(HttpMethod.Get, string.Concat(graphEndpoint, "/beta/directoryObjects/", id));
                         request.Headers.Authorization = new("Bearer", access_token);
                         using (HttpResponseMessage response = await _client.SendAsync(request))
                         {

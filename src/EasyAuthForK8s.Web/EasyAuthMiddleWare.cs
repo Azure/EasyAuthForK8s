@@ -72,14 +72,8 @@ public class EasyAuthMiddleware
         {
             //show error or redirect
             _logger.LogInformation($"Fatal error logging user in: {state.Msg}");
-            context.Response.StatusCode = StatusCodes.Status403Forbidden;
 
-            await ErrorPage.Render(context.Response,
-                await _graphHelper.ManifestConfigurationAsync(context.RequestAborted),
-                "Access Forbidden",
-                state.Msg);
-            
-            return;
+            throw new BadHttpRequestException(state.Msg, StatusCodes.Status403Forbidden);
         }
         else
         {

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace EasyAuthForK8s.Web.Models
 {
@@ -58,6 +59,14 @@ namespace EasyAuthForK8s.Web.Models
             public string value { get; set; }
         }
     }
+    public struct AppManifestResult
+    {
+        public bool Succeeded { get; set; } = false;
+        public Exception Exception { get; set; } = null;
+        public AppManifest AppManifest { get; set; }
+    }
+
+
 
     
 }

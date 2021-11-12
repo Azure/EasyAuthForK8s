@@ -13,6 +13,10 @@ using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Diagnostics;
+using System.Net;
+using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 
 namespace EasyAuthForK8s.Web.Helpers
 {
@@ -55,30 +59,6 @@ namespace EasyAuthForK8s.Web.Helpers
 
             //add the graph queries to the oidc message state so that they can be run after successful login
             context.Properties.Items.Add(Constants.OidcGraphQueryStateBag, string.Join('|', state.GraphQueries));
-
-            await next(context).ConfigureAwait(false);
-        }
-
-        /// <summary>
-        /// Handles scenarios where AAD sends back error information
-        /// </summary>
-        /// <param name="context"></param>
-        /// <returns></returns>
-        public async Task HandleRemoteFailure(RemoteFailureContext context, Func<RemoteFailureContext, Task> next)
-        {
-            EnsureLogger(context.HttpContext);
-            _logger!.LogWarning("A remote error was return during signin: {message}", context.Failure.Message);
-
-            var graphService = context.HttpContext.RequestServices.GetService<GraphHelperService>();
-            
-            var error_detail = context?.Failure?.Data["error_description"] as string ?? context.Failure?.Message;
-            
-            await ErrorPage.Render(context.Response,
-                await graphService?.ManifestConfigurationAsync(context.HttpContext.RequestAborted),
-                "Azure Active Directory Error",
-                error_detail);
-
-            context.HandleResponse();
 
             await next(context).ConfigureAwait(false);
         }
@@ -181,6 +161,36 @@ namespace EasyAuthForK8s.Web.Helpers
             await next(context).ConfigureAwait(false);
 
         }
+
+        public static async Task HandleException(HttpContext context)
+        {
+            var feature = context.Features.Get<IExceptionHandlerFeature>();
+            var graphService = context.RequestServices.GetService<GraphHelperService>();
+
+            var message = feature?.Error.Message ?? "Unknown Internal Error";
+            var code = context.Response.StatusCode;
+            string reasonPhrase = null;
+
+            if (feature?.Error is BadHttpRequestException)
+            {
+                //unwrap
+                var ex = feature?.Error as BadHttpRequestException;
+                if (!string.IsNullOrEmpty(ex?.Message))
+                    message = ex!.Message;
+
+                code = ex?.StatusCode ?? code;
+            }
+            else if(feature?.Error is OpenIdConnectProtocolException)
+            {
+                var ex = feature?.Error as OpenIdConnectProtocolException;
+                message = ex.Data["error_description"] as string ?? ex.Message;
+                reasonPhrase = "Azure Active Directory Error";
+            }
+
+            await ErrorPage.Render(context.Response,
+                (await graphService?.GetManifestConfigurationAsync(context.RequestAborted)).AppManifest ?? new AppManifest(),
+                reasonPhrase ?? ReasonPhrases.GetReasonPhrase(code), message);
+        }
         private string BuildScopeString(string baseScope, IList<string> additionalScopes)
         {
             return string.Join(' ', (baseScope ?? string.Empty)
@@ -200,7 +210,8 @@ namespace EasyAuthForK8s.Web.Helpers
             var factory = context.RequestServices.GetRequiredService<ILoggerFactory>();
             _logger = factory.CreateLogger("EasyAuthEvents");
         }
-
+        
+        
     }
 }
 
