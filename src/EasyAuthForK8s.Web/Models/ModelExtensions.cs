@@ -219,7 +219,6 @@ internal static class ModelExtensions
             }
         }
     }
-
     private static string EncodeValue(string value, EasyAuthConfigurationOptions.EncodingMethod method)
     {
         if (string.IsNullOrEmpty(value))

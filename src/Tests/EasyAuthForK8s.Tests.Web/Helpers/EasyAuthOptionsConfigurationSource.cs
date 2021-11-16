@@ -67,6 +67,11 @@ internal class EasyAuthOptionsConfigurationSource : IConfigurationSource, IConfi
                 value = prop as string;
                 return true;
             }
+            else if (prop is bool)
+            {
+                value = prop.ToString();
+                return true;
+            }
         }
         return false;
     }

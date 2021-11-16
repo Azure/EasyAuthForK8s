@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace EasyAuthForK8s.Web.Models
 {
@@ -57,6 +58,30 @@ namespace EasyAuthForK8s.Web.Models
             public string userConsentDescription { get; set; }
             public string userConsentDisplayName { get; set; }
             public string value { get; set; }
+        }
+        public List<string> FormattedScopeList(IEnumerable<string> scopes)
+        {
+            if (scopes == null || scopes.Count() == 0)
+                return new List<string>();
+
+            var validscopes = (publishedPermissionScopes ?? new List<PublishedPermissionScope>())
+                .Select(x => x.value)
+                .Where(x => !string.IsNullOrEmpty(x))
+                .ToList();
+
+            if (validscopes.Count == 0)
+                return scopes.ToList();
+
+            //audience works when scope is prefaced with appId.  appUri causes some problems
+            var result = scopes.Where(x => validscopes.Contains(x, StringComparer.InvariantCultureIgnoreCase))
+                .Distinct()
+                .Select(x => $"{this.appId}/{x}")
+                .ToList();
+
+            //add back the scopes that are not for this app, they must appear after the local
+            //scopes for the audience to be correct
+            result.AddRange(scopes.Except(validscopes, StringComparer.InvariantCultureIgnoreCase));
+            return result;
         }
     }
     public struct AppManifestResult

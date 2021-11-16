@@ -31,6 +31,8 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Moq;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using System.Threading;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.WebUtilities;
 
 namespace EasyAuthForK8s.Tests.Web;
 
@@ -90,6 +92,25 @@ public class EasyAuthMiddlewareTests
     }
 
     [Theory]
+    [InlineData(CookieAuthenticationDefaults.AuthenticationScheme, true, CookieAuthenticationDefaults.AuthenticationScheme)]
+    [InlineData(CookieAuthenticationDefaults.AuthenticationScheme, false, CookieAuthenticationDefaults.AuthenticationScheme)]
+    [InlineData(JwtBearerDefaults.AuthenticationScheme, true, JwtBearerDefaults.AuthenticationScheme)]
+    [InlineData(JwtBearerDefaults.AuthenticationScheme, false, "")]
+    public void Invoke_HandleAuth_CorrectSchemeUsed(string scheme, bool allowBearer, string expectedScheme)
+    {
+        EasyAuthConfigurationOptions options = new EasyAuthConfigurationOptions() { AllowBearerToken = allowBearer };
+
+        //must force a 401 so we can inspect the scheme used to acquire the identity
+        HttpResponseMessage response = GetResponseForAuthZ(options, "?scope=nonexistent", out var logs, out var stateResolver, null, scheme);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+
+        EasyAuthState state = stateResolver(response);
+
+        Assert.Equal(expectedScheme, state.Scheme);
+    }
+
+    [Theory]
     [InlineData("?role=foo", "RolesAuthorizationRequirement:User.IsInRole must be true for one of the following roles: (foo) ")]
     [InlineData("?role=foo|foo2", "RolesAuthorizationRequirement:User.IsInRole must be true for one of the following roles: (foo|foo2)")]
     [InlineData("?role=foo&scope=foo2", "RolesAuthorizationRequirement:User.IsInRole must be true for one of the following roles: (foo)")]
@@ -132,31 +153,51 @@ public class EasyAuthMiddlewareTests
     [InlineData(202, "?role=foo&role=bar", new string[] { "foo", "bar" }, "")]
     [InlineData(401, "?role=foo", new string[] { }, "")]
     [InlineData(401, "?role=foo", new string[] { "bar" }, "")]
-    [InlineData(401, "?role=foo&role=bar", new string[] {"foo"}, "")]
+    [InlineData(401, "?role=foo&role=bar", new string[] { "foo" }, "")]
     [InlineData(202, "?scope=", new string[] { }, "")]
-    [InlineData(202, "?scope=", new string[] { }, "foo" )]
-    [InlineData(202, "?scope=foo", new string[] { },  "foo" )]
-    [InlineData(202, "?scope=foo|bar", new string[] { }, "foo" )]
-    [InlineData(202, "?scope=foo|bar", new string[] {  }, "foo bar" )]
-    [InlineData(202, "?scope=foo&scope=bar", new string[] {  }, "foo bar" )]
+    [InlineData(202, "?scope=", new string[] { }, "foo")]
+    [InlineData(202, "?scope=foo", new string[] { }, "foo")]
+    [InlineData(202, "?scope=foo|bar", new string[] { }, "foo")]
+    [InlineData(202, "?scope=foo|bar", new string[] { }, "foo bar")]
+    [InlineData(202, "?scope=foo&scope=bar", new string[] { }, "foo bar")]
     [InlineData(401, "?scope=foo", new string[] { }, "")]
-    [InlineData(401, "?scope=foo", new string[] {  }, "bar" )]
-    [InlineData(401, "?scope=foo&role=bar", new string[] { }, "foo" )]
-    public void Invoke_HandleAuth_Authorize_WithRolesAndScopes(int expectedStatus, string query, string[] roles, string scope)
+    [InlineData(401, "?scope=foo", new string[] { }, "bar")]
+    [InlineData(401, "?scope=foo&role=bar", new string[] { }, "foo")]
+    [InlineData(202, "?role=", new string[] { }, "", true)]
+    [InlineData(202, "?role=", new string[] { "foo" }, "", true)]
+    [InlineData(202, "?role=foo", new string[] { "foo" }, "", true)]
+    [InlineData(202, "?role=foo|bar", new string[] { "foo" }, "", true)]
+    [InlineData(202, "?role=foo|bar", new string[] { "foo", "bar" }, "", true)]
+    [InlineData(202, "?role=foo&role=bar", new string[] { "foo", "bar" }, "", true)]
+    [InlineData(401, "?role=foo", new string[] { }, "", true)]
+    [InlineData(401, "?role=foo", new string[] { "bar" }, "", true)]
+    [InlineData(401, "?role=foo&role=bar", new string[] { "foo" }, "", true)]
+    [InlineData(202, "?scope=", new string[] { }, "", true)]
+    [InlineData(202, "?scope=", new string[] { }, "foo", true)]
+    [InlineData(202, "?scope=foo", new string[] { }, "foo", true)]
+    [InlineData(202, "?scope=foo|bar", new string[] { }, "foo", true)]
+    [InlineData(202, "?scope=foo|bar", new string[] { }, "foo bar", true)]
+    [InlineData(202, "?scope=foo&scope=bar", new string[] { }, "foo bar", true)]
+    [InlineData(401, "?scope=foo", new string[] { }, "", true)]
+    [InlineData(401, "?scope=foo", new string[] { }, "bar", true)]
+    [InlineData(401, "?scope=foo&role=bar", new string[] { }, "foo", true)]
+    public void Invoke_HandleAuth_Authorize_WithRolesAndScopes(int expectedStatus, string query, string[] roles, string scope, bool allowBearerToken = false)
     {
-        EasyAuthConfigurationOptions options = new EasyAuthConfigurationOptions();
+        EasyAuthConfigurationOptions options = new EasyAuthConfigurationOptions() { AllowBearerToken = allowBearerToken };
         TestAuthenticationHandlerOptions handlerOptions = new();
-        handlerOptions.Claims.AddRange(roles.Select(x => new Claim(ClaimConstants.Roles,x)));
-        
-        if(!string.IsNullOrEmpty(scope))
+        handlerOptions.Claims.AddRange(roles.Select(x => new Claim(ClaimConstants.Roles, x)));
+
+        if (!string.IsNullOrEmpty(scope))
             handlerOptions.Claims.Add(new Claim(ClaimConstants.Scp, scope));
 
-        HttpResponseMessage response = GetResponseForAuthZ(options, query,handlerOptions);
+        HttpResponseMessage response = GetResponseForAuthZ(options, query, handlerOptions,
+            allowBearerToken ? JwtBearerDefaults.AuthenticationScheme : CookieAuthenticationDefaults.AuthenticationScheme);
+
         if (expectedStatus != (int)response.StatusCode)
         {
             var body = response.Content.ReadAsStringAsync().Result;
         }
-        
+
         Assert.Equal(expectedStatus, (int)response.StatusCode);
     }
 
@@ -201,9 +242,10 @@ public class EasyAuthMiddlewareTests
         //it takes a moment for the logs to flush, so block while the host is shut down
         //so the logs get written before we evaluate them
         await host.StopAsync();
-        
+        await host.WaitForShutdownAsync();
+
         //it's late, and I still can't force logs to flush before they are evaluated.  So Task.Delay it is for now.
-        await Task.Delay(5000);
+        await Task.Delay(2000);
 
         if (shouldWarn)
             Assert.True(logger.Messages.Any(m => m.LogLevel == LogLevel.Warning && m.Message.Contains("Large Set-Cookie response header detected")));
@@ -219,9 +261,9 @@ public class EasyAuthMiddlewareTests
             .Build();
     }
     private HttpResponseMessage GetResponseForAuthN(
-        EasyAuthConfigurationOptions options, 
+        EasyAuthConfigurationOptions options,
         string query,
-        out IReadOnlyList<TestLogger.LoggedMessage> logs, 
+        out IReadOnlyList<TestLogger.LoggedMessage> logs,
         out Func<HttpResponseMessage, EasyAuthState> stateResolver)
     {
         TestLogger logger = new TestLogger();
@@ -259,15 +301,17 @@ public class EasyAuthMiddlewareTests
     }
     private HttpResponseMessage GetResponseForAuthZ(EasyAuthConfigurationOptions options,
         string query,
-        TestAuthenticationHandlerOptions handlerOptions = null) => 
-        GetResponseForAuthZ(options, query, out var logs, out var stateResolver, handlerOptions);
+        TestAuthenticationHandlerOptions handlerOptions = null,
+        string scheme = CookieAuthenticationDefaults.AuthenticationScheme) =>
+        GetResponseForAuthZ(options, query, out var logs, out var stateResolver, handlerOptions, scheme);
 
     private HttpResponseMessage GetResponseForAuthZ(
-        EasyAuthConfigurationOptions options, 
+        EasyAuthConfigurationOptions options,
         string query,
-        out List<TestLogger.LoggedMessage> logs, 
+        out List<TestLogger.LoggedMessage> logs,
         out Func<HttpResponseMessage, EasyAuthState> stateResolver,
-        TestAuthenticationHandlerOptions handlerOptions = null)
+        TestAuthenticationHandlerOptions handlerOptions = null,
+        string scheme = CookieAuthenticationDefaults.AuthenticationScheme)
     {
         TestLogger logger = new TestLogger();
         logs = logger.Messages;
@@ -284,7 +328,11 @@ public class EasyAuthMiddlewareTests
                 services.Configure<AuthenticationOptions>(options =>
                 {
                     List<AuthenticationSchemeBuilder> schemes = options.Schemes as List<AuthenticationSchemeBuilder>;
-                    schemes.First(c => c.Name == CookieAuthenticationDefaults.AuthenticationScheme).HandlerType = typeof(TestAuthenticationHandler);
+                    var s = schemes.FirstOrDefault(c => c.Name == scheme);
+                    if (s != null)
+                    {
+                        s.HandlerType = typeof(TestAuthenticationHandler);
+                    }
                 });
                 services.Replace(new ServiceDescriptor(typeof(GraphHelperService), MockGraphHelper()));
             })
@@ -311,6 +359,71 @@ public class EasyAuthMiddlewareTests
             .GetAsync(string.Concat(options.AuthPath, query))
             .Result;
     }
+
+    [Fact]
+    public async Task Invoke_HandleChallenge_Redirect()
+    {
+        var options = new EasyAuthConfigurationOptions();
+        TestLogger logger = new TestLogger();
+
+        using IHost host = new HostBuilder()
+            .ConfigureServices(services =>
+            {
+                services.AddSingleton<ILogger<EasyAuthMiddleware>>(logger.Factory().CreateLogger<EasyAuthMiddleware>());
+                services.AddEasyAuthForK8s(GetConfiguration(options), logger.Factory());
+
+                //swap out the cookiehandler with one that will do what we tell it
+                services.Configure<AuthenticationOptions>(options =>
+                {
+                    List<AuthenticationSchemeBuilder> schemes = options.Schemes as List<AuthenticationSchemeBuilder>;
+                    var s = schemes.FirstOrDefault(c => c.Name == CookieAuthenticationDefaults.AuthenticationScheme);
+                    if (s != null)
+                    {
+                        s.HandlerType = typeof(TestAuthenticationHandler);
+                    }
+                });
+                services.Replace(new ServiceDescriptor(typeof(GraphHelperService), MockGraphHelper()));
+            })
+            .ConfigureWebHost(webHostBuilder =>
+            {
+                webHostBuilder
+                .UseTestServer()
+                .Configure(app =>
+                {
+                    app.UseEasyAuthForK8s();
+                });
+            }).Build();
+
+        await host.StartAsync();
+
+        var server = host.GetTestServer();
+
+        var authResponse = await server.CreateClient().GetAsync(string.Concat(options.AuthPath, "?scope=unrecognized&scope=foo"));
+        Assert.Equal(HttpStatusCode.Unauthorized, authResponse.StatusCode);
+        Assert.Contains(authResponse.Headers, x => x.Key == HeaderNames.SetCookie);
+
+        var signinReponse = await server
+            .CreateRequest(options.SigninPath)
+            .AddHeader(HeaderNames.Cookie, authResponse.Headers.First(x => x.Key == HeaderNames.SetCookie).Value.First())
+            .GetAsync();
+
+        Assert.Equal(HttpStatusCode.Redirect, signinReponse.StatusCode);
+        Assert.NotNull(signinReponse.Headers.Location);
+
+        var redirectQuery = TestUtility.ParseQuery(signinReponse.Headers.Location.Query);
+
+        Assert.True(redirectQuery.ContainsKey("scope"));
+        var scopeValues = redirectQuery["scope"].First().Split(' ');
+
+        //converted to audience/scope format
+        Assert.Contains($"{TestUtility.DummyGuid}/foo", scopeValues);
+
+        //not recognized, so not converted
+        Assert.Contains("unrecognized", scopeValues);
+
+        //not recognized, so moved to the end
+        Assert.Equal("unrecognized", scopeValues.Last());
+    }
     private EasyAuthState GetStateFromResponseWithAsserts(IDataProtector dp, HttpResponseMessage response)
     {
         Assert.True(response.Headers.Contains(HeaderNames.SetCookie));
@@ -335,13 +448,27 @@ public class EasyAuthMiddlewareTests
 
     private GraphHelperService MockGraphHelper()
     {
+        var manifest = new AppManifest()
+        {
+            appId = TestUtility.DummyGuid,
+            publishedPermissionScopes = new()
+            {
+                new() { value = "foo" },
+                new() { value = "bar" }
+            }
+        };
+
         var openIdConnectOptions = Mock.Of<IOptionsMonitor<OpenIdConnectOptions>>();
         var httpClient = Mock.Of<HttpClient>();
         var logger = Mock.Of<ILogger<GraphHelperService>>();
 
         var graphService = new Mock<GraphHelperService>(openIdConnectOptions, httpClient, logger);
 
+        graphService.Setup(x => x.GetManifestConfigurationAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AppManifestResult() { AppManifest = manifest, Succeeded = true });
+
         return graphService.Object;
     }
+   
 }
 

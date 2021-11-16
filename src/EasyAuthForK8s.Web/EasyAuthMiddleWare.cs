@@ -84,6 +84,7 @@ public class EasyAuthMiddleware
     {
         List<string> scopes = new List<string>();
         string message = "";
+        string authScheme = "";
         EasyAuthState.AuthStatus authStatus = EasyAuthState.AuthStatus.Unauthenticated;
 
         _logger.LogInformation($"Invoke HandleAuth - Path:{context.Request.Path}, Query:{context.Request.QueryString}, " +
@@ -118,9 +119,13 @@ public class EasyAuthMiddleware
                     {
                         message += authN.Failure?.Message ?? "Bearer token authentication failed. ";
                     }
+                    else
+                        authScheme = JwtBearerDefaults.AuthenticationScheme;
                 }
             }
         }
+        else
+            authScheme = CookieAuthenticationDefaults.AuthenticationScheme;
 
         List<IAuthorizationRequirement> requirements = new() { new DenyAnonymousAuthorizationRequirement() };
 
@@ -188,8 +193,11 @@ public class EasyAuthMiddleware
             EasyAuthState state = new EasyAuthState
             {
                 Status = authStatus,
-                Scopes = scopes.SelectMany(x => x.Split("|", System.StringSplitOptions.RemoveEmptyEntries)).ToList(),
-                Msg = message
+                Scopes = scopes
+                .SelectMany(x => x.Split("|", System.StringSplitOptions.RemoveEmptyEntries))
+                .ToList(),
+                Msg = message,
+                Scheme = authScheme
             };
 
             if (context.Request.Query.ContainsKey(Constants.GraphParameterName))

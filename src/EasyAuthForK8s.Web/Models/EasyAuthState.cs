@@ -15,6 +15,7 @@ public class EasyAuthState
     public IList<string> Scopes { get; set; } = new List<string>();
     public IList<string> GraphQueries { get; set; } = new List<string>();
     public string Msg { get; set; } = string.Empty;
+    public string Scheme { get; set; } = string.Empty;
 
     public enum AuthStatus
     {

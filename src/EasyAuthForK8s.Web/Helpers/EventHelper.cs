@@ -54,8 +54,25 @@ namespace EasyAuthForK8s.Web.Helpers
                 var redirect = state.Url ?? _configOptions.SigninPath;
                 context.Properties.RedirectUri = redirect == _configOptions.SigninPath ? _configOptions.DefaultRedirectAfterSignin : redirect;
             }
+            if (state.Scopes?.Count > 0)
+            {
+                try
+                {
+                    var graphService = context.HttpContext.RequestServices.GetService<GraphHelperService>();
+                    var manifestResult = await graphService.GetManifestConfigurationAsync(context.HttpContext.RequestAborted);
+                    
+                    if (!manifestResult.Succeeded)
+                        throw new();
+                    
+                    context.ProtocolMessage.Scope = BuildScopeString(context.ProtocolMessage.Scope, 
+                        manifestResult.AppManifest.FormattedScopeList(state.Scopes));
 
-            context.ProtocolMessage.Scope = BuildScopeString(context.ProtocolMessage.Scope, state.Scopes);
+                }
+                catch (Exception ex)
+                {
+                    throw new InvalidOperationException("Unable to retrieve available scopes from Azure.  Try again later.", ex);
+                }
+            }
 
             //add the graph queries to the oidc message state so that they can be run after successful login
             context.Properties.Items.Add(Constants.OidcGraphQueryStateBag, string.Join('|', state.GraphQueries));
@@ -164,6 +181,8 @@ namespace EasyAuthForK8s.Web.Helpers
 
         public static async Task HandleException(HttpContext context)
         {
+            //TODO: we need to do some instrumentation here so that it can 
+            //be used by the health check
             var feature = context.Features.Get<IExceptionHandlerFeature>();
             var graphService = context.RequestServices.GetService<GraphHelperService>();
 
@@ -173,7 +192,7 @@ namespace EasyAuthForK8s.Web.Helpers
 
             if (feature?.Error is BadHttpRequestException)
             {
-                //unwrap
+                //unwrap inner, which has the real status
                 var ex = feature?.Error as BadHttpRequestException;
                 if (!string.IsNullOrEmpty(ex?.Message))
                     message = ex!.Message;
@@ -182,13 +201,16 @@ namespace EasyAuthForK8s.Web.Helpers
             }
             else if(feature?.Error is OpenIdConnectProtocolException)
             {
+                //unwrap oidc data
                 var ex = feature?.Error as OpenIdConnectProtocolException;
                 message = ex.Data["error_description"] as string ?? ex.Message;
                 reasonPhrase = "Azure Active Directory Error";
             }
-
+            
+            var manifestResult = graphService != null ? await graphService.GetManifestConfigurationAsync(context.RequestAborted) : new();
+            
             await ErrorPage.Render(context.Response,
-                (await graphService?.GetManifestConfigurationAsync(context.RequestAborted)).AppManifest ?? new AppManifest(),
+                manifestResult.Succeeded ? manifestResult.AppManifest : new AppManifest(),
                 reasonPhrase ?? ReasonPhrases.GetReasonPhrase(code), message);
         }
         private string BuildScopeString(string baseScope, IList<string> additionalScopes)
