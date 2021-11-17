@@ -20,7 +20,7 @@ internal static class ModelExtensions
         //see if state exists in property bag, and return it
         if (context.Items.ContainsKey(Constants.StateCookieName))
         {
-            return context.Items[Constants.StateCookieName] as EasyAuthState;
+            return (context.Items[Constants.StateCookieName]! as EasyAuthState)!;
         }
 
         //see if cookie exists, read, delete cookie, and save to property bag
@@ -30,12 +30,12 @@ internal static class ModelExtensions
 
             if (context.Request.Cookies.ContainsKey(Constants.StateCookieName))
             {
-                string encodedString = context.Request.Cookies[Constants.StateCookieName];
+                string? encodedString = context.Request.Cookies[Constants.StateCookieName]!;
                 if (encodedString != null)
                 {
                     IDataProtector dp = context.RequestServices.GetDataProtector(Constants.StateCookieName);
 
-                    easyAuthState = JsonSerializer.Deserialize<EasyAuthState>(dp.Unprotect(encodedString));
+                    easyAuthState = JsonSerializer.Deserialize<EasyAuthState>(dp.Unprotect(encodedString!)) ?? easyAuthState;
                 }
                 //remove the cookie, since this is a one-time use in the current request
                 context.Response.Cookies.Delete(Constants.StateCookieName);
@@ -93,7 +93,7 @@ internal static class ModelExtensions
             return new Claim(Constants.UserInfoClaimType, JsonSerializer.Serialize<UserInfoPayload>(payload));
         }
     }
-    public static UserInfoPayload UserInfoPayloadFromPrincipal(this ClaimsPrincipal principal, EasyAuthConfigurationOptions options)
+    public static UserInfoPayload? UserInfoPayloadFromPrincipal(this ClaimsPrincipal principal, EasyAuthConfigurationOptions options)
     {
         //see if info claim exists, and return empty if not
         if (principal.Claims == null || !principal.HasClaim(x => x.Type == Constants.UserInfoClaimType))

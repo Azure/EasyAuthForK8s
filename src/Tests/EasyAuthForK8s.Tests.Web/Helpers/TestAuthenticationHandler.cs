@@ -35,20 +35,11 @@ internal class TestAuthenticationHandler : IAuthenticationHandler
                 new AuthenticationProperties(),
                 CookieAuthenticationDefaults.AuthenticationScheme)));
     }
-    public Task ChallengeAsync(AuthenticationProperties? properties)
-    {
-        return Task.FromResult(0);
-    }
-
-    public Task ForbidAsync(AuthenticationProperties? properties)
-    {
-        return Task.FromResult(0);
-    }
-
-    public Task InitializeAsync(AuthenticationScheme scheme, HttpContext context)
-    {
-        return Task.FromResult(0);
-    }
+#pragma warning disable CS8632 // The annotation for nullable reference types should only be used in code within a '#nullable' annotations context.
+    public Task ChallengeAsync(AuthenticationProperties? properties) => Task.FromResult(0);
+    public Task ForbidAsync(AuthenticationProperties? properties) => Task.FromResult(0);
+    public Task InitializeAsync(AuthenticationScheme scheme, HttpContext context) => Task.FromResult(0);
+#pragma warning restore CS8632 // The annotation for nullable reference types should only be used in code within a '#nullable' annotations context.
 }
 internal class TestAuthenticationHandlerOptions
 {

@@ -10,7 +10,7 @@ namespace EasyAuthForK8s.Web.Models;
 /// </summary>
 public class EasyAuthState
 {
-    public string Url { get; set; }
+    public string? Url { get; set; }
     public AuthStatus Status { get; set; } = AuthStatus.Unauthenticated;
     public IList<string> Scopes { get; set; } = new List<string>();
     public IList<string> GraphQueries { get; set; } = new List<string>();

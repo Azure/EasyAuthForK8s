@@ -5,6 +5,7 @@
     <UserSecretsId>aspnet-OCP.Msal.Proxy.Web-81EA87AD-E64D-4755-A1CC-5EA47F49B5D8</UserSecretsId>
     <WebProject_DirectoryAccessLevelKey>0</WebProject_DirectoryAccessLevelKey>
     <AspNetCoreHostingModel>InProcess</AspNetCoreHostingModel>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <ItemGroup>

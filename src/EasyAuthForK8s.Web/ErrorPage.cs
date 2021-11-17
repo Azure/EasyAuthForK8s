@@ -8,7 +8,7 @@ namespace EasyAuthForK8s.Web
 {
     public class ErrorPage
     {
-        public static async Task Render(HttpResponse response, AppManifest appManifest, string errorStatus, string errorDetail)
+        public static async Task Render(HttpResponse response, AppManifest appManifest, string errorStatus, string? errorDetail)
         {
             response.ContentType = "text/html";
             StringBuilder sb = new StringBuilder();
@@ -20,12 +20,12 @@ namespace EasyAuthForK8s.Web
             sb.Append(HeadingHtml(errorStatus));
             sb.Append(DescriptionHtml(appManifest?.appDisplayName ?? "this applications"));
             sb.Append(CorrelationHtml(response.HttpContext.TraceIdentifier));
-            sb.Append(ErrorDetailsHtml(errorDetail));
+            sb.Append(ErrorDetailsHtml(errorDetail ?? "No Information"));
             sb.Append(PublisherHtml(appManifest?.publisherName ?? "No Information"));
-            sb.Append(LinksHtml(appManifest?.info));
+            sb.Append(LinksHtml(appManifest?.info!));
             sb.Append("</div>"); //main
             sb.Append("<div class=\"right\">");
-            sb.Append(LogoObjectHtml(appManifest?.info));
+            sb.Append(LogoObjectHtml(appManifest?.info!));
             sb.Append("</div>"); //right
             sb.Append("</div>"); //container
             sb.Append(ScriptHtml());

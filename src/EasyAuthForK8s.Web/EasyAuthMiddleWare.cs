@@ -154,35 +154,38 @@ public class EasyAuthMiddleware
 
         AuthorizationResult authZ = await _authService.AuthorizeAsync(authN.Principal ?? new ClaimsPrincipal(), null, requirements);
 
-        if (!authZ.Succeeded)
+        if (!authZ!.Succeeded)
         {
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
 
             authStatus = EasyAuthState.AuthStatus.Unauthorized;
             StringBuilder messageBuilder = new StringBuilder();
 
-            messageBuilder.Append($"Access denied for subject {(authN.Principal?.Identity.Name ?? "[anonymous]")}. ");
+            messageBuilder.Append($"Access denied for subject {(authN.Principal?.Identity?.Name ?? "[anonymous]")}. ");
 
-            foreach (IAuthorizationRequirement reason in authZ.Failure?.FailedRequirements)
+            if (authZ.Failure != null)
             {
-                //if AuthN fails the result is always Unauthenticated
-                //if AuthN succeeds, but AuthZ role is missing, there's nothing more we can do: Forbidden
-                //if AuthN succeeds, but AuthZ scope is missing, we can do a new challenge to get it
-                if (authStatus != EasyAuthState.AuthStatus.Unauthenticated)
+                foreach (IAuthorizationRequirement reason in authZ.Failure!.FailedRequirements)
                 {
-                    if (reason is DenyAnonymousAuthorizationRequirement)
+                    //if AuthN fails the result is always Unauthenticated
+                    //if AuthN succeeds, but AuthZ role is missing, there's nothing more we can do: Forbidden
+                    //if AuthN succeeds, but AuthZ scope is missing, we can do a new challenge to get it
+                    if (authStatus != EasyAuthState.AuthStatus.Unauthenticated)
                     {
-                        authStatus = EasyAuthState.AuthStatus.Unauthenticated;
+                        if (reason is DenyAnonymousAuthorizationRequirement)
+                        {
+                            authStatus = EasyAuthState.AuthStatus.Unauthenticated;
+                        }
+                        //in our parlance Forbidden is a terminal failure which would normally return 403,
+                        //but we must return 401 so that nginx can redirect to a friendly error for the user
+                        else if (reason is RolesAuthorizationRequirement)
+                        {
+                            authStatus = EasyAuthState.AuthStatus.Forbidden;
+                        }
                     }
-                    //in our parlance Forbidden is a terminal failure which would normally return 403,
-                    //but we must return 401 so that nginx can redirect to a friendly error for the user
-                    else if (reason is RolesAuthorizationRequirement)
-                    {
-                        authStatus = EasyAuthState.AuthStatus.Forbidden;
-                    }
-                }
 
-                messageBuilder.Append($"{reason.ToString()} ");
+                    messageBuilder.Append($"{reason.ToString()} ");
+                }
             }
 
             message += messageBuilder.ToString();
@@ -218,15 +221,15 @@ public class EasyAuthMiddleware
         else
         {
             context.Response.StatusCode = StatusCodes.Status202Accepted;
-            message = $"Subject {authN.Principal.Identity.Name} is authorized.";
+            message = $"Subject {authN.Principal?.Identity?.Name} is authorized.";
 
             _logger.LogInformation($"Returning Status202Accepted. AuthZ success: {message}");
 
             //rehydrate the user information as an intermediate step
-            UserInfoPayload info = authN.Principal.UserInfoPayloadFromPrincipal(_configureOptions);
+            UserInfoPayload? info = authN.Principal?.UserInfoPayloadFromPrincipal(_configureOptions);
 
             //append the user's information as headers using whatever options are configured
-            info.AppendResponseHeaders(context.Response.Headers, _configureOptions);
+            info?.AppendResponseHeaders(context.Response.Headers, _configureOptions);
         }
         //nginx does nothing with the response body, so this is primarily for debugging purposes
         await response.WriteAsync(message);

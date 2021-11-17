@@ -27,7 +27,7 @@ namespace EasyAuthForK8s.Web.Helpers
         {
             _configOptions = configOptions ?? throw new ArgumentNullException(nameof(configOptions));
         }
-        private static ILogger _logger;
+        private static ILogger? _logger;
         /// <summary>
         /// Modifies the OIDC message to add additional options
         /// </summary>
@@ -59,13 +59,17 @@ namespace EasyAuthForK8s.Web.Helpers
                 try
                 {
                     var graphService = context.HttpContext.RequestServices.GetService<GraphHelperService>();
-                    var manifestResult = await graphService.GetManifestConfigurationAsync(context.HttpContext.RequestAborted);
+
+                    if (graphService == null)
+                        throw new();
+                    
+                    var manifestResult = await graphService!.GetManifestConfigurationAsync(context.HttpContext.RequestAborted);
                     
                     if (!manifestResult.Succeeded)
                         throw new();
                     
                     context.ProtocolMessage.Scope = BuildScopeString(context.ProtocolMessage.Scope, 
-                        manifestResult.AppManifest.FormattedScopeList(state.Scopes));
+                        manifestResult.AppManifest!.FormattedScopeList(state.Scopes));
 
                 }
                 catch (Exception ex)
@@ -98,83 +102,86 @@ namespace EasyAuthForK8s.Web.Helpers
             */
             EnsureLogger(context.HttpContext);
 
-            ClaimsIdentity remIdentity = context.Principal.Identity as ClaimsIdentity;
-            List<ClaimsIdentity> identities = context.Principal.Identities as List<ClaimsIdentity>;
-            identities.Clear();
+            ClaimsIdentity? remIdentity = context.Principal?.Identity as ClaimsIdentity;
 
-            //remove unneeded claims and re-map to save a few bytes in the cookie
-            List<Claim> claimsToKeep = new List<Claim>();
-            Action<Claim, string> addClaim = (claim, name) =>
+            if (remIdentity != null)
             {
-                claimsToKeep.Add(new Claim(name, claim.Value, "", "", ""));
-            };
+                List<ClaimsIdentity>? identities = context.Principal!.Identities as List<ClaimsIdentity>;
+                identities!.Clear();
 
-            foreach (Claim claim in remIdentity.Claims)
-            {
-                if (claim.Type == remIdentity.RoleClaimType)
+                //remove unneeded claims and re-map to save a few bytes in the cookie
+                List<Claim> claimsToKeep = new List<Claim>();
+                Action<Claim, string> addClaim = (claim, name) =>
                 {
-                    addClaim(claim, Constants.Claims.Role);
-                }
-                else if (claim.Type == remIdentity.NameClaimType)
+                    claimsToKeep.Add(new Claim(name, claim.Value, "", "", ""));
+                };
+
+                foreach (Claim claim in remIdentity.Claims)
                 {
-                    addClaim(claim, Constants.Claims.Name);
+                    if (claim.Type == remIdentity.RoleClaimType)
+                    {
+                        addClaim(claim, Constants.Claims.Role);
+                    }
+                    else if (claim.Type == remIdentity.NameClaimType)
+                    {
+                        addClaim(claim, Constants.Claims.Name);
+                    }
+                    else if (claim.Type == ClaimTypes.NameIdentifier)
+                    {
+                        addClaim(claim, Constants.Claims.Subject);
+                    }
                 }
-                else if (claim.Type == ClaimTypes.NameIdentifier)
+
+                string? access_token = context.Properties.GetTokenValue("access_token");
+
+                if (string.IsNullOrEmpty(access_token))
                 {
-                    addClaim(claim, Constants.Claims.Subject);
+                    throw new InvalidOperationException("access_token is missing from authentication properties.  Ensure that SaveTokens option is 'true'.");
                 }
-            }
 
-            string access_token = context.Properties.GetTokenValue("access_token");
+                JwtSecurityToken accessToken = new JwtSecurityToken(access_token);
 
-            if (string.IsNullOrEmpty(access_token))
-            {
-                throw new InvalidOperationException("access_token is missing from authentication properties.  Ensure that SaveTokens option is 'true'.");
-            }
-
-            JwtSecurityToken accessToken = new JwtSecurityToken(access_token);
-            
-            //for whatever reason, id_tokens do not contain scp claims, but
-            //the OIDC handler extracts claims from the id_token, and 
-            //discards the scope from the token response, so we are left 
-            //with peeking inside the access_token to get the scopes.
-            foreach (Claim claim in accessToken.Claims)
-            {
-                if (claim.Type == ClaimConstants.Scp)
+                //for whatever reason, id_tokens do not contain scp claims, but
+                //the OIDC handler extracts claims from the id_token, and 
+                //discards the scope from the token response, so we are left 
+                //with peeking inside the access_token to get the scopes.
+                foreach (Claim claim in accessToken.Claims)
                 {
-                    addClaim(claim, ClaimConstants.Scp);
+                    if (claim.Type == ClaimConstants.Scp)
+                    {
+                        addClaim(claim, ClaimConstants.Scp);
+                    }
                 }
+
+                UserInfoPayload userInfo = new UserInfoPayload();
+
+                if (context.Properties.Items.ContainsKey(Constants.OidcGraphQueryStateBag))
+                {
+                    string[] queries = context.Properties.Items[Constants.OidcGraphQueryStateBag]!.Split('|', StringSplitOptions.RemoveEmptyEntries);
+                    var graphService = context.HttpContext.RequestServices.GetService<GraphHelperService>();
+                    if (graphService != null)
+                        userInfo.graph = await graphService.ExecuteQueryAsync(_configOptions.GraphEndpoint, access_token!, queries);
+
+                }
+
+                string? id_token = context.Properties.GetTokenValue("id_token");
+
+                if (string.IsNullOrEmpty(id_token))
+                {
+                    throw new InvalidOperationException("id_token is missing from authentication properties.  Ensure that SaveTokens option is 'true'.");
+                }
+
+                JwtSecurityToken jwtSecurityToken = new JwtSecurityToken(id_token);
+                userInfo.PopulateFromClaims(jwtSecurityToken.Claims);
+                claimsToKeep.Add(userInfo.ToPayloadClaim(_configOptions));
+
+                identities.Add(new ClaimsIdentity(claimsToKeep, remIdentity.AuthenticationType, Constants.Claims.Subject, Constants.Claims.Role));
+
+                //at this point we are done with properties, so dump the item collection keeping only the expiry
+                DateTimeOffset? expiresUtc = context.Properties.ExpiresUtc;
+                context.Properties.Items.Clear();
+                context.Properties.ExpiresUtc = expiresUtc;
             }
-
-            UserInfoPayload userInfo = new UserInfoPayload();
-
-            if (context.Properties.Items.ContainsKey(Constants.OidcGraphQueryStateBag))
-            {
-                string[] queries = context.Properties.Items[Constants.OidcGraphQueryStateBag].Split('|', StringSplitOptions.RemoveEmptyEntries);
-                var graphService = context.HttpContext.RequestServices.GetService<GraphHelperService>(); 
-                if(graphService != null)
-                    userInfo.graph = await graphService.ExecuteQueryAsync(_configOptions.GraphEndpoint, context.Properties.GetTokenValue("access_token"), queries);
-                    
-            }
-
-            string id_token = context.Properties.GetTokenValue("id_token");
-            
-            if (string.IsNullOrEmpty(id_token))
-            {
-                throw new InvalidOperationException("id_token is missing from authentication properties.  Ensure that SaveTokens option is 'true'.");
-            }
-
-            JwtSecurityToken jwtSecurityToken = new JwtSecurityToken(id_token);
-            userInfo.PopulateFromClaims(jwtSecurityToken.Claims);
-            claimsToKeep.Add(userInfo.ToPayloadClaim(_configOptions));
-
-            identities.Add(new ClaimsIdentity(claimsToKeep, remIdentity.AuthenticationType, Constants.Claims.Subject, Constants.Claims.Role));
-
-            //at this point we are done with properties, so dump the item collection keeping only the expiry
-            DateTimeOffset? expiresUtc = context.Properties.ExpiresUtc;
-            context.Properties.Items.Clear();
-            context.Properties.ExpiresUtc = expiresUtc;
-
             await next(context).ConfigureAwait(false);
 
         }
@@ -188,7 +195,7 @@ namespace EasyAuthForK8s.Web.Helpers
 
             var message = feature?.Error.Message ?? "Unknown Internal Error";
             var code = context.Response.StatusCode;
-            string reasonPhrase = null;
+            string? reasonPhrase = null;
 
             if (feature?.Error is BadHttpRequestException)
             {
@@ -203,14 +210,14 @@ namespace EasyAuthForK8s.Web.Helpers
             {
                 //unwrap oidc data
                 var ex = feature?.Error as OpenIdConnectProtocolException;
-                message = ex.Data["error_description"] as string ?? ex.Message;
+                message = ex?.Data["error_description"] as string ?? ex?.Message;
                 reasonPhrase = "Azure Active Directory Error";
             }
             
             var manifestResult = graphService != null ? await graphService.GetManifestConfigurationAsync(context.RequestAborted) : new();
             
             await ErrorPage.Render(context.Response,
-                manifestResult.Succeeded ? manifestResult.AppManifest : new AppManifest(),
+                manifestResult.Succeeded ? manifestResult.AppManifest! : new AppManifest(),
                 reasonPhrase ?? ReasonPhrases.GetReasonPhrase(code), message);
         }
         private string BuildScopeString(string baseScope, IList<string> additionalScopes)

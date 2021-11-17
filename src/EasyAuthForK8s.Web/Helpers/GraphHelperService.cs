@@ -102,7 +102,7 @@ namespace EasyAuthForK8s.Web.Helpers
                                     JsonElement statusElement = element.GetProperty("status");
 
                                     bool hasError = false;
-                                    if (!IsSuccessStatus(statusElement.GetInt32()))
+                                    if (!IsSuccessStatus(statusElement!.GetInt32()))
                                     {
                                         hasError = true;
                                         writer.WritePropertyName("error_status");
@@ -116,9 +116,8 @@ namespace EasyAuthForK8s.Web.Helpers
                                         //but since it wasn't the error will be encoded.
                                         if (hasError && bodyElement.ValueKind == JsonValueKind.String)
                                         {
-                                            string s = bodyElement.GetRawText();
                                             bodyElement = JsonDocument
-                                                .Parse(Encoding.UTF8.GetString(Convert.FromBase64String(bodyElement.GetString())))
+                                                .Parse(Encoding.UTF8.GetString(Convert.FromBase64String(bodyElement.GetString() ?? "{}" )))
                                                 .RootElement;
                                         }
 
@@ -159,7 +158,7 @@ namespace EasyAuthForK8s.Web.Helpers
                         else
                         {
                             data.Add($"{{\"error_status\":{(int)(response.StatusCode)}," +
-                                $"\"error_message\":\"Graph API failure: {JsonEncodedText.Encode(response.ReasonPhrase)}\"}}");
+                                $"\"error_message\":\"Graph API failure: {JsonEncodedText.Encode(response.ReasonPhrase ?? "Unknown")}\"}}");
 
                             _logger.LogWarning($"An graph query resulted in an error code - HttpStatus:{(int)(response.StatusCode)}, " +
                                 $"Reason:{response.ReasonPhrase}, Request:{request.RequestUri}, Body: {JsonSerializer.Serialize(body)}");
@@ -196,8 +195,11 @@ namespace EasyAuthForK8s.Web.Helpers
             {
                 var options = _optionsResolver();
 
+                if(options.ConfigurationManager == null)
+                    throw new InvalidOperationException("oidcConfigurationManager could not be resolved.");
+
                 var oidcConfiguration = await options
-                    .ConfigurationManager?.GetConfigurationAsync(cancel);
+                    .ConfigurationManager!.GetConfigurationAsync(cancel);
 
                 if (oidcConfiguration == null)
                     throw new InvalidOperationException("oidcConfiguration could not be resolved.");
@@ -207,9 +209,9 @@ namespace EasyAuthForK8s.Web.Helpers
                     .GetLeftPart(System.UriPartial.Authority);
 
 
-                string access_token = null;
-                string id = null;
-                AppManifest appManifest = null;
+                string? access_token = null;
+                string? id = null;
+                AppManifest? appManifest = null;
 
                 _logger.LogInformation("Begin GetConfigurationAsync to aquire application manifest.");
                 try
@@ -218,34 +220,37 @@ namespace EasyAuthForK8s.Web.Helpers
                     {
                         Content = new FormUrlEncodedContent(new List<KeyValuePair<string, string>>()
                         {
-                            new("client_id", options.ClientId),
-                            new("client_secret", options.ClientSecret),
+                            //rather than validating parameters, just let AAD respond
+                            new("client_id", options.ClientId ?? String.Empty),
+                            new("client_secret", options.ClientSecret ?? String.Empty),
                             new("grant_type", "client_credentials"),
                             new("scope", String.Concat(graphEndpoint, "/.default"))
                         })
                     };
-                    using (HttpResponseMessage response = await _client.SendAsync(request))
+                    using (HttpResponseMessage response = await _client.SendAsync(request, cancel))
                     {
                         if (response.IsSuccessStatusCode)
                         {
-                            JsonDocument document = await JsonDocument.ParseAsync(response.Content.ReadAsStream());
+                            JsonDocument document = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(cancel));
                             access_token = document.RootElement.GetProperty("access_token").GetString();
 
-                            if(!string.IsNullOrEmpty(access_token))
+                            if (!string.IsNullOrEmpty(access_token))
                             {
                                 id = new JwtSecurityToken(access_token).Claims.First(x => x.Type == "oid").Value;
                             }
                         }
+                        else
+                            throw new(await response.Content.ReadAsStringAsync(cancel));
                     }
                     if(access_token != null && id != null)
                     {
                         request = new HttpRequestMessage(HttpMethod.Get, string.Concat(graphEndpoint, "/beta/directoryObjects/", id));
                         request.Headers.Authorization = new("Bearer", access_token);
-                        using (HttpResponseMessage response = await _client.SendAsync(request))
+                        using (HttpResponseMessage response = await _client.SendAsync(request, cancel))
                         {
                             if (response.IsSuccessStatusCode)
                             {
-                                appManifest = await JsonSerializer.DeserializeAsync<AppManifest>(response.Content.ReadAsStream());
+                                appManifest = await JsonSerializer.DeserializeAsync<AppManifest>(await response.Content.ReadAsStreamAsync(cancel));
                                 _logger.LogInformation("Successful GetConfigurationAsync to aquire application manifest.");
                             }
                         }
@@ -255,7 +260,7 @@ namespace EasyAuthForK8s.Web.Helpers
                 {
                     _logger.LogError(ex, "Error retrieving application manifest configuration.");
                 }
-                return appManifest;
+                return appManifest!;
             }
         }
     }
