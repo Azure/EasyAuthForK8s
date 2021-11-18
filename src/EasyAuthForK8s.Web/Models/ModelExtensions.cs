@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Primitives;
 using Microsoft.Identity.Web;
 using System;
 using System.Collections.Generic;
@@ -96,9 +97,9 @@ internal static class ModelExtensions
     public static UserInfoPayload? UserInfoPayloadFromPrincipal(this ClaimsPrincipal principal, EasyAuthConfigurationOptions options)
     {
         //see if info claim exists, and return empty if not
-        if (principal.Claims == null || !principal.HasClaim(x => x.Type == Constants.UserInfoClaimType))
+        if(principal.Claims == null || !principal.HasClaim(x => x.Type == Constants.UserInfoClaimType))
         {
-            return new();
+            return new UserInfoPayload().PopulateFromClaims(principal.Claims!);
         }
 
         //re-hydrate the info object
@@ -118,8 +119,9 @@ internal static class ModelExtensions
             }
         }
     }
-    public static void PopulateFromClaims(this UserInfoPayload payload, IEnumerable<Claim> claims)
+    public static UserInfoPayload PopulateFromClaims(this UserInfoPayload payload, IEnumerable<Claim> claims)
     {
+        if(claims != null)
         foreach (Claim claim in claims)
         {
             switch (claim.Type)
@@ -161,8 +163,9 @@ internal static class ModelExtensions
 
                         break;
                     }
-            }
+            }  
         }
+        return payload;
     }
     internal static void AppendResponseHeaders(this UserInfoPayload payload, IHeaderDictionary headers, EasyAuthConfigurationOptions configOptions)
     {
@@ -178,7 +181,7 @@ internal static class ModelExtensions
 
              if (headers.ContainsKey(headerName))
              {
-                 _ = headers[headerName].Append(encodedValue);
+                 headers[headerName] = StringValues.Concat(headers[headerName], encodedValue);
              }
              else
              {

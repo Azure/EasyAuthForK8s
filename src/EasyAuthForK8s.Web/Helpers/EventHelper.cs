@@ -160,7 +160,7 @@ namespace EasyAuthForK8s.Web.Helpers
                     string[] queries = context.Properties.Items[Constants.OidcGraphQueryStateBag]!.Split('|', StringSplitOptions.RemoveEmptyEntries);
                     var graphService = context.HttpContext.RequestServices.GetService<GraphHelperService>();
                     if (graphService != null)
-                        userInfo.graph = await graphService.ExecuteQueryAsync(_configOptions.GraphEndpoint, access_token!, queries);
+                        userInfo.graph = await graphService!.ExecuteQueryAsync(access_token!, queries, context.HttpContext.RequestAborted);
 
                 }
 

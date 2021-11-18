@@ -13,6 +13,7 @@ public class Constants
     public const string OidcGraphQueryStateBag = ".EasyAuthState.GraphQueries";
     public const int StateTtlMinutes = 5;
     public const string UserInfoClaimType = "ea4k";
+    public const string GraphApiVersion = "beta";
     public class Claims
     {
         public const string Name = "n";

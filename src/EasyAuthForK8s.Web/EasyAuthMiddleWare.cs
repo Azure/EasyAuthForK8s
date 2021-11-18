@@ -88,7 +88,7 @@ public class EasyAuthMiddleware
         EasyAuthState.AuthStatus authStatus = EasyAuthState.AuthStatus.Unauthenticated;
 
         _logger.LogInformation($"Invoke HandleAuth - Path:{context.Request.Path}, Query:{context.Request.QueryString}, " +
-            $"AuthCookie: {context.Request.Cookies.Any(x => x.Key == Constants.CookieName)}, AuthHeader: {context.Request.Headers.ContainsKey(HeaderNames.Authorization)}");
+            $"AuthCookie: {context.Request.Cookies.ContainsKey(Constants.CookieName)}, AuthHeader: {context.Request.Headers.ContainsKey(HeaderNames.Authorization)}");
 #if DEBUG
         LogRequestHeaders("HandleAuth", context.Request);
 #endif

@@ -1,0 +1,48 @@
+﻿{
+  "responses": [
+    {
+      "id": "1",
+      "status": 200,
+      "headers": {
+        "Cache-Control": "no-cache",
+        "x-ms-resource-unit": "1",
+        "OData-Version": "4.0",
+        "Content-Type": "application/json;odata.metadata=minimal;odata.streaming=true;IEEE754Compatible=false;charset=utf-8"
+      },
+      "body": {
+        "@odata.context": "https://graph.microsoft.com/beta/$metadata#users(displayName)/$entity",
+        "displayName": "Jon Lester"
+      }
+    },
+    {
+      "id": "3",
+      "status": 404,
+      "headers": {
+        "Cache-Control": "no-cache",
+        "x-ms-resource-unit": "1",
+        "Content-Type": "application/json"
+      },
+      "body": {
+        "error": {
+          "code": "Request_ResourceNotFound",
+          "message": "Resource 'foo' does not exist or one of its queried reference-property objects are not present.",
+          "innerError": {
+            "date": "2021-11-18T13:16:56",
+            "request-id": "aaade440-fe0c-48f8-b618-31dc184b8869",
+            "client-request-id": "3d0f7be7-4f63-2825-0716-d760958665cb"
+          }
+        }
+      }
+    },
+    {
+      "id": "2",
+      "status": 200,
+      "headers": {
+        "Cache-Control": "no-cache",
+        "x-ms-resource-unit": "1",
+        "Content-Type": "text/plain; charset=utf-8"
+      },
+      "body": "Sm9uIExlc3Rlcg=="
+    }
+  ]
+}

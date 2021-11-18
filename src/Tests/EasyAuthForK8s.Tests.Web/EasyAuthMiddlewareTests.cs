@@ -33,6 +33,9 @@ using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using System.Threading;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.WebUtilities;
+using System.IO;
+using System.IdentityModel.Tokens.Jwt;
+using System.Dynamic;
 
 namespace EasyAuthForK8s.Tests.Web;
 
@@ -142,6 +145,85 @@ public class EasyAuthMiddlewareTests
         string responseBody = await response.Content.ReadAsStringAsync();
         Assert.Contains(containsMessage, responseBody);
         Assert.Contains(logs, x => x.Message.Contains(containsMessage));
+    }
+    [Fact]
+    public async Task Invoke_HandleAuth_ResponseHeadersSet_Separate()
+    {
+        EasyAuthConfigurationOptions options = new EasyAuthConfigurationOptions() 
+            { HeaderFormatOption = EasyAuthConfigurationOptions.HeaderFormat.Separate};
+
+        HttpResponseMessage response = await GetResponseForHeadersAsync(options);
+
+        Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+
+        Assert.True(response.Headers.Contains($"{options.ResponseHeaderPrefix}name"));
+        Assert.False(response.Headers.Contains($"{options.ResponseHeaderPrefix}userinfo"));
+        Assert.Equal("Jon", response.Headers.GetValues($"{options.ResponseHeaderPrefix}name").First());
+    }
+    [Fact]
+    public async Task Invoke_HandleAuth_ResponseHeadersSet_Combined()
+    {
+        EasyAuthConfigurationOptions options = new EasyAuthConfigurationOptions() 
+            { HeaderFormatOption = EasyAuthConfigurationOptions.HeaderFormat.Combined };
+
+        HttpResponseMessage response = await GetResponseForHeadersAsync(options);
+
+        Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+
+        Assert.False(response.Headers.Contains($"{options.ResponseHeaderPrefix}name"));
+        Assert.True(response.Headers.Contains($"{options.ResponseHeaderPrefix}userinfo"));
+
+        var header = WebUtility.UrlDecode(response.Headers.GetValues($"{options.ResponseHeaderPrefix}userinfo").First());
+        var deserialized = Newtonsoft.Json.JsonConvert.DeserializeObject<dynamic>(header);
+       
+        Assert.NotNull(deserialized);
+        Assert.True(deserialized.name == "Jon");
+    }
+    [Fact]
+    public async Task Invoke_HandleAuth_ResponseHeadersSet_Graph()
+    {
+        EasyAuthConfigurationOptions options = new EasyAuthConfigurationOptions()
+        { HeaderFormatOption = EasyAuthConfigurationOptions.HeaderFormat.Separate };
+
+        HttpResponseMessage response = await GetResponseForHeadersWithCookieSignedInAsync(options);
+
+        Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+
+        Assert.True(response.Headers.Contains($"{options.ResponseHeaderPrefix}graph"));
+
+        var headers = response.Headers.GetValues($"{options.ResponseHeaderPrefix}graph")
+            .Select(x => Newtonsoft.Json.JsonConvert.DeserializeObject<dynamic>(WebUtility.UrlDecode(x)))
+            .ToList();
+
+        Assert.Equal(3, headers.Count);
+        Assert.True(headers[0].displayName == "Jon Lester");
+        Assert.True(headers[1].value == "Jon Lester");
+        Assert.True(headers[2].error_status == "404");
+    }
+    [Fact]
+    public async Task Invoke_HandleAuth_ResponseHeadersSet_InvalidHeader()
+    {
+        EasyAuthConfigurationOptions options = new EasyAuthConfigurationOptions() 
+            { ClaimEncodingMethod = EasyAuthConfigurationOptions.EncodingMethod.NoneWithReject };
+
+        TestAuthenticationHandlerOptions handlerOptions = new TestAuthenticationHandlerOptions()
+        {
+            Claims = new List<Claim>()
+            {
+                new Claim("otherClaim1", "good"),
+                new Claim("otherClaim2", "bäd") //invalid header character
+            }
+        };
+        HttpResponseMessage response = await GetResponseForHeadersAsync(options, handlerOptions);
+
+        Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+
+        Assert.True(response.Headers.Contains($"{options.ResponseHeaderPrefix}otherClaim1"));
+        Assert.True(response.Headers.Contains($"{options.ResponseHeaderPrefix}otherClaim2"));
+        
+        Assert.Equal("good", response.Headers.GetValues($"{options.ResponseHeaderPrefix}otherClaim1").First());
+        Assert.Equal("encoding_error", response.Headers.GetValues($"{options.ResponseHeaderPrefix}otherClaim2").First());
+
     }
 
     [Theory]
@@ -253,6 +335,70 @@ public class EasyAuthMiddlewareTests
             Assert.DoesNotContain(logger.Messages, m => m.LogLevel == LogLevel.Warning);
 
     }
+    [Fact]
+    public async Task Invoke_HandleChallenge_Redirect()
+    {
+        var options = new EasyAuthConfigurationOptions();
+        TestLogger logger = new TestLogger();
+
+        using IHost host = new HostBuilder()
+            .ConfigureServices(services =>
+            {
+                services.AddSingleton<ILogger<EasyAuthMiddleware>>(logger.Factory().CreateLogger<EasyAuthMiddleware>());
+                services.AddEasyAuthForK8s(GetConfiguration(options), logger.Factory());
+
+                //swap out the cookiehandler with one that will do what we tell it
+                services.Configure<AuthenticationOptions>(options =>
+                {
+                    List<AuthenticationSchemeBuilder> schemes = options.Schemes as List<AuthenticationSchemeBuilder>;
+                    var s = schemes.FirstOrDefault(c => c.Name == CookieAuthenticationDefaults.AuthenticationScheme);
+                    if (s != null)
+                    {
+                        s.HandlerType = typeof(TestAuthenticationHandler);
+                    }
+                });
+                services.Replace(new ServiceDescriptor(typeof(GraphHelperService), MockGraphHelper()));
+            })
+            .ConfigureWebHost(webHostBuilder =>
+            {
+                webHostBuilder
+                .UseTestServer()
+                .Configure(app =>
+                {
+                    app.UseEasyAuthForK8s();
+                });
+            }).Build();
+
+        await host.StartAsync();
+
+        var server = host.GetTestServer();
+
+        var authResponse = await server.CreateClient().GetAsync(string.Concat(options.AuthPath, "?scope=unrecognized&scope=foo"));
+        Assert.Equal(HttpStatusCode.Unauthorized, authResponse.StatusCode);
+        Assert.Contains(authResponse.Headers, x => x.Key == HeaderNames.SetCookie);
+
+        var signinReponse = await server
+            .CreateRequest(options.SigninPath)
+            .AddHeader(HeaderNames.Cookie, authResponse.Headers.First(x => x.Key == HeaderNames.SetCookie).Value.First())
+            .GetAsync();
+
+        Assert.Equal(HttpStatusCode.Redirect, signinReponse.StatusCode);
+        Assert.NotNull(signinReponse.Headers.Location);
+
+        var redirectQuery = TestUtility.ParseQuery(signinReponse.Headers.Location.Query);
+
+        Assert.True(redirectQuery.ContainsKey("scope"));
+        var scopeValues = redirectQuery["scope"].First().Split(' ');
+
+        //converted to audience/scope format
+        Assert.Contains($"{TestUtility.DummyGuid}/foo", scopeValues);
+
+        //not recognized, so not converted
+        Assert.Contains("unrecognized", scopeValues);
+
+        //not recognized, so moved to the end
+        Assert.Equal("unrecognized", scopeValues.Last());
+    }
     private IConfiguration GetConfiguration(EasyAuthConfigurationOptions options)
     {
         return new ConfigurationBuilder()
@@ -360,17 +506,16 @@ public class EasyAuthMiddlewareTests
             .Result;
     }
 
-    [Fact]
-    public async Task Invoke_HandleChallenge_Redirect()
+    private async Task<HttpResponseMessage> GetResponseForHeadersAsync(
+       EasyAuthConfigurationOptions options,
+       TestAuthenticationHandlerOptions handlerOptions = null)
     {
-        var options = new EasyAuthConfigurationOptions();
-        TestLogger logger = new TestLogger();
-
         using IHost host = new HostBuilder()
             .ConfigureServices(services =>
             {
-                services.AddSingleton<ILogger<EasyAuthMiddleware>>(logger.Factory().CreateLogger<EasyAuthMiddleware>());
-                services.AddEasyAuthForK8s(GetConfiguration(options), logger.Factory());
+                services.AddEasyAuthForK8s(GetConfiguration(options), new TestLogger().Factory());
+                if (handlerOptions != null)
+                    services.AddSingleton<TestAuthenticationHandlerOptions>(handlerOptions);
 
                 //swap out the cookiehandler with one that will do what we tell it
                 services.Configure<AuthenticationOptions>(options =>
@@ -396,34 +541,93 @@ public class EasyAuthMiddlewareTests
 
         await host.StartAsync();
 
-        var server = host.GetTestServer();
+        return await host.GetTestServer()
+            .CreateClient()
+            .GetAsync(options.AuthPath);
 
-        var authResponse = await server.CreateClient().GetAsync(string.Concat(options.AuthPath, "?scope=unrecognized&scope=foo"));
-        Assert.Equal(HttpStatusCode.Unauthorized, authResponse.StatusCode);
-        Assert.Contains(authResponse.Headers, x => x.Key == HeaderNames.SetCookie);
-
-        var signinReponse = await server
-            .CreateRequest(options.SigninPath)
-            .AddHeader(HeaderNames.Cookie, authResponse.Headers.First(x => x.Key == HeaderNames.SetCookie).Value.First())
-            .GetAsync();
-
-        Assert.Equal(HttpStatusCode.Redirect, signinReponse.StatusCode);
-        Assert.NotNull(signinReponse.Headers.Location);
-
-        var redirectQuery = TestUtility.ParseQuery(signinReponse.Headers.Location.Query);
-
-        Assert.True(redirectQuery.ContainsKey("scope"));
-        var scopeValues = redirectQuery["scope"].First().Split(' ');
-
-        //converted to audience/scope format
-        Assert.Contains($"{TestUtility.DummyGuid}/foo", scopeValues);
-
-        //not recognized, so not converted
-        Assert.Contains("unrecognized", scopeValues);
-
-        //not recognized, so moved to the end
-        Assert.Equal("unrecognized", scopeValues.Last());
     }
+    private async Task<HttpResponseMessage> GetResponseForHeadersWithCookieSignedInAsync(
+       EasyAuthConfigurationOptions options,
+       TestAuthenticationHandlerOptions handlerOptions = null)
+    {
+        using IHost host = new HostBuilder()
+            .ConfigureServices(services =>
+            {
+                services.AddEasyAuthForK8s(GetConfiguration(options), new TestLogger().Factory());
+                if (handlerOptions != null)
+                    services.AddSingleton<TestAuthenticationHandlerOptions>(handlerOptions);
+
+                services.Replace(new ServiceDescriptor(typeof(GraphHelperService), MockGraphHelper()));
+            })
+            .ConfigureWebHost(webHostBuilder =>
+            {
+                webHostBuilder
+                .UseTestServer()
+                .Configure(app =>
+                {
+                    app.Use(async (context, next) =>
+                    {
+                        var token = new JwtSecurityToken("eyJhbGciOiJub25lIn0.eyJpc3MiOiJqb24ifQ.");
+                        AuthenticationProperties props = new AuthenticationProperties(
+                            new Dictionary<string, string>() {
+                                { Constants.OidcGraphQueryStateBag, "foo" },
+                                { ".Token.access_token", new JwtSecurityTokenHandler().WriteToken(token) },
+                                { ".Token.id_token", new JwtSecurityTokenHandler().WriteToken(token) }
+                            });
+
+                        var signedIn = false;
+                        var cookieValue = "";
+
+                        //inject resultant cookie from the response back into to the request
+                        var cookies = new Mock<IRequestCookieCollection>();
+                        cookies.Setup(x => x[Constants.CookieName]).Returns(() =>
+                        {
+                            //force the sign in logic to run, which will execute graph queries
+                            //should only run once
+                            if (!signedIn)
+                            {
+                                signedIn = true;
+
+                                context.SignInAsync(
+                                    CookieAuthenticationDefaults.AuthenticationScheme,
+                                    new TestAuthenticationHandler().AuthenticateAsync().Result.Principal,
+                                    props).Wait();
+
+                                var cookies = CookieHeaderValue.ParseList(context.Response.Headers.SetCookie);
+
+                                cookieValue = cookies
+                                    .Where(x => x.Name == Constants.CookieName)
+                                    .Select(x => x.Value)
+                                    .First()
+                                    .ToString();
+
+                            }
+                            return cookieValue;
+                        }
+                        );
+                        cookies.Setup(x => x.ContainsKey(Constants.CookieName)).Returns(true);
+                        context.Request.Cookies = cookies.Object;
+
+
+
+
+                       
+                        await next.Invoke();
+                    });
+                    app.UseEasyAuthForK8s();
+                });
+            }).Build();
+
+        await host.StartAsync();
+
+        return await host.GetTestServer()
+            .CreateClient()
+            .GetAsync(options.AuthPath);
+
+    }
+
+
+
     private EasyAuthState GetStateFromResponseWithAsserts(IDataProtector dp, HttpResponseMessage response)
     {
         Assert.True(response.Headers.Contains(HeaderNames.SetCookie));
@@ -445,8 +649,7 @@ public class EasyAuthMiddlewareTests
         Assert.Contains(containsMessage, state.Msg);
         Assert.Contains(logs, x => x.Message.Contains(containsMessage));
     }
-
-    private GraphHelperService MockGraphHelper()
+    private GraphHelperService MockGraphHelper(ILogger logger = null)
     {
         var manifest = new AppManifest()
         {
@@ -460,12 +663,20 @@ public class EasyAuthMiddlewareTests
 
         var openIdConnectOptions = Mock.Of<IOptionsMonitor<OpenIdConnectOptions>>();
         var httpClient = Mock.Of<HttpClient>();
-        var logger = Mock.Of<ILogger<GraphHelperService>>();
+        logger = logger ?? Mock.Of<ILogger<GraphHelperService>>();
 
         var graphService = new Mock<GraphHelperService>(openIdConnectOptions, httpClient, logger);
 
         graphService.Setup(x => x.GetManifestConfigurationAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new AppManifestResult() { AppManifest = manifest, Succeeded = true });
+
+        graphService.Setup(x => x.ExecuteQueryAsync(It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => 
+            {   
+                var data =  new List<string>();
+                GraphHelperService.ExtractGraphResponse(data, File.OpenRead("./Helpers/sample-graph-result.json"), logger).Wait();
+                return data;
+            });
 
         return graphService.Object;
     }

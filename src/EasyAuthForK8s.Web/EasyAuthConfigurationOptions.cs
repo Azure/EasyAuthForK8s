@@ -2,8 +2,8 @@
 public class EasyAuthConfigurationOptions
 {
     public string DataProtectionFileLocation { get; set; } = "C:\\mnt\\dp";
-    public string SigninPath { get; set; } = "/msal/index";
-    public string AuthPath { get; set; } = "/msal/auth";
+    public string SigninPath { get; set; } = "/easyauth/login";
+    public string AuthPath { get; set; } = "/easyauth/auth";
     public bool AllowBearerToken { get; set; } = false;
     /// <summary>
     /// provides a default path to send the user after successful login where the 
@@ -27,13 +27,6 @@ public class EasyAuthConfigurationOptions
     /// feature.
     /// </summary>
     public bool CompressCookieClaims { get; set; } = true;
-
-    /// <summary>
-    /// Default assumes public Azure cloud and beta API version.  Endpoint should be updated for other clouds 
-    /// as required, or to specify a different api version
-    /// </summary>
-
-    public string GraphEndpoint { get; set; } = "https://graph.microsoft.com/beta";
 
     /// <summary>
     /// Prefix of the header names sent in the reponse after authorization.  Any unsafe

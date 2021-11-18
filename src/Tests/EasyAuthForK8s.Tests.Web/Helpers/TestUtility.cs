@@ -37,7 +37,7 @@ namespace EasyAuthForK8s.Tests.Web.Helpers
                 if (!keyValuePairs.ContainsKey(name))
                     keyValuePairs.Add(name, new(value));
                 else
-                    keyValuePairs[name].Append(value);
+                    keyValuePairs[name] = StringValues.Concat(keyValuePairs[name],value);
             }
             return new QueryCollection(keyValuePairs);
         }

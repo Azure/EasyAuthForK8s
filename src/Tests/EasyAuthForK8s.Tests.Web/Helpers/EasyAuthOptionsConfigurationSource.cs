@@ -4,6 +4,7 @@ using Microsoft.Extensions.Primitives;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using static EasyAuthForK8s.Web.EasyAuthConfigurationOptions;
 
 namespace EasyAuthForK8s.Tests.Web.Helpers;
 /// <summary>
@@ -62,12 +63,7 @@ internal class EasyAuthOptionsConfigurationSource : IConfigurationSource, IConfi
                 .First(x => $"{Constants.EasyAuthConfigSection}:{x.Name}" == key)
                 .GetValue(_options, null);
 
-            if (prop is string)
-            {
-                value = prop as string;
-                return true;
-            }
-            else if (prop is bool)
+            if (prop != null)
             {
                 value = prop.ToString();
                 return true;

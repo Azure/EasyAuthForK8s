@@ -16,6 +16,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -59,12 +60,17 @@ namespace EasyAuthForK8s.Web.Helpers
             return result;
         }
 
-        public virtual async Task<List<string>> ExecuteQueryAsync(string endpoint, string accessToken, string[] queries)
+        public virtual async Task<List<string>> ExecuteQueryAsync(string accessToken, string[] queries, CancellationToken cancel)
         {
             List<string> data = new List<string>();
-            if (queries != null && queries.Length > 0)
+
+            var configResult = await GetOidcConfigurationAsync(OidcOptions(), cancel);
+            if (configResult == null)
+                data.Add("oidcConfiguration could not be resolved.");
+
+            else if (queries != null && queries.Length > 0)
             {
-                HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, $"{endpoint}/$batch");
+                HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, $"{GraphEndpointFromUInfoEndpoint(configResult!.UserInfoEndpoint)}/$batch");
                 request.Headers.Accept.TryParseAdd("application/json;odata.metadata=none");
                 request.Headers.Add("ConsistencyLevel", "eventual");
                 request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
@@ -84,76 +90,7 @@ namespace EasyAuthForK8s.Web.Helpers
                     {
                         if (response.IsSuccessStatusCode)
                         {
-                            JsonDocument document = await JsonDocument.ParseAsync(response.Content.ReadAsStream());
-
-                            JsonElement responseCollection = document.RootElement.GetProperty("responses");
-
-                            //we have to order the reponses back into the order they were sent
-                            //since the order is non-determistic
-                            foreach (JsonElement element in responseCollection.EnumerateArray()
-                                .OrderBy(x => x.GetProperty("id").GetString())
-                                .ToArray())
-                            {
-                                using MemoryStream stream = new MemoryStream();
-                                using Utf8JsonWriter writer = new Utf8JsonWriter(stream);
-                                {
-                                    writer.WriteStartObject();
-                                    JsonElement bodyElement = element.GetProperty("body");
-                                    JsonElement statusElement = element.GetProperty("status");
-
-                                    bool hasError = false;
-                                    if (!IsSuccessStatus(statusElement!.GetInt32()))
-                                    {
-                                        hasError = true;
-                                        writer.WritePropertyName("error_status");
-                                        writer.WriteNumberValue(statusElement.GetInt32());
-                                    }
-
-                                    if (bodyElement.ValueKind == JsonValueKind.Object || hasError)
-                                    {
-                                        //this gets a little weird when there is an error but the expected value 
-                                        //is not an object.  This means a raw value should have been returned,
-                                        //but since it wasn't the error will be encoded.
-                                        if (hasError && bodyElement.ValueKind == JsonValueKind.String)
-                                        {
-                                            bodyElement = JsonDocument
-                                                .Parse(Encoding.UTF8.GetString(Convert.FromBase64String(bodyElement.GetString() ?? "{}" )))
-                                                .RootElement;
-                                        }
-
-                                        if (bodyElement.TryGetProperty("error", out JsonElement errorElement))
-                                        {
-                                            writer.WritePropertyName("error_message");
-                                            var error_message = errorElement.GetProperty("message").GetString();
-                                            writer.WriteStringValue(error_message);
-                                            _logger.LogWarning($"An item in a graph query batch had errors - {error_message}");
-                                        }
-                                        else
-                                        {
-                                            //graph responses tend to be quite verbose, so remove metadata
-                                            foreach (JsonProperty property in bodyElement.EnumerateObject())
-                                            {
-                                                if (!property.Name.StartsWith("@odata"))
-                                                {
-                                                    property.WriteTo(writer);
-                                                }
-                                            }
-                                        }
-                                    }
-                                    //here we're dealing with a raw value from odata $value
-                                    else
-                                    {
-                                        writer.WritePropertyName("$value");
-                                        string foo = bodyElement.GetRawText();
-                                        bodyElement.WriteTo(writer);
-                                    }
-
-                                    writer.WriteEndObject();
-                                    writer.Flush();
-                                    stream.Position = 0;
-                                    data.Add(await new StreamReader(stream, Encoding.UTF8).ReadToEndAsync());
-                                }
-                            }
+                            await ExtractGraphResponse(data, response.Content.ReadAsStream(), _logger);
                         }
                         else
                         {
@@ -174,16 +111,115 @@ namespace EasyAuthForK8s.Web.Helpers
             return data;
         }
 
+        internal static async Task ExtractGraphResponse(List<string> results, Stream body, ILogger logger)
+        {
+            JsonDocument document = await JsonDocument.ParseAsync(body);
+
+            JsonElement responseCollection = document.RootElement.GetProperty("responses");
+
+            //we have to order the reponses back into the order they were sent
+            //since the return order is non-determistic
+            foreach (JsonElement element in responseCollection.EnumerateArray()
+                .OrderBy(x => x.GetProperty("id").GetString())
+                .ToArray())
+            {
+                using MemoryStream stream = new MemoryStream();
+                using Utf8JsonWriter writer = new Utf8JsonWriter(stream);
+                {
+                    writer.WriteStartObject();
+                    JsonElement bodyElement = element.GetProperty("body");
+                    JsonElement statusElement = element.GetProperty("status");
+
+                    bool hasError = false;
+                    if (!IsSuccessStatus(statusElement!.GetInt32()))
+                    {
+                        hasError = true;
+                        writer.WritePropertyName("error_status");
+                        writer.WriteNumberValue(statusElement.GetInt32());
+                    }
+
+                    if (bodyElement.ValueKind == JsonValueKind.Object || hasError)
+                    {
+                        //this gets a little weird when there is an error but the expected value 
+                        //is not an object.  This means a raw value should have been returned,
+                        //but since it wasn't the error will be encoded.
+                        if (hasError && bodyElement.ValueKind == JsonValueKind.String)
+                        {
+                            bodyElement = JsonDocument
+                                .Parse(Encoding.UTF8.GetString(Convert.FromBase64String(bodyElement.GetString() ?? "{}")))
+                                .RootElement;
+                        }
+
+                        if (bodyElement.TryGetProperty("error", out JsonElement errorElement))
+                        {
+                            writer.WritePropertyName("error_message");
+                            var error_message = errorElement.GetProperty("message").GetString();
+                            writer.WriteStringValue(error_message);
+                            logger.LogWarning($"An item in a graph query batch had errors - {error_message}");
+                        }
+                        else
+                        {
+                            //graph responses tend to be quite verbose, so remove metadata
+                            foreach (JsonProperty property in bodyElement.EnumerateObject())
+                            {
+                                if (!property.Name.StartsWith("@odata"))
+                                {
+                                    property.WriteTo(writer);
+                                }
+                            }
+                        }
+                    }
+                    //here we're dealing with a raw value from odata $value
+                    else
+                    {
+                        writer.WritePropertyName("value");
+                        //it might be encoded
+                        var bodyText = bodyElement.GetString();
+                        if (bodyText != null && IsBase64String(bodyText!))
+                            writer.WriteStringValue(Encoding.UTF8.GetString(Convert.FromBase64String(bodyText)));
+                        else
+                            bodyElement.WriteTo(writer);
+                    }
+
+                    writer.WriteEndObject();
+                    writer.Flush();
+                    stream.Position = 0;
+                    results.Add(await new StreamReader(stream, Encoding.UTF8).ReadToEndAsync());
+                }
+            }
+        }
+        private static bool IsBase64String(string base64)
+        {
+            base64 = base64.Trim();
+            return (base64.Length % 4 == 0) && Regex.IsMatch(base64, @"^[a-zA-Z0-9\+/]*={0,3}$", RegexOptions.Compiled);
+        }
         private static bool IsSuccessStatus(int status)
         {
             return status >= 200 && status < 300;
         }
+        private static string GraphEndpointFromUInfoEndpoint(string usrInfo)
+        {
+            return string.Concat(new Uri(usrInfo)
+                .GetLeftPart(System.UriPartial.Authority),
+                "/",
+                Constants.GraphApiVersion);
+        }
+
+        private static async Task<OpenIdConnectConfiguration?> GetOidcConfigurationAsync(
+            OpenIdConnectOptions options, 
+            CancellationToken cancel)
+        {
+            if (options == null || options.ConfigurationManager == null)
+                return null;
+
+            return await options.ConfigurationManager!.GetConfigurationAsync(cancel);
+        }
 
         internal class AppManifestRetriever : IConfigurationRetriever<AppManifest>
         {
-            HttpClient _client;
-            Func<OpenIdConnectOptions> _optionsResolver;
-            ILogger _logger;
+            readonly HttpClient _client;
+            readonly Func<OpenIdConnectOptions> _optionsResolver;
+            readonly ILogger _logger;
 
             public AppManifestRetriever(HttpClient client, Func<OpenIdConnectOptions> optionsResolver, ILogger logger)
             {
@@ -195,19 +231,12 @@ namespace EasyAuthForK8s.Web.Helpers
             {
                 var options = _optionsResolver();
 
-                if(options.ConfigurationManager == null)
-                    throw new InvalidOperationException("oidcConfigurationManager could not be resolved.");
-
-                var oidcConfiguration = await options
-                    .ConfigurationManager!.GetConfigurationAsync(cancel);
-
-                if (oidcConfiguration == null)
+                var configResult = await GetOidcConfigurationAsync(options, cancel);
+                if(configResult == null)
                     throw new InvalidOperationException("oidcConfiguration could not be resolved.");
-
-                var tokenEndpoint = oidcConfiguration.TokenEndpoint;
-                var graphEndpoint = new Uri(oidcConfiguration.UserInfoEndpoint)
-                    .GetLeftPart(System.UriPartial.Authority);
-
+                   
+                var tokenEndpoint = configResult!.TokenEndpoint;
+                var graphEndpoint = GraphEndpointFromUInfoEndpoint(configResult!.UserInfoEndpoint);
 
                 string? access_token = null;
                 string? id = null;
@@ -244,7 +273,8 @@ namespace EasyAuthForK8s.Web.Helpers
                     }
                     if(access_token != null && id != null)
                     {
-                        request = new HttpRequestMessage(HttpMethod.Get, string.Concat(graphEndpoint, "/beta/directoryObjects/", id));
+                        var url = string.Concat(graphEndpoint, "/directoryObjects/", id);
+                        request = new HttpRequestMessage(HttpMethod.Get, url);
                         request.Headers.Authorization = new("Bearer", access_token);
                         using (HttpResponseMessage response = await _client.SendAsync(request, cancel))
                         {
