@@ -97,7 +97,7 @@ internal static class ModelExtensions
     public static UserInfoPayload? UserInfoPayloadFromPrincipal(this ClaimsPrincipal principal, EasyAuthConfigurationOptions options)
     {
         //see if info claim exists, and return empty if not
-        if(principal.Claims == null || !principal.HasClaim(x => x.Type == Constants.UserInfoClaimType))
+        if (principal.Claims == null || !principal.HasClaim(x => x.Type == Constants.UserInfoClaimType))
         {
             return new UserInfoPayload().PopulateFromClaims(principal.Claims!);
         }
@@ -121,50 +121,50 @@ internal static class ModelExtensions
     }
     public static UserInfoPayload PopulateFromClaims(this UserInfoPayload payload, IEnumerable<Claim> claims)
     {
-        if(claims != null)
-        foreach (Claim claim in claims)
-        {
-            switch (claim.Type)
+        if (claims != null)
+            foreach (Claim claim in claims)
             {
-                case ClaimConstants.Name:
-                    payload.name = claim.Value;
-                    break;
-                case ClaimConstants.Oid:
-                case ClaimConstants.ObjectId:
-                    payload.oid = claim.Value;
-                    break;
-                case ClaimConstants.PreferredUserName:
-                    payload.preferred_username = claim.Value;
-                    break;
-                case ClaimConstants.Roles:
-                case ClaimConstants.Role:
-                    payload.roles.Add(claim.Value);
-                    break;
-                case ClaimConstants.Sub:
-                    payload.sub = claim.Value;
-                    break;
-                case ClaimConstants.Tid:
-                case ClaimConstants.TenantId:
-                    payload.tid = claim.Value;
-                    break;
-                case "email":
-                    payload.email = claim.Value;
-                    break;
-                case ClaimConstants.Scp:
-                case ClaimConstants.Scope:
-                    payload.email = claim.Value;
-                    break;
-                default:
-                    {
-                        if (!Constants.IgnoredClaims.Any(x => x == claim.Type))
-                        {
-                            payload.otherClaims.Add(new() { name = claim.Type, value = claim.Value });
-                        }
-
+                switch (claim.Type)
+                {
+                    case ClaimConstants.Name:
+                        payload.name = claim.Value;
                         break;
-                    }
-            }  
-        }
+                    case ClaimConstants.Oid:
+                    case ClaimConstants.ObjectId:
+                        payload.oid = claim.Value;
+                        break;
+                    case ClaimConstants.PreferredUserName:
+                        payload.preferred_username = claim.Value;
+                        break;
+                    case ClaimConstants.Roles:
+                    case ClaimConstants.Role:
+                        payload.roles.Add(claim.Value);
+                        break;
+                    case ClaimConstants.Sub:
+                        payload.sub = claim.Value;
+                        break;
+                    case ClaimConstants.Tid:
+                    case ClaimConstants.TenantId:
+                        payload.tid = claim.Value;
+                        break;
+                    case "email":
+                        payload.email = claim.Value;
+                        break;
+                    case ClaimConstants.Scp:
+                    case ClaimConstants.Scope:
+                        payload.email = claim.Value;
+                        break;
+                    default:
+                        {
+                            if (!Constants.IgnoredClaims.Any(x => x == claim.Type))
+                            {
+                                payload.otherClaims.Add(new() { name = claim.Type, value = claim.Value });
+                            }
+
+                            break;
+                        }
+                }
+            }
         return payload;
     }
     internal static void AppendResponseHeaders(this UserInfoPayload payload, IHeaderDictionary headers, EasyAuthConfigurationOptions configOptions)
@@ -174,20 +174,20 @@ internal static class ModelExtensions
             return;
         }
 
-        void addHeader(string name, string value) 
-         {
-             string headerName = SanitizeHeaderName($"{configOptions.ResponseHeaderPrefix}{name}");
-             string encodedValue = EncodeValue(value, configOptions.ClaimEncodingMethod);
+        void addHeader(string name, string value)
+        {
+            string headerName = SanitizeHeaderName($"{configOptions.ResponseHeaderPrefix}{name}");
+            string encodedValue = EncodeValue(value, configOptions.ClaimEncodingMethod);
 
-             if (headers.ContainsKey(headerName))
-             {
-                 headers[headerName] = StringValues.Concat(headers[headerName], encodedValue);
-             }
-             else
-             {
-                 headers.Add(headerName, encodedValue);
-             }
-         };
+            if (headers.ContainsKey(headerName))
+            {
+                headers[headerName] = StringValues.Concat(headers[headerName], encodedValue);
+            }
+            else
+            {
+                headers.Add(headerName, encodedValue);
+            }
+        };
 
         if (configOptions.HeaderFormatOption == EasyAuthConfigurationOptions.HeaderFormat.Combined)
         {

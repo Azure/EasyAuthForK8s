@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace EasyAuthForK8s.Web.Authorization;
 
@@ -13,7 +12,7 @@ public class ScopeRequirement : IAuthorizationRequirement
     /// <param name="allowedValues">The optional list of scope values.</param>
     public ScopeRequirement(IEnumerable<string>? allowedValues = null) => AllowedValues = allowedValues;
     public IEnumerable<string>? AllowedValues { get; }
-    public override string ToString() => 
+    public override string ToString() =>
         $"{nameof(ScopeRequirement)}: Consented scope must contain one of the following values: " +
         $"({string.Join(", ", AllowedValues ?? Array.Empty<string>())})";
 

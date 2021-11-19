@@ -2,7 +2,6 @@
 using Microsoft.Identity.Web;
 using System;
 using System.Linq;
-using System.Security.Claims;
 using System.Threading.Tasks;
 
 namespace EasyAuthForK8s.Web.Authorization;

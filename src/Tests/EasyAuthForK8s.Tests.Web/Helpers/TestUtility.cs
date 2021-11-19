@@ -3,9 +3,7 @@ using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Primitives;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace EasyAuthForK8s.Tests.Web.Helpers
 {
@@ -37,7 +35,7 @@ namespace EasyAuthForK8s.Tests.Web.Helpers
                 if (!keyValuePairs.ContainsKey(name))
                     keyValuePairs.Add(name, new(value));
                 else
-                    keyValuePairs[name] = StringValues.Concat(keyValuePairs[name],value);
+                    keyValuePairs[name] = StringValues.Concat(keyValuePairs[name], value);
             }
             return new QueryCollection(keyValuePairs);
         }

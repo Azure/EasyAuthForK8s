@@ -2,10 +2,8 @@
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Microsoft.Identity.Web;
 using Microsoft.IdentityModel.Protocols;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
-using Microsoft.IdentityModel.Tokens;
 using System;
 using System.Collections.Generic;
 using System.Dynamic;
@@ -29,7 +27,7 @@ namespace EasyAuthForK8s.Web.Helpers
         ConfigurationManager<AppManifest> _configurationManager;
         ILogger<GraphHelperService> _logger;
 
-        public GraphHelperService(IOptionsMonitor<OpenIdConnectOptions> openIdConnectOptions, HttpClient httpClient, ILogger<GraphHelperService> logger )
+        public GraphHelperService(IOptionsMonitor<OpenIdConnectOptions> openIdConnectOptions, HttpClient httpClient, ILogger<GraphHelperService> logger)
         {
             _httpClient = httpClient ?? throw new ArgumentNullException("httpClient");
             _openIdConnectOptions = openIdConnectOptions ?? throw new ArgumentNullException("openIdConnectOptions");
@@ -206,7 +204,7 @@ namespace EasyAuthForK8s.Web.Helpers
         }
 
         private static async Task<OpenIdConnectConfiguration?> GetOidcConfigurationAsync(
-            OpenIdConnectOptions options, 
+            OpenIdConnectOptions options,
             CancellationToken cancel)
         {
             if (options == null || options.ConfigurationManager == null)
@@ -232,9 +230,9 @@ namespace EasyAuthForK8s.Web.Helpers
                 var options = _optionsResolver();
 
                 var configResult = await GetOidcConfigurationAsync(options, cancel);
-                if(configResult == null)
+                if (configResult == null)
                     throw new InvalidOperationException("oidcConfiguration could not be resolved.");
-                   
+
                 var tokenEndpoint = configResult!.TokenEndpoint;
                 var graphEndpoint = GraphEndpointFromUInfoEndpoint(configResult!.UserInfoEndpoint);
 
@@ -271,7 +269,7 @@ namespace EasyAuthForK8s.Web.Helpers
                         else
                             throw new(await response.Content.ReadAsStringAsync(cancel));
                     }
-                    if(access_token != null && id != null)
+                    if (access_token != null && id != null)
                     {
                         var url = string.Concat(graphEndpoint, "/directoryObjects/", id);
                         request = new HttpRequestMessage(HttpMethod.Get, url);
@@ -290,6 +288,8 @@ namespace EasyAuthForK8s.Web.Helpers
                 {
                     _logger.LogError(ex, "Error retrieving application manifest configuration.");
                 }
+                if (appManifest != null)
+                    appManifest.oidcScopes = configResult.ScopesSupported;
                 return appManifest!;
             }
         }

@@ -28,6 +28,13 @@ namespace EasyAuthForK8s.Web.Models
         public List<AppRole?> appRoles { get; set; } = new List<AppRole?>();
         public Info? info { get; set; }
         public List<PublishedPermissionScope?> publishedPermissionScopes { get; set; } = new List<PublishedPermissionScope?>();
+
+        /// <summary>
+        /// this is not part of the actual manifest, but for the sake of completeness
+        /// we'll hold on to the list of oidc scopes that the AAD instance supports
+        /// so we can tell these apart from any other non-application scopes
+        /// </summary>
+        public ICollection<string>? oidcScopes { get; set; } = null;
         public class AppRole
         {
             public List<string> allowedMemberTypes { get; set; } = new List<string>();
@@ -59,29 +66,56 @@ namespace EasyAuthForK8s.Web.Models
             public string? userConsentDisplayName { get; set; }
             public string? value { get; set; }
         }
-        public List<string> FormattedScopeList(IEnumerable<string> scopes)
+        /// <summary>
+        /// Creates an ordered list of scopes and formats the scope name with resource
+        /// identifier where required.
+        /// </summary>
+        /// <param name="requestedScopes">scopes requested by an previous auth attempt</param>
+        /// <param name="scopeString">The scope string from the current OIDC message, which will be replaced</param>
+        /// <returns></returns>
+        public string FormattedScopeString(IEnumerable<string> requestedScopes, string scopeString)
         {
-            if (scopes == null || scopes.Count() == 0)
-                return new List<string>();
+            //the scope list must be formatted in the correct order for the audience of the 
+            //multi-resource token to be correct:
+            // 1. OIDC scopes
+            // 2. Local scopes for this application
+            // 3. MS Graph scopes or anything else
 
-            var validscopes = (publishedPermissionScopes ?? new List<PublishedPermissionScope?>())
+            if (requestedScopes == null || requestedScopes.Count() == 0)
+                return scopeString!;
+
+            var knownScopes = (publishedPermissionScopes ?? new List<PublishedPermissionScope?>())
                 .Where(x => x != null && !string.IsNullOrEmpty(x!.value))
                 .Select(x => x!.value!)
                 .ToList();
 
-            if (validscopes.Count == 0)
-                return scopes.ToList();
+            if (knownScopes.Count == 0)
+                return scopeString!;
 
-            //audience works when scope is prefaced with appId.  appUri causes some problems
-            var result = scopes.Where(x => validscopes.Contains(x, StringComparer.InvariantCultureIgnoreCase))
-                .Distinct()
-                .Select(x => $"{this.appId}/{x}")
-                .ToList();
+            //combine into one working list
+            var workingScopes = (scopeString == null ?
+                    Array.Empty<string>() :
+                    scopeString.Split(' ', System.StringSplitOptions.RemoveEmptyEntries))
+                .Union(requestedScopes);
 
-            //add back the scopes that are not for this app, they must appear after the local
-            //scopes for the audience to be correct
-            result.AddRange(scopes.Except(validscopes, StringComparer.InvariantCultureIgnoreCase));
-            return result;
+            //create an ordered list
+            // 1.  Add anything known to be an OIDC scope
+            var result = (this.oidcScopes != null && this.oidcScopes.Count > 0) ?
+                workingScopes
+                    .Where(x => this.oidcScopes.Contains(x, StringComparer.InvariantCultureIgnoreCase))
+                    .ToList() :
+                new List<string>();
+
+            // 2. Add application-specific scopes
+            result.AddRange(workingScopes.Where(x => knownScopes.Contains(x, StringComparer.InvariantCultureIgnoreCase))
+                .Except(result, StringComparer.InvariantCultureIgnoreCase));
+
+            // 3. Add back anything else
+            result.AddRange(workingScopes.Except(result, StringComparer.InvariantCultureIgnoreCase));
+
+            //format
+            return string.Join(' ', result.Select(x => 
+                knownScopes.Contains(x, StringComparer.InvariantCultureIgnoreCase) ? $"{this.appId}/{x}" : x));
         }
     }
     public struct AppManifestResult
@@ -93,5 +127,5 @@ namespace EasyAuthForK8s.Web.Models
 
 
 
-    
+
 }

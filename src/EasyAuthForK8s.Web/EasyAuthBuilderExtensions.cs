@@ -43,7 +43,7 @@ public static class EasyAuthBuilderExtensions
         services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
             .AddMicrosoftIdentityWebApp(o =>
             {
-                azureAdConfigSection.Bind(o);                
+                azureAdConfigSection.Bind(o);
 
                 var nextRedirectHandler = o.Events.OnRedirectToIdentityProvider;
                 o.Events.OnRedirectToIdentityProvider = async context =>
@@ -56,7 +56,7 @@ public static class EasyAuthBuilderExtensions
                 var nextHandler = c.Events.OnSigningIn;
                 c.Events.OnSigningIn = async context => await eventHelper.CookieSigningIn(context, nextHandler);
             });
-            
+
 
         //configure OIDC options
         services.Configure<OpenIdConnectOptions>(OpenIdConnectDefaults.AuthenticationScheme, (OpenIdConnectOptions configureOptions) =>
@@ -94,9 +94,9 @@ public static class EasyAuthBuilderExtensions
     public static IApplicationBuilder UseEasyAuthForK8s(this IApplicationBuilder builder)
     {
         builder.UseExceptionHandler(new ExceptionHandlerOptions() { AllowStatusCode404Response = true, ExceptionHandler = EventHelper.HandleException });
-        
+
         builder.UseForwardedHeaders();
-        
+
         builder.Use(async (context, next) =>
         {
             context.Request.Scheme = "https";
@@ -165,7 +165,7 @@ public static class EasyAuthBuilderExtensions
                     }
                     return Task.CompletedTask;
                 }, context.Response);
-                
+
             }
             await next.Invoke();
         });

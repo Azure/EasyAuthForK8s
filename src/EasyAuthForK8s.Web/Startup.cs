@@ -1,5 +1,4 @@
-﻿using EasyAuthForK8s.Web.Helpers;
-using Microsoft.AspNetCore.Builder;
+﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -33,7 +32,7 @@ public class Startup
         // log warnings for size that might cause NGINX problems.  Must add 
         // this middleware before EasyAuth
         app.UseLargeSetCookieLogWarning(4096);
-        
+
         //if (Convert.ToBoolean(Configuration["ForceHttps"]))
         //{
         //    var options = new ForwardedHeadersOptions
@@ -49,7 +48,7 @@ public class Startup
         //    });
         //}
 
-        
+
         app.UseEasyAuthForK8s();
 
     }

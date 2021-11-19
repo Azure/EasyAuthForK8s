@@ -2,21 +2,19 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Identity.Web;
+using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using System;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Security.Claims;
-using System.Text;
 using System.Threading.Tasks;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.AspNetCore.Diagnostics;
-using System.Net;
-using Microsoft.AspNetCore.WebUtilities;
-using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 
 namespace EasyAuthForK8s.Web.Helpers
 {
@@ -42,7 +40,7 @@ namespace EasyAuthForK8s.Web.Helpers
 
             //if additional scopes are requested, add them to the redirect
             EasyAuthState state = context.HttpContext.EasyAuthStateFromHttpContext();
-            
+
             // there are three ways to determine where to send the user after successful signin
             // in order of precendence:
             //  1. if the rd parameter was supplied when they were sent the challenge it will already be set.  Don't change.
@@ -62,14 +60,14 @@ namespace EasyAuthForK8s.Web.Helpers
 
                     if (graphService == null)
                         throw new();
-                    
+
                     var manifestResult = await graphService!.GetManifestConfigurationAsync(context.HttpContext.RequestAborted);
-                    
+
                     if (!manifestResult.Succeeded)
                         throw new();
-                    
-                    context.ProtocolMessage.Scope = BuildScopeString(context.ProtocolMessage.Scope, 
-                        manifestResult.AppManifest!.FormattedScopeList(state.Scopes));
+
+                    context.ProtocolMessage.Scope = 
+                        manifestResult.AppManifest!.FormattedScopeString(state.Scopes, context.ProtocolMessage.Scope);
 
                 }
                 catch (Exception ex)
@@ -91,7 +89,7 @@ namespace EasyAuthForK8s.Web.Helpers
         /// <param name="context"></param>
         /// <param name="configOptions"></param>
         /// <returns></returns>
-        public async Task CookieSigningIn(CookieSigningInContext context, 
+        public async Task CookieSigningIn(CookieSigningInContext context,
             Func<CookieSigningInContext, Task> next)
         {
             /* 
@@ -206,16 +204,16 @@ namespace EasyAuthForK8s.Web.Helpers
 
                 code = ex?.StatusCode ?? code;
             }
-            else if(feature?.Error is OpenIdConnectProtocolException)
+            else if (feature?.Error is OpenIdConnectProtocolException)
             {
                 //unwrap oidc data
                 var ex = feature?.Error as OpenIdConnectProtocolException;
                 message = ex?.Data["error_description"] as string ?? ex?.Message;
                 reasonPhrase = "Azure Active Directory Error";
             }
-            
+
             var manifestResult = graphService != null ? await graphService.GetManifestConfigurationAsync(context.RequestAborted) : new();
-            
+
             await ErrorPage.Render(context.Response,
                 manifestResult.Succeeded ? manifestResult.AppManifest! : new AppManifest(),
                 reasonPhrase ?? ReasonPhrases.GetReasonPhrase(code), message);
@@ -232,15 +230,15 @@ namespace EasyAuthForK8s.Web.Helpers
         {
             if (_logger != null)
                 return;
-            
-            if(context == null)
+
+            if (context == null)
                 throw new ArgumentNullException("context");
 
             var factory = context.RequestServices.GetRequiredService<ILoggerFactory>();
             _logger = factory.CreateLogger("EasyAuthEvents");
         }
-        
-        
+
+
     }
 }
 

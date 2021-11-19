@@ -14,6 +14,7 @@ public class Constants
     public const int StateTtlMinutes = 5;
     public const string UserInfoClaimType = "ea4k";
     public const string GraphApiVersion = "beta";
+    public const string OriginalUriHeader = "X-Original-URI";
     public class Claims
     {
         public const string Name = "n";

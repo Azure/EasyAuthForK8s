@@ -9,7 +9,6 @@ using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Microsoft.Identity.Web;
 using Microsoft.Net.Http.Headers;
 using System;
 using System.Collections.Generic;
@@ -41,7 +40,7 @@ public class EasyAuthMiddleware
         _next = next ?? throw new ArgumentNullException(nameof(next));
         _configureOptions = configureOptions.Value ?? throw new ArgumentNullException(nameof(configureOptions)); ;
         //_aadOptions = aadOptions;
-        _authService = authservice ?? throw new ArgumentNullException(nameof(authservice)); 
+        _authService = authservice ?? throw new ArgumentNullException(nameof(authservice));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger)); ;
         _openIdConnectOptions = openIdConnectOptions ?? throw new ArgumentNullException(nameof(openIdConnectOptions));
         _graphHelper = graphHelper ?? throw new ArgumentNullException(nameof(graphHelper));
@@ -197,10 +196,11 @@ public class EasyAuthMiddleware
             {
                 Status = authStatus,
                 Scopes = scopes
-                .SelectMany(x => x.Split("|", System.StringSplitOptions.RemoveEmptyEntries))
-                .ToList(),
+                    .SelectMany(x => x.Split("|", System.StringSplitOptions.RemoveEmptyEntries))
+                    .ToList(),
                 Msg = message,
-                Scheme = authScheme
+                Scheme = authScheme,
+                Url = context.Request.Headers.TryGetValue(Constants.OriginalUriHeader, out var url) ? url.FirstOrDefault() : null
             };
 
             if (context.Request.Query.ContainsKey(Constants.GraphParameterName))

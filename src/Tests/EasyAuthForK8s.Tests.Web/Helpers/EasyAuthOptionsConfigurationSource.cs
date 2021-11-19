@@ -4,7 +4,6 @@ using Microsoft.Extensions.Primitives;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using static EasyAuthForK8s.Web.EasyAuthConfigurationOptions;
 
 namespace EasyAuthForK8s.Tests.Web.Helpers;
 /// <summary>

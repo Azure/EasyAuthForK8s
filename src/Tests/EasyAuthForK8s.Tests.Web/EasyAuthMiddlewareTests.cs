@@ -1,8 +1,11 @@
 ﻿using EasyAuthForK8s.Tests.Web.Helpers;
 using EasyAuthForK8s.Web;
+using EasyAuthForK8s.Web.Helpers;
 using EasyAuthForK8s.Web.Models;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
@@ -10,32 +13,26 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using MicrosoftIdentityOptions = Microsoft.Identity.Web.MicrosoftIdentityOptions;
-using ClaimConstants = Microsoft.Identity.Web.ClaimConstants;
 using Microsoft.Net.Http.Headers;
+using Moq;
 using System;
 using System.Collections.Generic;
+using System.IdentityModel.Tokens.Jwt;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Runtime.InteropServices;
+using System.Security.Claims;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
-using System.Security.Claims;
-using EasyAuthForK8s.Web.Helpers;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using Moq;
-using Microsoft.AspNetCore.Authentication.OpenIdConnect;
-using System.Threading;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.WebUtilities;
-using System.IO;
-using System.IdentityModel.Tokens.Jwt;
-using System.Dynamic;
+using ClaimConstants = Microsoft.Identity.Web.ClaimConstants;
+using MicrosoftIdentityOptions = Microsoft.Identity.Web.MicrosoftIdentityOptions;
 
 namespace EasyAuthForK8s.Tests.Web;
 
@@ -149,8 +146,8 @@ public class EasyAuthMiddlewareTests
     [Fact]
     public async Task Invoke_HandleAuth_ResponseHeadersSet_Separate()
     {
-        EasyAuthConfigurationOptions options = new EasyAuthConfigurationOptions() 
-            { HeaderFormatOption = EasyAuthConfigurationOptions.HeaderFormat.Separate};
+        EasyAuthConfigurationOptions options = new EasyAuthConfigurationOptions()
+        { HeaderFormatOption = EasyAuthConfigurationOptions.HeaderFormat.Separate };
 
         HttpResponseMessage response = await GetResponseForHeadersAsync(options);
 
@@ -163,8 +160,8 @@ public class EasyAuthMiddlewareTests
     [Fact]
     public async Task Invoke_HandleAuth_ResponseHeadersSet_Combined()
     {
-        EasyAuthConfigurationOptions options = new EasyAuthConfigurationOptions() 
-            { HeaderFormatOption = EasyAuthConfigurationOptions.HeaderFormat.Combined };
+        EasyAuthConfigurationOptions options = new EasyAuthConfigurationOptions()
+        { HeaderFormatOption = EasyAuthConfigurationOptions.HeaderFormat.Combined };
 
         HttpResponseMessage response = await GetResponseForHeadersAsync(options);
 
@@ -175,7 +172,7 @@ public class EasyAuthMiddlewareTests
 
         var header = WebUtility.UrlDecode(response.Headers.GetValues($"{options.ResponseHeaderPrefix}userinfo").First());
         var deserialized = Newtonsoft.Json.JsonConvert.DeserializeObject<dynamic>(header);
-       
+
         Assert.NotNull(deserialized);
         Assert.True(deserialized.name == "Jon");
     }
@@ -203,8 +200,8 @@ public class EasyAuthMiddlewareTests
     [Fact]
     public async Task Invoke_HandleAuth_ResponseHeadersSet_InvalidHeader()
     {
-        EasyAuthConfigurationOptions options = new EasyAuthConfigurationOptions() 
-            { ClaimEncodingMethod = EasyAuthConfigurationOptions.EncodingMethod.NoneWithReject };
+        EasyAuthConfigurationOptions options = new EasyAuthConfigurationOptions()
+        { ClaimEncodingMethod = EasyAuthConfigurationOptions.EncodingMethod.NoneWithReject };
 
         TestAuthenticationHandlerOptions handlerOptions = new TestAuthenticationHandlerOptions()
         {
@@ -220,7 +217,7 @@ public class EasyAuthMiddlewareTests
 
         Assert.True(response.Headers.Contains($"{options.ResponseHeaderPrefix}otherClaim1"));
         Assert.True(response.Headers.Contains($"{options.ResponseHeaderPrefix}otherClaim2"));
-        
+
         Assert.Equal("good", response.Headers.GetValues($"{options.ResponseHeaderPrefix}otherClaim1").First());
         Assert.Equal("encoding_error", response.Headers.GetValues($"{options.ResponseHeaderPrefix}otherClaim2").First());
 
@@ -357,6 +354,13 @@ public class EasyAuthMiddlewareTests
                         s.HandlerType = typeof(TestAuthenticationHandler);
                     }
                 });
+                services.Configure<OpenIdConnectOptions>(OpenIdConnectDefaults.AuthenticationScheme, (OpenIdConnectOptions configureOptions) =>
+                {
+                    configureOptions.ResponseType = "code";
+                    configureOptions.SaveTokens = true;
+                    //explicitly add a requested scope
+                    configureOptions.Scope.Add("User.Read");
+                });
                 services.Replace(new ServiceDescriptor(typeof(GraphHelperService), MockGraphHelper()));
             })
             .ConfigureWebHost(webHostBuilder =>
@@ -398,6 +402,11 @@ public class EasyAuthMiddlewareTests
 
         //not recognized, so moved to the end
         Assert.Equal("unrecognized", scopeValues.Last());
+
+        //a scope that is part of the oidc configuration, should be moved to the end
+        //but before an unrecognized scope that was part of the request
+        //this is not a requirement, just ensuring the sort is deterministic
+        Assert.Equal("User.Read", scopeValues[scopeValues.Length - 2]);
     }
     private IConfiguration GetConfiguration(EasyAuthConfigurationOptions options)
     {
@@ -611,7 +620,7 @@ public class EasyAuthMiddlewareTests
 
 
 
-                       
+
                         await next.Invoke();
                     });
                     app.UseEasyAuthForK8s();
@@ -658,6 +667,13 @@ public class EasyAuthMiddlewareTests
             {
                 new() { value = "foo" },
                 new() { value = "bar" }
+            },
+            oidcScopes = new string[]
+            {
+                "openid",
+                "profile",
+                "email",
+                "offline_access"
             }
         };
 
@@ -671,15 +687,15 @@ public class EasyAuthMiddlewareTests
             .ReturnsAsync(new AppManifestResult() { AppManifest = manifest, Succeeded = true });
 
         graphService.Setup(x => x.ExecuteQueryAsync(It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(() => 
-            {   
-                var data =  new List<string>();
+            .ReturnsAsync(() =>
+            {
+                var data = new List<string>();
                 GraphHelperService.ExtractGraphResponse(data, File.OpenRead("./Helpers/sample-graph-result.json"), logger).Wait();
                 return data;
             });
 
         return graphService.Object;
     }
-   
+
 }
 

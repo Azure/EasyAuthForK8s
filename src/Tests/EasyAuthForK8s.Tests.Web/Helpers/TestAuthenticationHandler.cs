@@ -1,11 +1,10 @@
 ﻿using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Http;
-using System;
+using Microsoft.Identity.Web;
+using System.Collections.Generic;
 using System.Security.Claims;
 using System.Threading.Tasks;
-using System.Collections.Generic;
-using Microsoft.Identity.Web;
 
 namespace EasyAuthForK8s.Tests.Web.Helpers;
 
@@ -17,9 +16,9 @@ internal class TestAuthenticationHandler : IAuthenticationHandler
     TestAuthenticationHandlerOptions _options;
     public TestAuthenticationHandler(TestAuthenticationHandlerOptions options = null)
     {
-        if(options == null)
+        if (options == null)
             _options = new TestAuthenticationHandlerOptions();
-        else 
+        else
             _options = options;
     }
 
