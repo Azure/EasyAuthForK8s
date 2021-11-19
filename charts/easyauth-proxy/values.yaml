@@ -68,8 +68,6 @@ resources: {}
 
 secret:
   name: aad-secret
-  azureadtenantid: tenantid
-  azureadclientid: clientid
   azureclientsecret: clientsecret
 
 autoscaling:
