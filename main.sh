@@ -26,12 +26,6 @@ if ! [ -x "$(command -v az)" ]; then
 fi
 
 echo ""
-# Show the subscription we will be deploying to.
-echo "******We will be deploying to this subscription******"
-az account show
-az account list
-
-echo ""
 echo "BEGIN @ $(date +"%T"): Set variables..."
 
 # Initialize Variables for flags
@@ -43,34 +37,35 @@ LOCATION=''
 INPUTIMAGE=''
 ALT_TENANT_ID=''
 SKIP_CLUSTER_CREATION=''
+E2E_TEST_FLAG=''
+SP=''
+SP_SECRET=''
 
-while getopts "a:c:r:e:l:i:t:ph" OPTION
+while getopts "a:c:r:e:l:i:t:s:z:pgh" OPTION
 do
 	case $OPTION in
 		a)
-			# echo "The value of -a is ${OPTARG} - AD_APP_NAME"
             AD_APP_NAME=$OPTARG ;;
 	    c)
-			# echo "The value of -c is ${OPTARG} - CLUSTER_NAME"
             CLUSTER_NAME=$OPTARG ;;
         r)
-			# echo "The value of -r is ${OPTARG} - CLUSTER_RG"
             CLUSTER_RG=$OPTARG ;;
         e)
-			# echo "The value of -e is ${OPTARG} - EMAIL"
             EMAIL=$OPTARG ;;
         l)
-			# echo "The value of -l is ${OPTARG} - LOCATION"
             LOCATION=$OPTARG ;;
         i)
-			# echo "The value of -i is ${OPTARG} - INPUTIMAGE"
             INPUTIMAGE=$OPTARG ;;
         t)
-			# echo "The value of -i is ${OPTARG} - INPUTIMAGE"
             ALT_TENANT_ID=$OPTARG ;;
+        s)
+            SP=$OPTARG ;;
+        z)
+            SP_SECRET=$OPTARG ;;
         p) 
-            # echo "The value of -p is ${OPTARG} - SKIP_CLUSTER_CREATION"
             SKIP_CLUSTER_CREATION="True" ;;
+        g) 
+            E2E_TEST_FLAG="True" ;;  
 		h)
             # Change to how others show it like az
             echo "HELP: Here are the flags and their variables"
@@ -81,17 +76,25 @@ do
             echo "REQUIRED: -l is for LOCATION"
             echo "OPTOINAL: -i is for INPUTIMAGE"
             echo "OPTOINAL: -t is for ALT_TENANT_ID"
+            echo "OPTOINAL: -s is for SERVICE_PRICIPAL"
+            echo "OPTOINAL: -z is for SP_SECRET"
             echo "OPTOINAL: -p is for SKIP_CLUSTER_CREATION"
 			exit ;;
 	esac
 done
-
 
 # Force required flags.
 if [ -z "$AD_APP_NAME" ] || [ -z "$CLUSTER_NAME" ] || [ -z "$CLUSTER_RG" ] || [ -z "$EMAIL" ] || [ -z "$LOCATION" ]; then
     echo "*****ERROR. Please enter all required flags.*****"
     exit
 fi 
+
+echo ""
+# Show the subscription we will be deploying to.
+if [ -z "$E2E_TEST_FLAG" ]; then
+    echo "******We will be deploying to this subscription******"
+    az account show
+fi
 
 APP_HOSTNAME="$AD_APP_NAME.$LOCATION.cloudapp.azure.com"
 HOMEPAGE=https://$APP_HOSTNAME
@@ -105,7 +108,10 @@ echo "The value of -e is $EMAIL - EMAIL"
 echo "The value of -l is $LOCATION - LOCATION"
 echo "The value of -i is $INPUTIMAGE - INPUTIMAGE"
 echo "The value of -t is $ALT_TENANT_ID - ALT_TENANT_ID"
+echo "The value of -s is $SP - SERVICE_PRICIPAL"
+echo "The value of -z is $SP_SECRET - SP_SECRET"
 echo "The value of -p is $SKIP_CLUSTER_CREATION - SKIP_CLUSTER_CREATION"
+echo "The value of -g is $E2E_TEST_FLAG - E2E_TEST_FLAG"
 echo "COMPLETE @ $(date +"%T"): Setting variables"
 
 echo "****BEGIN @ $(date +"%T"): Call AKS Cluster Creation script...****"

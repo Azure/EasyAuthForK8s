@@ -5,8 +5,17 @@ echo "BEGIN @ $(date +"%T"): Register AAD Application..."
 if [ -n "$ALT_TENANT_ID" ]; then
     echo "SETTING ALT_TENANT_ID: " $ALT_TENANT_ID
     SUBSCRIPTION_ID=$(az account show | jq -r '.id')
+    ORIGINAL_TENANT=$(az account show | jq -r '.homeTenantId')
+
+  if [ -z "$E2E_TEST_FLAG" ]; then
     echo "ORIGINAL SUBSCRIPTION_ID: " $SUBSCRIPTION_ID
+    echo "ORIGINAL TENANT_ID: " $ORIGINAL_TENANT
+    echo "USING AZ ACCOUNT SET"
     az account set -s $ALT_TENANT_ID
+  else
+    echo "USING AZ LOGIN"
+    az login --service-principal -u $SP -p $SP_SECRET --tenant $ALT_TENANT_ID --allow-no-subscriptions
+  fi
 fi
 
 CLIENT_ID=$(az ad app create --display-name $AD_APP_NAME --homepage $HOMEPAGE --reply-urls $REPLY_URLS --required-resource-accesses @./TemplateFiles/manifest.json -o json | jq -r '.appId')
@@ -51,8 +60,17 @@ AZURE_TENANT_ID=$(az account show -o json | jq '.tenantId' -r)
 echo "AZURE_TENANT_ID: " $AZURE_TENANT_ID
 
 if [ -n "$ALT_TENANT_ID" ]; then
-    echo "SETTING TENANT BACK TO ORIGINAL: " $SUBSCRIPTION_ID
+    echo "SETTING TENANT BACK TO ORIGINAL."
+  
+  if [ -z "$E2E_TEST_FLAG" ]; then
+    echo "ORIGINAL SUBSCRIPTION_ID: " $SUBSCRIPTION_ID
+    echo "ORIGINAL TENANT_ID: " $ORIGINAL_TENANT
+    echo "USING AZ ACCOUNT SET"
     az account set -s $SUBSCRIPTION_ID
+  else
+    echo "USING AZ LOGIN"
+    az login --service-principal -u $SP -p $SP_SECRET --tenant $ORIGINAL_TENANT
+  fi
 fi
 
 echo "COMPLETE @ $(date +"%T"): Register AAD Application"

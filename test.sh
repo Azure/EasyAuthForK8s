@@ -9,8 +9,10 @@ L=''
 I=''
 T=''
 P=''
+S=''
+Z=''
 
-while getopts "a:c:r:e:l:i:t:ph" OPTION
+while getopts "a:c:r:e:l:i:t:s:z:p" OPTION
 do
 	case $OPTION in
 		a)
@@ -33,28 +35,22 @@ do
             I=$OPTARG ;;
         t)
 			# echo "The value of -i is ${OPTARG} - INPUTIMAGE"
-            T=$OPTARG ;;
+            T=$OPTARG ;;  
+        s)
+            # echo "The value of -s is ${OPTARG} - SP"
+            S=$OPTARG ;;
+        z)
+            # echo "The value of -z is ${OPTARG} - SP_SECRET"
+            Z=$OPTARG ;;
         p) 
             # echo "The value of -p is ${OPTARG} - SKIP_CLUSTER_CREATION"
             P=$OPTARG ;;
-		h)
-            # Change to how others show it like az
-            echo "HELP: Here are the flags and their variables"
-			echo "REQUIRED: -a is for AD_APP_NAME"
-            echo "REQUIRED: -c is for CLUSTER_NAME *Note: Cluster Name must be unique*" 
-            echo "REQUIRED: -r is for CLUSTER_RG"
-            echo "REQUIRED: -e is for EMAIL"
-            echo "REQUIRED: -l is for LOCATION"
-            echo "OPTOINAL: -i is for INPUTIMAGE"
-            echo "OPTOINAL: -t is for ALT_TENANT_ID"
-            echo "OPTOINAL: -p is for SKIP_CLUSTER_CREATION"
-			exit ;;
 	esac
 done
 
 echo ""
 echo "BEGIN @ $(date +"%T"): START OF END-TO-END TEST"
-bash ./main.sh -a $A -c $C -r $R -e $E -l $L -t $T
+bash ./main.sh -a $A -c $C -r $R -e $E -l $L -t $T -s $S -z $Z -g
 
 APP_NAME="$A.$L.cloudapp.azure.com"
 WEBPAGE=https://$APP_NAME
