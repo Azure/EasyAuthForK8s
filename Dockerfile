@@ -36,7 +36,6 @@ RUN /tools/reportgenerator \
     "-reporttypes:HTMLInline;HTMLChart"
 
 RUN ls -la /testresults/coverage/reports
-# RUN dotnet test ./OCP.Msal.Proxy.sln --configuration Release --no-restore
 
 RUN dotnet publish \
     ./EasyAuthForK8s.Web/EasyAuthForK8s.Web.csproj \
