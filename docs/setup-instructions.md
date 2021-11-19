@@ -187,7 +187,7 @@ echo $CLIENT_SECRET
 ```
 
 # Go to the root of the repo before running this command
-helm install --set secret.azureadtenantid=$AZURE_TENANT_ID --set secret.azureadclientid=$CLIENT_ID --set secret.azureclientsecret=$CLIENT_SECRET msal-proxy ./charts/msal-proxy
+helm install --set secret.azureadtenantid=$AZURE_TENANT_ID --set secret.azureadclientid=$CLIENT_ID --set secret.azureclientsecret=$CLIENT_SECRET easyauth-proxy ./charts/easyauth-proxy
 
 # Confirm everything was deployed.
 kubectl get svc,deploy,pod
@@ -302,7 +302,7 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: msal-proxy
+  name: easyauth-proxy
   annotations:
     kubernetes.io/ingress.class: nginx
     cert-manager.io/cluster-issuer: letsencrypt-prod
@@ -315,7 +315,7 @@ spec:
         pathType: Prefix
         backend:
           service:
-            name: msal-proxy
+            name: easyauth-proxy
             port:
               number: 80
   tls:
@@ -357,7 +357,7 @@ It should look something like this:
     az ad app delete --id $CLIENT_ID
     helm delete nginx-ingress --purge
     helm delete cert-manager --purge
-    helm delete msal-proxy --purge
+    helm delete easyauth-proxy --purge
     kubectl delete secret ingress-tls-prod
     kubectl delete -f https://raw.githubusercontent.com/jetstack/cert-manager/release-0.11/deploy/manifests/00-crds.yaml
     kubectl delete ns cert-manager

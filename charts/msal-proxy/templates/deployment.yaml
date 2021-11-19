@@ -1,16 +1,16 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "msal-proxy.fullname" . }}
+  name: {{ include "easyauth-proxy.fullname" . }}
   labels:
-    {{- include "msal-proxy.labels" . | nindent 4 }}
+    {{- include "easyauth-proxy.labels" . | nindent 4 }}
 spec:
 {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
 {{- end }}
   selector:
     matchLabels:
-      {{- include "msal-proxy.selectorLabels" . | nindent 6 }}
+      {{- include "easyauth-proxy.selectorLabels" . | nindent 6 }}
   template:
     metadata:
     {{- with .Values.podAnnotations }}
@@ -18,13 +18,13 @@ spec:
         {{- toYaml . | nindent 8 }}
     {{- end }}
       labels:
-        {{- include "msal-proxy.selectorLabels" . | nindent 8 }}
+        {{- include "easyauth-proxy.selectorLabels" . | nindent 8 }}
     spec:
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      serviceAccountName: {{ include "msal-proxy.serviceAccountName" . }}
+      serviceAccountName: {{ include "easyauth-proxy.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       volumes:
@@ -51,46 +51,46 @@ spec:
               port: http
           env:
              -  name: Logging__LogLevel__Default
-                value: {{ .Values.env.LogLevel }}
-             -  name: ForceHttps
-                value: "{{ .Values.env.ForceHttps }}"
+                value: {{ .Values.logging.logLevel }}
              -  name: EasyAuthForK8s__DataProtectionFileLocation
-                value: {{ .Values.env.EasyAuthForK8sSigninPath }}                
+                value: {{ .Values.easyAuthForK8s.dataProtectionFileLocation }}                
              -  name: EasyAuthForK8s__SigninPath
-                value: "{{ .Values.env.EasyAuthForK8sSigninPath }}"
+                value: "{{ .Values.easyAuthForK8s.signinPath }}"
              -  name: EasyAuthForK8s__AuthPath
-                value: {{ .Values.env.EasyAuthForK8sAuthPath }}
+                value: {{ .Values.easyAuthForK8s.authPath }}
              -  name: EasyAuthForK8s__AllowBearerToken
-                value: "{{ .Values.env.EasyAuthForK8sAllowBearerToken }}"
+                value: "{{ .Values.easyAuthForK8s.allowBearerToken }}"
              -  name: EasyAuthForK8s__DefaultRedirectAfterSignin
-                value: "{{ .Values.env.EasyAuthForK8sDefaultRedirectAfterSignin }}"                
+                value: "{{ .Values.easyAuthForK8s.defaultRedirectAfterSignin }}"
+                name: EasyAuthForK8s__CompressCookieClaims
+                value: "{{ .Values.easyAuthForK8s.compressCookieClaims }}"
+             -  name: EasyAuthForK8s__ResponseHeaderPrefix
+                value: {{ .Values.easyAuthForK8s.responseHeaderPrefix }}
+             -  name: EasyAuthForK8s__ClaimEncodingMethod
+                value: "{{ .Values.easyAuthForK8s.claimEncodingMethod }}"
+             -  name: EasyAuthForK8s__HeaderFormatOption
+                value: "{{ .Values.easyAuthForK8s.headerFormatOption }}"                  
              -  name: AzureAd__Instance
-                value: {{ .Values.env.AzureAdInstance }}
+                value: {{ .Values.azureAd.instance }}
              -  name: AzureAd__Domain
-                value: {{ .Values.env.AzureAdDomain }}
-             -  name: AzureAd__CallbackPath
-                value: {{ .Values.env.AzureAdCallbackPath }}
-             -  name: AzureAd__SignedOutCallbackPath
-                value: {{ .Values.env.AzureAdSignedOutCallbackPath }}      
-             -  name: AzureAd__SignUpSignInPolicyId
-                value: {{ .Values.env.AzureAdSignUpSignInPolicyId }}                            
+                value: {{ .Values.azureAd.domain }}
              -  name: AzureAd__TenantId
-                valueFrom:
-                  secretKeyRef:
-                    name: {{ .Values.env.AzureAdTenantIdKeyRefName }}
-                    key: {{ .Values.env.AzureAdTenantIdKeyRefKey }}
+                value: {{ .Values.azureAd.tenantId }}
              -  name: AzureAd__ClientId
-                valueFrom:
-                  secretKeyRef:
-                    name: {{ .Values.env.AzureAdClientIdKeyRefName }}
-                    key: {{ .Values.env.AzureAdClientIdKeyRefKey }}
+                value: {{ .Values.azureAd.clientId }}
+             -  name: AzureAd__CallbackPath
+                value: {{ .Values.azureAd.callbackPath }}
+             -  name: AzureAd__SignedOutCallbackPath
+                value: {{ .Values.azureAd.signedOutCallbackPath }}      
+             -  name: AzureAd__SignUpSignInPolicyId
+                value: {{ .Values.azureAd.signUpSignInPolicyId }}                            
              -  name: AzureAd__ClientSecret
                 valueFrom:
                   secretKeyRef:
                     name: {{ .Values.env.AzureAdClientSecretKeyRefName }}
                     key: {{ .Values.env.AzureAdClientSecretKeyRefKey }}
           volumeMounts:
-          - mountPath: {{ .Values.env.DataProtectionFileLocation }}
+          - mountPath: {{ .Values.easyAuthForK8s.dataProtectionFileLocation }}
             name: {{ .Values.volumeName }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}

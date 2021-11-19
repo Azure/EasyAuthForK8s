@@ -9,7 +9,7 @@ echo "BEGIN @ $(date +"%T"): Deploy MSAL Proxy..."
 echo "BEGIN @ $(date +"%T"): Calling Helm..."
 echo ""
 
-helm install --set secret.azureadtenantid=$AZURE_TENANT_ID --set secret.azureadclientid=$CLIENT_ID --set secret.azureclientsecret=$CLIENT_SECRET msal-proxy ./charts/msal-proxy
+helm install --set azureAd.tenantId=$AZURE_TENANT_ID --set azureAd.clientId=$CLIENT_ID --set secret.azureclientsecret=$CLIENT_SECRET easyauth-proxy ./charts/easyauth-proxy
 
 echo ""
 echo "COMPLETE @ $(date +"%T"): Calling Helm"

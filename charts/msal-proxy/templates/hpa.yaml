@@ -2,14 +2,14 @@
 apiVersion: autoscaling/v2beta1
 kind: HorizontalPodAutoscaler
 metadata:
-  name: {{ include "msal-proxy.fullname" . }}
+  name: {{ include "easyauth-proxy.fullname" . }}
   labels:
-    {{- include "msal-proxy.labels" . | nindent 4 }}
+    {{- include "easyauth-proxy.labels" . | nindent 4 }}
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: {{ include "msal-proxy.fullname" . }}
+    name: {{ include "easyauth-proxy.fullname" . }}
   minReplicas: {{ .Values.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.autoscaling.maxReplicas }}
   metrics:

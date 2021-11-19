@@ -48,7 +48,10 @@ n=50
 while [ -z "$CLIENT_SECRET" ]
 do
   CLIENT_SECRET=$(az ad app credential reset --id $CLIENT_ID -o json | jq '.password' -r)
-  echo "CLIENT_SECRET: " $CLIENT_SECRET
+  echo "***********************IMPORTANT**************************** "
+  echo "* Make note of the secret below.  It will not be shown again"
+  echo "* CLIENT_SECRET: " $CLIENT_SECRET
+  echo "***********************IMPORTANT****************************"
   if [ "$n" == "0" ]; then
     echo "ERROR. INFINITE LOOP in 3-registerAADApp.sh."
     exit 1
