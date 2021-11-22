@@ -87,8 +87,8 @@ spec:
              -  name: AzureAd__ClientSecret
                 valueFrom:
                   secretKeyRef:
-                    name: {{ .Values.env.AzureAdClientSecretKeyRefName }}
-                    key: {{ .Values.env.AzureAdClientSecretKeyRefKey }}
+                    name: {{ .Values.azureAd.clientSecretKeyRefName }}
+                    key: {{ .Values.azureAd.clientSecretKeyRefKey }}
           volumeMounts:
           - mountPath: {{ .Values.easyAuthForK8s.dataProtectionFileLocation }}
             name: {{ .Values.volumeName }}
