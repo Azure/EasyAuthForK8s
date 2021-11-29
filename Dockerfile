@@ -18,7 +18,7 @@ COPY ./src/Tests/EasyAuthForK8s.Tests.Web ./Tests/EasyAuthForK8s.Tests.Web
 #test
 LABEL test=true
 RUN dotnet tool install dotnet-reportgenerator-globaltool \
-    --version 4.4.6 \
+    --version 5.0.0 \
     --tool-path /tools
 
 RUN dotnet test \

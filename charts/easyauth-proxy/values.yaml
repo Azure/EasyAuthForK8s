@@ -5,10 +5,10 @@
 replicaCount: 1
 
 image:
-  repository: dakondra/dot6-test-container
+  repository: lesterjt/easyauthfork8s
   pullPolicy: Always
   # Overrides the image tag whose default is the chart appVersion.
-  tag: latest
+  tag: dotnet6
 
 imagePullSecrets: []
 nameOverride: ""
