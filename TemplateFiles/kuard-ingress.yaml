@@ -44,7 +44,7 @@ spec:
   - host: {{APP_HOSTNAME}}
     http:
       paths:
-      - path: /msal
+      - path: /easyauth
         pathType: Prefix
         backend:
           service:
