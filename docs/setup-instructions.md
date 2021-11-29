@@ -43,7 +43,7 @@ Review these very carefully and modify.
     APP_HOSTNAME="$AD_APP_NAME.$LOCATION.cloudapp.azure.com"
     HOMEPAGE=https://$APP_HOSTNAME
     IDENTIFIER_URIS=$HOMEPAGE
-    REPLY_URLS=https://$APP_HOSTNAME/msal/signin-oidc
+    REPLY_URLS=https://$APP_HOSTNAME/easyauth/signin-oidc
 
 ## Login to Azure
 

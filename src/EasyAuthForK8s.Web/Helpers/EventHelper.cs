@@ -59,12 +59,12 @@ namespace EasyAuthForK8s.Web.Helpers
                     var graphService = context.HttpContext.RequestServices.GetService<GraphHelperService>();
 
                     if (graphService == null)
-                        throw new();
+                        throw new("Graph Service could not be resolved.");
 
                     var manifestResult = await graphService!.GetManifestConfigurationAsync(context.HttpContext.RequestAborted);
 
                     if (!manifestResult.Succeeded)
-                        throw new();
+                        throw manifestResult.Exception ?? new("Manifest retrieval operation returned a failure result.");
 
                     context.ProtocolMessage.Scope = 
                         manifestResult.AppManifest!.FormattedScopeString(state.Scopes, context.ProtocolMessage.Scope);

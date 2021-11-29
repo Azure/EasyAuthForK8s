@@ -99,7 +99,7 @@ fi
 APP_HOSTNAME="$AD_APP_NAME.$LOCATION.cloudapp.azure.com"
 HOMEPAGE=https://$APP_HOSTNAME
 IDENTIFIER_URIS=$HOMEPAGE
-REPLY_URLS=https://$APP_HOSTNAME/msal/signin-oidc
+REPLY_URLS=https://$APP_HOSTNAME/easyauth/signin-oidc
 
 echo "The value of -a is $AD_APP_NAME - AD_APP_NAME"
 echo "The value of -c is $CLUSTER_NAME - CLUSTER_NAME"

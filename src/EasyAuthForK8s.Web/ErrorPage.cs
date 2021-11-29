@@ -18,7 +18,7 @@ namespace EasyAuthForK8s.Web
             sb.Append("<div class=\"container\">");
             sb.Append("<div class=\"main\">");
             sb.Append(HeadingHtml(errorStatus));
-            sb.Append(DescriptionHtml(appManifest?.appDisplayName ?? "this applications"));
+            sb.Append(DescriptionHtml(appManifest?.appDisplayName ?? "this application"));
             sb.Append(CorrelationHtml(response.HttpContext.TraceIdentifier));
             sb.Append(ErrorDetailsHtml(errorDetail ?? "No Information"));
             sb.Append(PublisherHtml(appManifest?.publisherName ?? "No Information"));

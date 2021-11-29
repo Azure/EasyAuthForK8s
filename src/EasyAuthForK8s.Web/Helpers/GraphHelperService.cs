@@ -31,9 +31,10 @@ namespace EasyAuthForK8s.Web.Helpers
         {
             _httpClient = httpClient ?? throw new ArgumentNullException("httpClient");
             _openIdConnectOptions = openIdConnectOptions ?? throw new ArgumentNullException("openIdConnectOptions");
-            _configurationManager = new ConfigurationManager<AppManifest>("noop",
-                    new AppManifestRetriever(_httpClient, OidcOptions, logger));
             _logger = logger ?? throw new ArgumentNullException("logger");
+            _configurationManager = new ConfigurationManager<AppManifest>("noop",
+                    new AppManifestRetriever(_httpClient, OidcOptions, _logger));
+
         }
 
         private OpenIdConnectOptions OidcOptions()
@@ -227,6 +228,8 @@ namespace EasyAuthForK8s.Web.Helpers
             }
             public async Task<AppManifest> GetConfigurationAsync(string ignored, IDocumentRetriever retriever, CancellationToken cancel)
             {
+                _logger.LogInformation("Begin GetConfigurationAsync to aquire application manifest.");
+
                 var options = _optionsResolver();
 
                 var configResult = await GetOidcConfigurationAsync(options, cancel);
@@ -240,7 +243,6 @@ namespace EasyAuthForK8s.Web.Helpers
                 string? id = null;
                 AppManifest? appManifest = null;
 
-                _logger.LogInformation("Begin GetConfigurationAsync to aquire application manifest.");
                 try
                 {
                     HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, tokenEndpoint)
@@ -287,6 +289,7 @@ namespace EasyAuthForK8s.Web.Helpers
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Error retrieving application manifest configuration.");
+                    throw;
                 }
                 if (appManifest != null)
                     appManifest.oidcScopes = configResult.ScopesSupported;
