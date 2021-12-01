@@ -189,7 +189,8 @@ public class EasyAuthMiddlewareTests
         Assert.True(response.Headers.Contains($"{options.ResponseHeaderPrefix}graph"));
 
         var headers = response.Headers.GetValues($"{options.ResponseHeaderPrefix}graph")
-            .Select(x => Newtonsoft.Json.JsonConvert.DeserializeObject<dynamic>(WebUtility.UrlDecode(x)))
+            .SelectMany(x => WebUtility.UrlDecode(x).Split('|'))
+            .Select(x => Newtonsoft.Json.JsonConvert.DeserializeObject<dynamic>(x))
             .ToList();
 
         Assert.Equal(3, headers.Count);

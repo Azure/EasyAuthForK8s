@@ -179,9 +179,11 @@ internal static class ModelExtensions
             string headerName = SanitizeHeaderName($"{configOptions.ResponseHeaderPrefix}{name}");
             string encodedValue = EncodeValue(value, configOptions.ClaimEncodingMethod);
 
+            //nginx will only forward the first header of a given name,
+            //so we must combine them into a single comma-delimited value
             if (headers.ContainsKey(headerName))
             {
-                headers[headerName] = StringValues.Concat(headers[headerName], encodedValue);
+                headers[headerName] = string.Concat(headers[headerName], "|", encodedValue);
             }
             else
             {
