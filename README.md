@@ -30,6 +30,16 @@ The diagram above conveys the basic interaction between the components for a use
 
 > For example, you could have one set of applications accessible only by internal employees and another set of applications for customers or external users all running in the same cluster and using the same ingress controller.
 
+## Quickstart using Azure Cloud Shell
+Try it out by setting up a new AKS cluster with a sample application that uses EasyAuth.  Launch [Cloud Shell](https://shell.azure.com/bash), then run the following bash commands:
+```
+git clone https://github.com/Azure/EasyAuthForK8s.git
+
+# hint - run bash main.sh -h for parameter help
+# Note: Cluster name (-c) must be unique
+bash ./EasyAuthForK8s/main.sh -a easy-auth-demo -c {insert-unique-hostname} -r easy-auth -e email@contoso.com -l eastus
+```
+
 ## Documentation
 * [Setup Instructions](docs/setup-instructions.md) - step-by-step guide to building a cluster, configuring the ingress controller, and deploying an application protected by EasyAuth
 * [Detailed Architecture](docs/detailed-architecture.md) - an in-depth guide to how EasyAuth works

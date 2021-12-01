@@ -1,20 +1,5 @@
 # EasyAuthForK8s - Setup Instructions
 
-## Quickstart Demo [Azure Cloud Shell]
-
-- Go to the root folder of the repo
-- Run bash command
-```
-# Run -h for all required and optional flags
-bash main.sh -h
-
-# Example command
-# Note: Cluster name (-c) must be unique
-bash main.sh -a msal-test -c cluster-test -r easy-auth -e email@microsoft.com -l eastus
-```
-
-## Standard Walkthrough
-
 These are **critical dependencies to install prior** to running the commands below.
 
 - [JQ](https://stedolan.github.io/jq/)
