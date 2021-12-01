@@ -14,7 +14,9 @@ using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Security.Claims;
+using System.Text;
 using System.Threading.Tasks;
+using System.Web;
 
 namespace EasyAuthForK8s.Web.Helpers
 {
@@ -36,7 +38,6 @@ namespace EasyAuthForK8s.Web.Helpers
             Func<RedirectContext, Task> next)
         {
             EnsureLogger(context.HttpContext);
-            _logger!.LogInformation($"Redirecting sign-in to endpoint {context.ProtocolMessage.IssuerAddress}");
 
             //if additional scopes are requested, add them to the redirect
             EasyAuthState state = context.HttpContext.EasyAuthStateFromHttpContext();
@@ -47,13 +48,17 @@ namespace EasyAuthForK8s.Web.Helpers
             //  2. The url extracted from the nginx header in the authreq (ie the url they were attempting to access, state.Url)
             //  3. Fall back to a predetermined path.  Default is the root "/"
             //  4. Never go back to the Login path, since it will just challenge again
-            if (context.Properties.RedirectUri == context.Options.CallbackPath || context.Properties.RedirectUri == _configOptions.SigninPath)
-            {
-                var redirect = state.Url ?? _configOptions.SigninPath;
-                context.Properties.RedirectUri = redirect == _configOptions.SigninPath ? _configOptions.DefaultRedirectAfterSignin : redirect;
-            }
+            if (TryExtractInnerRedirect(context, out var rd))
+                context.Properties.RedirectUri = rd;
+            else
+                context.Properties.RedirectUri = state.Url ?? _configOptions.DefaultRedirectAfterSignin;
+
+
+            _logger!.LogInformation($"Redirecting sign-in to endpoint '{context.ProtocolMessage.IssuerAddress}' for '{context.Properties.RedirectUri}'");
+
             if (state.Scopes?.Count > 0)
             {
+                context.Properties.Items.Add(Constants.OidcScopesStateBag, string.Join('&', state.Scopes.Select(x => string.Join('|', x))));
                 try
                 {
                     var graphService = context.HttpContext.RequestServices.GetService<GraphHelperService>();
@@ -66,13 +71,15 @@ namespace EasyAuthForK8s.Web.Helpers
                     if (!manifestResult.Succeeded)
                         throw manifestResult.Exception ?? new("Manifest retrieval operation returned a failure result.");
 
-                    context.ProtocolMessage.Scope = 
+                    context.ProtocolMessage.Scope =
                         manifestResult.AppManifest!.FormattedScopeString(state.Scopes, context.ProtocolMessage.Scope);
 
+                    _logger!.LogInformation($"Requested scopes: {context.ProtocolMessage.Scope}");
                 }
                 catch (Exception ex)
                 {
-                    throw new InvalidOperationException("Unable to retrieve available scopes from Azure.  Try again later.", ex);
+                    _logger!.LogError(ex, "Failed to retrieve scopes from application manifest.");
+                    throw new InvalidOperationException("Unable to retrieve available scopes for this application from Azure.  Try again later.", ex);
                 }
             }
 
@@ -80,6 +87,19 @@ namespace EasyAuthForK8s.Web.Helpers
             context.Properties.Items.Add(Constants.OidcGraphQueryStateBag, string.Join('|', state.GraphQueries));
 
             await next(context).ConfigureAwait(false);
+        }
+
+        private static bool TryExtractInnerRedirect(RedirectContext context, out string? redirectUrl)
+        {
+            redirectUrl = null;
+            var i = (context!.Properties!.RedirectUri ?? "").IndexOf('?');
+            if (i < 0)
+                return false;
+
+            redirectUrl = HttpUtility.ParseQueryString(context!.Properties!.RedirectUri!.Substring(i))
+                .Get(Constants.RedirectParameterName);
+
+            return redirectUrl != null;
         }
 
         /// <summary>
@@ -151,6 +171,36 @@ namespace EasyAuthForK8s.Web.Helpers
                     }
                 }
 
+                //validate that the scopes granted account for all the scopes requested.  This is not strictly necessary
+                //since the middleware will catch this.  However, the result there will be a return trip to request the scope
+                //again, and if we didn't get it the first time, we must assume we never will and it will create an
+                //infinite redirect loop.  So, just treat it as as fatal here and forbid.  In theory, this should never happen,
+                //but it HAS happened, so this is here.
+                if (context.Properties.Items.ContainsKey(Constants.OidcScopesStateBag))
+                {
+                    List<string[]> requestedScopes =
+                        context.Properties.Items[Constants.OidcScopesStateBag]!
+                        .Split('&', StringSplitOptions.RemoveEmptyEntries)
+                        .Select(x => x.Split('|', StringSplitOptions.RemoveEmptyEntries))
+                        .ToList();
+
+                    var scopeClaim = claimsToKeep.FirstOrDefault(x => x.Type == ClaimConstants.Scp);
+                    if (scopeClaim != null)
+                    {
+                        var grantedScopes = scopeClaim!.Value.Split(' ');
+                        foreach (var scope in requestedScopes)
+                        {
+                            if (!scope.Intersect(scopeClaim!.Value.Split(' ')).Any())
+                            {
+                                //turn this into something human readable
+                                var requestedScopeString = string.Join(" AND ", requestedScopes.Select(x => "(" + string.Join(" OR ", x) + ")"));
+                                throw new OpenIdConnectProtocolException($"The granted scope set '{scopeClaim!.Value}' " +
+                                    $"does not satisfy the requested scope set '{requestedScopeString}'");
+                            }
+                        }
+                    }
+                }
+
                 UserInfoPayload userInfo = new UserInfoPayload();
 
                 if (context.Properties.Items.ContainsKey(Constants.OidcGraphQueryStateBag))
@@ -188,29 +238,46 @@ namespace EasyAuthForK8s.Web.Helpers
         {
             //TODO: we need to do some instrumentation here so that it can 
             //be used by the health check
+
+            EnsureLogger(context);
+
             var feature = context.Features.Get<IExceptionHandlerFeature>();
             var graphService = context.RequestServices.GetService<GraphHelperService>();
 
-            var message = feature?.Error.Message ?? "Unknown Internal Error";
+            StringBuilder sb = new StringBuilder(feature?.Error.Message ?? "Unknown Internal Error");
             var code = context.Response.StatusCode;
             string? reasonPhrase = null;
 
-            if (feature?.Error is BadHttpRequestException)
+            if (feature?.Error != null)
             {
-                //unwrap inner, which has the real status
-                var ex = feature?.Error as BadHttpRequestException;
-                if (!string.IsNullOrEmpty(ex?.Message))
-                    message = ex!.Message;
+                var current = feature!.Error!;
 
-                code = ex?.StatusCode ?? code;
+                while (current.InnerException != null)
+                {
+                    sb.Append("... ");
+                    current = current.InnerException;
+                    if (current is BadHttpRequestException)
+                    {
+                        //get the real status
+                        var ex = current as BadHttpRequestException;
+                        if (!string.IsNullOrEmpty(ex?.Message))
+                            sb.Append(ex!.Message);
+                        code = ex?.StatusCode ?? code;
+                    }
+                    else if (current is OpenIdConnectProtocolException)
+                    {
+                        //unwrap oidc data
+                        var ex = current as OpenIdConnectProtocolException;
+                        sb.Append(ex?.Data["error_description"] as string ?? ex?.Message);
+                        reasonPhrase = "Azure Active Directory Error";
+                    }
+                    else if (!string.IsNullOrEmpty(current.Message))
+                        sb.Append(current.Message);
+                }
             }
-            else if (feature?.Error is OpenIdConnectProtocolException)
-            {
-                //unwrap oidc data
-                var ex = feature?.Error as OpenIdConnectProtocolException;
-                message = ex?.Data["error_description"] as string ?? ex?.Message;
-                reasonPhrase = "Azure Active Directory Error";
-            }
+
+            var message = sb.ToString();
+            _logger!.LogError($"Error: {message}, TraceId: {context.TraceIdentifier}, Status: {code}");
 
             var manifestResult = graphService != null ? await graphService.GetManifestConfigurationAsync(context.RequestAborted) : new();
 
@@ -226,7 +293,7 @@ namespace EasyAuthForK8s.Web.Helpers
 
         }
 
-        private void EnsureLogger(HttpContext context)
+        private static void EnsureLogger(HttpContext context)
         {
             if (_logger != null)
                 return;

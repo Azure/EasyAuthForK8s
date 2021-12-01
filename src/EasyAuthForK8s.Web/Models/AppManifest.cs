@@ -73,7 +73,7 @@ namespace EasyAuthForK8s.Web.Models
         /// <param name="requestedScopes">scopes requested by an previous auth attempt</param>
         /// <param name="scopeString">The scope string from the current OIDC message, which will be replaced</param>
         /// <returns></returns>
-        public string FormattedScopeString(IEnumerable<string> requestedScopes, string scopeString)
+        public string FormattedScopeString(IEnumerable<string[]> requestedScopes, string scopeString)
         {
             //the scope list must be formatted in the correct order for the audience of the 
             //multi-resource token to be correct:
@@ -89,14 +89,11 @@ namespace EasyAuthForK8s.Web.Models
                 .Select(x => x!.value!)
                 .ToList();
 
-            if (knownScopes.Count == 0)
-                return scopeString!;
-
             //combine into one working list
             var workingScopes = (scopeString == null ?
                     Array.Empty<string>() :
                     scopeString.Split(' ', System.StringSplitOptions.RemoveEmptyEntries))
-                .Union(requestedScopes);
+                .Union(requestedScopes.SelectMany(x => x));
 
             //create an ordered list
             // 1.  Add anything known to be an OIDC scope
@@ -114,7 +111,7 @@ namespace EasyAuthForK8s.Web.Models
             result.AddRange(workingScopes.Except(result, StringComparer.InvariantCultureIgnoreCase));
 
             //format
-            return string.Join(' ', result.Select(x => 
+            return string.Join(' ', result.Select(x =>
                 knownScopes.Contains(x, StringComparer.InvariantCultureIgnoreCase) ? $"{this.appId}/{x}" : x));
         }
     }

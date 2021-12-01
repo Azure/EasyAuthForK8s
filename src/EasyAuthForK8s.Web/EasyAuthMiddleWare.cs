@@ -107,7 +107,7 @@ public class EasyAuthMiddleware
 
         if (!authN.Succeeded)
         {
-            message += authN.Failure?.Message ?? "Cookie authentication failed. ";
+            message += (authN.Failure?.Message ?? "Cookie authentication failed") + "... ";
             if (_configureOptions.AllowBearerToken)
             {
                 {
@@ -196,7 +196,7 @@ public class EasyAuthMiddleware
             {
                 Status = authStatus,
                 Scopes = scopes
-                    .SelectMany(x => x.Split("|", System.StringSplitOptions.RemoveEmptyEntries))
+                    .Select(x => x.Split("|", System.StringSplitOptions.RemoveEmptyEntries))
                     .ToList(),
                 Msg = message,
                 Scheme = authScheme,

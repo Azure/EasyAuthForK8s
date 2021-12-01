@@ -11,6 +11,7 @@ public class Constants
     public const string RedirectParameterName = "rd";
     public const string StateCookieName = "EasyAuthState";
     public const string OidcGraphQueryStateBag = ".EasyAuthState.GraphQueries";
+    public const string OidcScopesStateBag = ".EasyAuthState.Scopes";
     public const int StateTtlMinutes = 5;
     public const string UserInfoClaimType = "ea4k";
     public const string GraphApiVersion = "beta";

@@ -204,6 +204,13 @@ namespace EasyAuthForK8s.Web.Helpers
                 Constants.GraphApiVersion);
         }
 
+        private static string GraphResourceFromUInfoEndpoint(string usrInfo)
+        {
+            return string.Concat(new Uri(usrInfo)
+                .GetLeftPart(System.UriPartial.Authority),
+                "/.default");
+        }
+
         private static async Task<OpenIdConnectConfiguration?> GetOidcConfigurationAsync(
             OpenIdConnectOptions options,
             CancellationToken cancel)
@@ -226,25 +233,36 @@ namespace EasyAuthForK8s.Web.Helpers
                 _optionsResolver = optionsResolver;
                 _logger = logger;
             }
-            public async Task<AppManifest> GetConfigurationAsync(string ignored, IDocumentRetriever retriever, CancellationToken cancel)
+            async Task<AppManifest> IConfigurationRetriever<AppManifest>.GetConfigurationAsync(string ignored, IDocumentRetriever retriever, CancellationToken cancel)
             {
                 _logger.LogInformation("Begin GetConfigurationAsync to aquire application manifest.");
-
-                var options = _optionsResolver();
-
-                var configResult = await GetOidcConfigurationAsync(options, cancel);
-                if (configResult == null)
-                    throw new InvalidOperationException("oidcConfiguration could not be resolved.");
-
-                var tokenEndpoint = configResult!.TokenEndpoint;
-                var graphEndpoint = GraphEndpointFromUInfoEndpoint(configResult!.UserInfoEndpoint);
-
-                string? access_token = null;
-                string? id = null;
                 AppManifest? appManifest = null;
+                OpenIdConnectConfiguration? configResult = null;
 
                 try
                 {
+                    var options = _optionsResolver() ?? throw new ArgumentNullException("_optionsResolver");
+
+                    try
+                    {
+                        configResult = await GetOidcConfigurationAsync(options, cancel);
+                        if (configResult == null)
+                            throw new InvalidOperationException("oidcConfiguration is empty.");
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error retrieving OIDC configuration.");
+                        throw;
+                    }
+
+                    var tokenEndpoint = configResult!.TokenEndpoint;
+                    var graphEndpoint = GraphEndpointFromUInfoEndpoint(configResult!.UserInfoEndpoint);
+                    var graphResource = GraphResourceFromUInfoEndpoint(configResult!.UserInfoEndpoint);
+
+                    string? access_token = null;
+                    string? id = null;
+
+
                     HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, tokenEndpoint)
                     {
                         Content = new FormUrlEncodedContent(new List<KeyValuePair<string, string>>()
@@ -253,7 +271,7 @@ namespace EasyAuthForK8s.Web.Helpers
                             new("client_id", options.ClientId ?? String.Empty),
                             new("client_secret", options.ClientSecret ?? String.Empty),
                             new("grant_type", "client_credentials"),
-                            new("scope", String.Concat(graphEndpoint, "/.default"))
+                            new("scope", graphResource)
                         })
                     };
                     using (HttpResponseMessage response = await _client.SendAsync(request, cancel))
@@ -291,6 +309,7 @@ namespace EasyAuthForK8s.Web.Helpers
                     _logger.LogError(ex, "Error retrieving application manifest configuration.");
                     throw;
                 }
+
                 if (appManifest != null)
                     appManifest.oidcScopes = configResult.ScopesSupported;
                 return appManifest!;

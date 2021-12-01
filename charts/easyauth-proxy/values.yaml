@@ -89,6 +89,7 @@ azureAd:
   tenantId: ""
   # app Id of the service principal.
   clientId: ""
+  # configure paths for OIDC middleware
   # there's no reason to change these unless there is a conflict
   # such as another easyauth proxy using the same host name
   callbackPath: "/easyauth/signin-oidc"
@@ -101,6 +102,7 @@ azureAd:
 easyAuthForK8s: 
   # data protection key ring location
   dataProtectionFileLocation: "/mnt/dp"
+  # configure paths for EasyAuth middleware
   # there's no reason to change these unless there is a conflict
   # such as another easyauth proxy using the same host name
   signinPath: "/easyauth/login"

@@ -12,7 +12,12 @@ public class EasyAuthState
 {
     public string? Url { get; set; }
     public AuthStatus Status { get; set; } = AuthStatus.Unauthenticated;
-    public IList<string> Scopes { get; set; } = new List<string>();
+    /// <summary>
+    /// jagged collection of required scopes.  Each array element represents 
+    /// a set of allowable values.  eg, if the required scope is "foo" and the 
+    /// collection contains an element ["foo", "bar"] the requirement is deemed met
+    /// </summary>
+    public IList<string[]> Scopes { get; set; } = new List<string[]>();
     public IList<string> GraphQueries { get; set; } = new List<string>();
     public string Msg { get; set; } = string.Empty;
     public string Scheme { get; set; } = string.Empty;

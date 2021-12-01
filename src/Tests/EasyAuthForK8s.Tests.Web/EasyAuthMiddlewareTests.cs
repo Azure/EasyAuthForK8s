@@ -73,7 +73,7 @@ public class EasyAuthMiddlewareTests
 
     [Theory]
     [InlineData("?scope=foo", "ScopeRequirement: Consented scope must contain one of the following values: (foo)", new string[] { "foo" })]
-    [InlineData("?scope=foo|foo2", "ScopeRequirement: Consented scope must contain one of the following values: (foo, foo2)", new string[] { "foo", "foo2" })]
+    [InlineData("?scope=foo|foo2", "ScopeRequirement: Consented scope must contain one of the following values: (foo, foo2)", new string[] { "foo|foo2" })]
     [InlineData("?scope=foo&scope=foo2", "ScopeRequirement: Consented scope must contain one of the following values: (foo)", new string[] { "foo", "foo2" })]
     public async Task Invoke_HandleAuth_UnauthorizedWithScopes(string query, string containsMessage, string[] scopes)
     {
@@ -86,7 +86,7 @@ public class EasyAuthMiddlewareTests
         EasyAuthState state = stateResolver(response);
 
         Assert.Equal(EasyAuthState.AuthStatus.Unauthorized, state.Status);
-        Assert.Equal(state.Scopes, scopes.ToList());
+        Assert.Equal(state.Scopes, scopes.Select(x => x.Split('|', StringSplitOptions.RemoveEmptyEntries)).ToList());
 
         await EvaluateMessagesWithAsserts(containsMessage, response.Content, state, logs);
     }
