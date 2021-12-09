@@ -81,7 +81,8 @@ public static class EasyAuthBuilderExtensions
         // this is "by design" for now as the safest option since we don't know
         // what might have changed during the deployment
         services.AddDataProtection()
-          .PersistKeysToFileSystem(new DirectoryInfo(easyAuthConfig.DataProtectionFileLocation));
+          .PersistKeysToFileSystem(new DirectoryInfo(easyAuthConfig.DataProtectionFileLocation))
+          .SetApplicationName(Constants.CookieName);
 
         services.Configure<ForwardedHeadersOptions>(options =>
         {
