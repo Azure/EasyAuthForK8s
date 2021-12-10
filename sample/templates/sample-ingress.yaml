@@ -24,7 +24,7 @@ spec:
           service:
             name: easyauth-sample-pod
             port:
-              number: 443
+              number: 80
         
 ---
 apiVersion: networking.k8s.io/v1
@@ -50,35 +50,35 @@ spec:
           service:
             name: easyauth-sample-pod
             port:
-              number: 443
+              number: 80
       - path: /css
         pathType: Prefix
         backend:
           service:
             name: easyauth-sample-pod
             port:
-              number: 443
+              number: 80
       - path: /js
         pathType: Prefix
         backend:
           service:
             name: easyauth-sample-pod
             port:
-              number: 443
+              number: 80
       - path: /lib
         pathType: Prefix
         backend:
           service:
             name: easyauth-sample-pod
             port:
-              number: 443
+              number: 80
       - path: /favicon.ico
         pathType: Exact
         backend:
           service:
             name: easyauth-sample-pod
             port:
-              number: 443
+              number: 80
        
 ---
 apiVersion: networking.k8s.io/v1
@@ -107,7 +107,7 @@ spec:
           service:
             name: easyauth-sample-pod
             port:
-              number: 443
+              number: 80
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -135,5 +135,5 @@ spec:
           service:
             name: easyauth-sample-pod
             port:
-              number: 443       
+              number: 80       
 
