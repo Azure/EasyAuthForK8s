@@ -7,7 +7,7 @@ metadata:
     nginx.ingress.kubernetes.io/auth-signin: "https://$host/easyauth/login"
     nginx.ingress.kubernetes.io/auth-response-headers: "x-injected-userinfo,x-injected-name,x-injected-oid,x-injected-preferred-username,x-injected-sub,x-injected-tid,x-injected-email,x-injected-groups,x-injected-scp,x-injected-roles,x-injected-graph"
     cert-manager.io/cluster-issuer: letsencrypt-prod
-    nginx.ingress.kubernetes.io/rewrite-target: /$1
+    #nginx.ingress.kubernetes.io/rewrite-target: /$1
 spec:
   ingressClassName: nginx
   tls:
@@ -33,7 +33,6 @@ metadata:
   name: easyauth-sample-ingress-anonymous
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod
-    nginx.ingress.kubernetes.io/rewrite-target: /$1
 spec:
   ingressClassName: nginx
   tls:
@@ -79,6 +78,13 @@ spec:
             name: easyauth-sample-pod
             port:
               number: 80
+      - path: /EasyAuthForK8s.Sample.styles.css
+        pathType: Exact
+        backend:
+          service:
+            name: easyauth-sample-pod
+            port:
+              number: 80
        
 ---
 apiVersion: networking.k8s.io/v1
@@ -90,7 +96,7 @@ metadata:
     nginx.ingress.kubernetes.io/auth-signin: "https://$host/easyauth/login"
     nginx.ingress.kubernetes.io/auth-response-headers: "x-injected-userinfo,x-injected-name,x-injected-oid,x-injected-preferred-username,x-injected-sub,x-injected-tid,x-injected-email,x-injected-groups,x-injected-scp,x-injected-roles,x-injected-graph"
     cert-manager.io/cluster-issuer: letsencrypt-prod
-    nginx.ingress.kubernetes.io/rewrite-target: /$1
+    #nginx.ingress.kubernetes.io/rewrite-target: /$1
 spec:
   ingressClassName: nginx
   tls:
@@ -118,7 +124,7 @@ metadata:
     nginx.ingress.kubernetes.io/auth-signin: "https://$host/easyauth/login"
     nginx.ingress.kubernetes.io/auth-response-headers: "x-injected-userinfo,x-injected-name,x-injected-oid,x-injected-preferred-username,x-injected-sub,x-injected-tid,x-injected-email,x-injected-groups,x-injected-scp,x-injected-roles,x-injected-graph"
     cert-manager.io/cluster-issuer: letsencrypt-prod
-    nginx.ingress.kubernetes.io/rewrite-target: /$1
+    #nginx.ingress.kubernetes.io/rewrite-target: /$1
 spec:
   ingressClassName: nginx
   tls:
