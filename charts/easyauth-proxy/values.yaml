@@ -105,8 +105,6 @@ azureAd:
   signedOutCallbackPath : "/signout-callback-oidc"
   # Leave this blank if not B2C
   signUpSignInPolicyId: ""
-  clientSecretKeyRefName: aad-secret
-  clientSecretKeyRefKey: CLIENT_SECRET
 
 easyAuthForK8s: 
   # data protection key ring location
