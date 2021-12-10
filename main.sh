@@ -141,18 +141,18 @@ echo "****BEGIN @ $(date +"%T"): Call ADD App Creation script****"
 . ./AutomationScripts/3-registerAADApp.sh
 echo "****COMPLETE @ $(date +"%T"): AAD App created script****"
 
-echo "****BEGIN @ $(date +"%T"): Call Deploy MSAL Proxy script****"
-. ./AutomationScripts/4-deployMSALProxy.sh
-echo "****COMPLETE @ $(date +"%T"): Deployed MSAL Proxy script****"
-
 echo "****BEGIN @ $(date +"%T"): Call Install Cert Manager script****"
-. ./AutomationScripts/5-installCertManager.sh
+. ./AutomationScripts/4-installCertManager.sh
 echo "****COMPLETE @ $(date +"%T"): Installed Cert Manager script****"
+
+echo "****BEGIN @ $(date +"%T"): Call Deploy MSAL Proxy script****"
+. ./AutomationScripts/5-deployMSALProxy.sh
+echo "****COMPLETE @ $(date +"%T"): Deployed MSAL Proxy script****"
 
 echo "BEGIN @ $(date +"%T"): Deploy sample app..."
 # If we have a parameter for an image install a custom image. If not, then we install kuard.
 if [ -z "$INPUTIMAGE" ]; then
-    echo "No image input, installing kuard."
+    echo "No image input, installing sample."
     kubectl run easyauth-sample-pod --image=docker.io/lesterjt/easyauthfork8s-sample:latest --expose --port=80
 else
     echo "Your custom image $INPUTIMAGE installed"

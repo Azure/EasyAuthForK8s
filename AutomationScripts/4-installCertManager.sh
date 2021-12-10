@@ -1,7 +1,7 @@
 #!/bin/bash
 
 echo "BEGIN @ $(date +"%T"): Install Cert Manager..."
-TLS_SECRET_NAME=$APP_HOSTNAME-tls
+TLS_SECRET_NAME=$AD_APP_NAME-tls
 
 kubectl create namespace cert-manager
 
