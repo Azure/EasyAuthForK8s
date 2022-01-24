@@ -34,7 +34,7 @@ do
 			# echo "The value of -i is ${OPTARG} - INPUTIMAGE"
             I=$OPTARG ;;
         t)
-			# echo "The value of -i is ${OPTARG} - INPUTIMAGE"
+			# echo "The value of -t is ${OPTARG} - ALT_TENANT_ID"
             T=$OPTARG ;;  
         s)
             # echo "The value of -s is ${OPTARG} - SP"
