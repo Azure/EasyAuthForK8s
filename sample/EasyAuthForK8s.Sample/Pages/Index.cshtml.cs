@@ -14,30 +14,30 @@ namespace EasyAuthForK8s.Sample.Pages
         }
         public void OnGet(string? encoding, string? format, string? prefix)
         {
-            if (!string.IsNullOrEmpty(encoding))
-                Encoding = encoding!;
-            if (!string.IsNullOrEmpty(format))
-                Format = format!;
-            //if empty just ignore the prefix
-            if (prefix != null)
-                Prefix = prefix!;
+                if (!string.IsNullOrEmpty(encoding))
+                    Encoding = encoding!;
+                if (!string.IsNullOrEmpty(format))
+                    Format = format!;
+                //if empty just ignore the prefix
+                if (prefix != null)
+                    Prefix = prefix!;
 
-            var headers = Request.Headers
-                .Where(x => x.Key.StartsWith(Prefix, StringComparison.InvariantCultureIgnoreCase) || string.IsNullOrWhiteSpace(Prefix))
-                .Select(x => new KeyValuePair<string, string>(x.Key, x.Value));
+                var headers = Request.Headers
+                    .Where(x => x.Key.StartsWith(Prefix, StringComparison.InvariantCultureIgnoreCase) || string.IsNullOrWhiteSpace(Prefix))
+                    .Select(x => new KeyValuePair<string, string>(x.Key, x.Value));
 
-            if (Encoding == "UrlEncode")
-                headers = headers.Select(x => new KeyValuePair<string, string>(x.Key, WebUtility.UrlDecode(x.Value)));
+                if (Encoding == "UrlEncode")
+                    headers = headers.Select(x => new KeyValuePair<string, string>(x.Key, WebUtility.UrlDecode(x.Value)));
 
-            else if (Encoding == "Base64")
-                headers = headers.Select(x => new KeyValuePair<string, string>(x.Key, System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(x.Value))));
+                else if (Encoding == "Base64")
+                    headers = headers.Select(x => new KeyValuePair<string, string>(x.Key, System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(x.Value))));
 
-            if (Format == "Combined")
-            {
-                headers = headers.Select(x => new KeyValuePair<string, string>(x.Key, JsonPrettyPrint(x.Value)));
-            }
+                if (Format == "Combined")
+                {
+                    headers = headers.Select(x => new KeyValuePair<string, string>(x.Key, JsonPrettyPrint(x.Value)));
+                }
 
-            Headers.AddRange(headers.ToList());
+                Headers.AddRange(headers.ToList());
         }
         public List<KeyValuePair<string, string>> Headers = new();
         public string Encoding = "UrlEncode";

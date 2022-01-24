@@ -5,7 +5,7 @@
     <div class="alert alert-success" role="alert">
          <strong>Tip: </strong>Trying clicking the different nav links above to see how the different ingress rules are applied.  Sign Out will return you to /Anonymous.
     </div>
-    <p><strong>Header Configuration: </strong>If you aren't using the defaults, choose the header options below that match your current EasyAuth proxy configuration.</p>   
+    <p><strong style="color: red">Header Configuration: </strong>If you aren't using the defaults in the values.yaml file of the the easyauth-proxy helm chart, choose the header options below that match your current EasyAuth proxy configuration.</p>   
     <div class="btn-toolbar mb-3" role="toolbar">
         <div class="input-group" role="group">
             <div class="input-group-prepend"><span class="input-group-text" id="header-prefix-lbl">Header Prefix:</span></div>
@@ -36,8 +36,9 @@
                 </label>
             </div>
         </div>
+        <button type="button" class="btn btn-primary" onclick="reload()" >&#x27F3;&nbsp;Reload</button>
     </div>
-    <button type="button" class="btn btn-primary" onclick="reload()" >&#x27F3;&nbsp;Reload</button>
+    <img src="~/HeaderConfigExample.png" width="80%" height="auto" />
 
   <table class="table table-striped">
     <thead>

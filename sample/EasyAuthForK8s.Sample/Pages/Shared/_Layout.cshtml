@@ -12,7 +12,7 @@
     <header>
         <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-dark bg-dark border-bottom box-shadow mb-3">
             <div class="container">
-                <a class="navbar-brand" href="#">EasyAuth Sample</a>
+                <a class="navbar-brand" href="/">EasyAuth Sample</a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
                         aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
@@ -20,19 +20,19 @@
                 <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
                     <ul class="navbar-nav flex-grow-1">
                         <li class="nav-item">
-                            <a class="nav-link" asp-area="" asp-page="/Index">Home</a>
+                            <a class="nav-link" href="/">Home</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" asp-area="" asp-page="/Anonymous">Anonymous Access</a>
+                            <a class="nav-link" href="/Anonymous">Anonymous Access</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" asp-area="" asp-page="/RoleRequired">Role Permission Required</a>
+                            <a class="nav-link" href="/RoleRequired">Role Permission Required</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" asp-area="" asp-page="/Graph">Graph Query</a>
+                            <a class="nav-link" href="/Graph">Graph Query</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" asp-area="" asp-page="/EasyAuth/Logout">Sign Out</a>
+                            <a class="nav-link" href="/Anonymous" onclick="alert('Please open a GitHub issue if you need a sign out example.')">Sign Out</a>
                         </li>
                     </ul>
                 </div>
