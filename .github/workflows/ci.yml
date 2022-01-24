@@ -38,8 +38,8 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - run: brew install FairwindsOps/tap/pluto
-      ###- run: helm template ./charts/msal-proxy --api-versions v1.13.0 | pluto detect -
-      - run: pluto detect-files -d ./charts/msal-proxy
+      ###- run: helm template ./charts/easyauth-proxy --api-versions v1.13.0 | pluto detect -
+      - run: pluto detect-files -d ./charts/easyauth-proxy
       - run: pluto detect-files -d ./
       
   push_to_registries:

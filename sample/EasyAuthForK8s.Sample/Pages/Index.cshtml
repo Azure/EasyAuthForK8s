@@ -1,0 +1,62 @@
+﻿@page "/{**catchAll}"
+@model IndexModel
+
+<div class="container">    
+    <div class="alert alert-success" role="alert">
+         <strong>Tip: </strong>Trying clicking the different nav links above to see how the different ingress rules are applied.  Sign Out will return you to /Anonymous.
+    </div>
+    <p><strong style="color: red">Header Configuration: </strong>If you aren't using the defaults in the values.yaml file of the the easyauth-proxy helm chart, choose the header options below that match your current EasyAuth proxy configuration.</p>   
+    <div class="btn-toolbar mb-3" role="toolbar">
+        <div class="input-group" role="group">
+            <div class="input-group-prepend"><span class="input-group-text" id="header-prefix-lbl">Header Prefix:</span></div>
+            <input type="text" id="header-prefix" class="form-control" aria-label="Header Prefix" aria-describedby="header-prefix-lbl" value="@Model.Prefix">
+        </div>&nbsp;
+        <div class="input-group" role="group">
+            <div class="input-group-prepend"><span class="input-group-text" id="header-prefix-lbl">Encoding:</span></div>
+            <div class="btn-group btn-group-toggle" data-toggle="buttons">
+                <label class="btn btn-outline-secondary">
+                    <input type="radio" name="header-encoding" id="UrlEncode" @(Model.Encoding == "UrlEncode" ? "checked" : "")> UrlEncode
+                </label>
+                <label class="btn btn-outline-secondary">
+                    <input type="radio" name="header-encoding" id="Base64" @(Model.Encoding == "Base64" ? "checked" : "")> Base64
+                </label>
+                <label class="btn btn-outline-secondary">
+                    <input type="radio" name="header-encoding" id="None" @(Model.Encoding == "None" ? "checked" : "")> None/NoneWithReject
+                </label>
+            </div>
+        </div>&nbsp;
+        <div class="input-group" role="group">
+            <div class="input-group-prepend"><span class="input-group-text" id="header-prefix-lbl">Format:</span></div>
+            <div class="btn-group btn-group-toggle" data-toggle="buttons">
+                <label class="btn btn-outline-secondary">
+                    <input type="radio" name="header-format" id="Separate" @(Model.Format == "Separate" ? "checked" : "")> Separate
+                </label>
+                <label class="btn btn-outline-secondary">
+                    <input type="radio" name="header-format" id="Combined" @(Model.Format == "Combined" ? "checked" : "")> Combined (JSON)
+                </label>
+            </div>
+        </div>
+        <button type="button" class="btn btn-primary" onclick="reload()" >&#x27F3;&nbsp;Reload</button>
+    </div>
+    <img src="~/HeaderConfigExample.png" width="80%" height="auto" />
+
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Value</th>
+      </tr>
+    </thead>
+    <tbody>
+      @foreach (var h in Model.Headers)
+        {
+          <tr>
+            <td>@h.Key</td>
+            <td><pre>@h.Value</pre></td>
+          </tr>
+        }
+    </tbody>
+  </table>
+</div>
+
+

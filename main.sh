@@ -99,7 +99,7 @@ fi
 APP_HOSTNAME="$AD_APP_NAME.$LOCATION.cloudapp.azure.com"
 HOMEPAGE=https://$APP_HOSTNAME
 IDENTIFIER_URIS=$HOMEPAGE
-REPLY_URLS=https://$APP_HOSTNAME/msal/signin-oidc
+REPLY_URLS=https://$APP_HOSTNAME/easyauth/signin-oidc
 
 echo "The value of -a is $AD_APP_NAME - AD_APP_NAME"
 echo "The value of -c is $CLUSTER_NAME - CLUSTER_NAME"
@@ -141,22 +141,22 @@ echo "****BEGIN @ $(date +"%T"): Call ADD App Creation script****"
 . ./AutomationScripts/3-registerAADApp.sh
 echo "****COMPLETE @ $(date +"%T"): AAD App created script****"
 
-echo "****BEGIN @ $(date +"%T"): Call Deploy MSAL Proxy script****"
-. ./AutomationScripts/4-deployMSALProxy.sh
-echo "****COMPLETE @ $(date +"%T"): Deployed MSAL Proxy script****"
-
 echo "****BEGIN @ $(date +"%T"): Call Install Cert Manager script****"
-. ./AutomationScripts/5-installCertManager.sh
+. ./AutomationScripts/4-installCertManager.sh
 echo "****COMPLETE @ $(date +"%T"): Installed Cert Manager script****"
+
+echo "****BEGIN @ $(date +"%T"): Call Deploy MSAL Proxy script****"
+. ./AutomationScripts/5-deployMSALProxy.sh
+echo "****COMPLETE @ $(date +"%T"): Deployed MSAL Proxy script****"
 
 echo "BEGIN @ $(date +"%T"): Deploy sample app..."
 # If we have a parameter for an image install a custom image. If not, then we install kuard.
 if [ -z "$INPUTIMAGE" ]; then
-    echo "No image input, installing kuard."
-    kubectl run kuard-pod --image=gcr.io/kuar-demo/kuard-amd64:1 --expose --port=8080
+    echo "No image input, installing sample."
+    kubectl run easyauth-sample-pod --image=docker.io/dakondra/eak-test-container:latest --expose --port=80
 else
     echo "Your custom image $INPUTIMAGE installed"
-    kubectl run custom-pod --image=$INPUTIMAGE --expose --port=8080
+    kubectl run custom-pod --image=$INPUTIMAGE --expose --port=80
 fi
 echo "COMPLETE @ $(date +"%T"): Deployed sample app"
 
@@ -186,6 +186,7 @@ done
 echo "COMPLETE @ $(date +"%T"): Verify Production Certificate works"
 echo "END OF SCRIPT"
 echo ""
+echo "NOTE: Please wait 5 minutes for Azure AD to complete setup before opening the homepage!"
 echo ""
 echo "Visit the app in the browser. Good luck! " $HOMEPAGE
 echo ""

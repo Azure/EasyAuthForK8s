@@ -34,7 +34,7 @@ do
 			# echo "The value of -i is ${OPTARG} - INPUTIMAGE"
             I=$OPTARG ;;
         t)
-			# echo "The value of -i is ${OPTARG} - INPUTIMAGE"
+			# echo "The value of -t is ${OPTARG} - ALT_TENANT_ID"
             T=$OPTARG ;;  
         s)
             # echo "The value of -s is ${OPTARG} - SP"
@@ -54,7 +54,8 @@ bash ./main.sh -a $A -c $C -r $R -e $E -l $L -t $T -s $S -z $Z -g
 
 APP_NAME="$A.$L.cloudapp.azure.com"
 WEBPAGE=https://$APP_NAME
-echo "Grabbed homepage: " $WEBPAGE
+echo "Grabbed homepage: " $WEBPAGE ". Sleeping for 10 seconds..."
+sleep 10
 RESPONSE_CODE=$(curl -s -o /dev/null -w "%{http_code}" $WEBPAGE)
 echo "response code: " $RESPONSE_CODE
 

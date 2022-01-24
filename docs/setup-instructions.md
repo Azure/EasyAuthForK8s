@@ -1,20 +1,5 @@
 # EasyAuthForK8s - Setup Instructions
 
-## Quickstart Demo [Azure Cloud Shell]
-
-- Go to the root folder of the repo
-- Run bash command
-```
-# Run -h for all required and optional flags
-bash main.sh -h
-
-# Example command
-# Note: Cluster name (-c) must be unique
-bash main.sh -a msal-test -c cluster-test -r easy-auth -e email@microsoft.com -l eastus
-```
-
-## Standard Walkthrough
-
 These are **critical dependencies to install prior** to running the commands below.
 
 - [JQ](https://stedolan.github.io/jq/)
@@ -43,7 +28,7 @@ Review these very carefully and modify.
     APP_HOSTNAME="$AD_APP_NAME.$LOCATION.cloudapp.azure.com"
     HOMEPAGE=https://$APP_HOSTNAME
     IDENTIFIER_URIS=$HOMEPAGE
-    REPLY_URLS=https://$APP_HOSTNAME/msal/signin-oidc
+    REPLY_URLS=https://$APP_HOSTNAME/easyauth/signin-oidc
 
 ## Login to Azure
 
@@ -73,9 +58,9 @@ Note: It takes several minutes to create the AKS cluster. Complete these steps b
     helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
     helm repo update
     # Install the ingress controller
-    helm install nginx-ingress ingress-nginx/ingress-nginx --namespace ingress-controllers --set rbac.create=true
+    helm install nginx-ingress ingress-nginx/ingress-nginx --namespace ingress-controllers --set rbac.create=true --set controller.config.large-client-header-buffers="8 32k"
     
-    # Important! It take a few minutes for Azure to assign a public IP address to the ingress. Run this command until it returns a public IP address.
+    # Important! It takes a few minutes for Azure to assign a public IP address to the ingress. Run this command until it returns a public IP address.
     kubectl get services/nginx-ingress-ingress-nginx-controller -n ingress-controllers -o jsonpath="{.status.loadBalancer.ingress[0].ip}"
 
 ## Configure DNS for the cluster public IP
@@ -187,7 +172,7 @@ echo $CLIENT_SECRET
 ```
 
 # Go to the root of the repo before running this command
-helm install --set secret.azureadtenantid=$AZURE_TENANT_ID --set secret.azureadclientid=$CLIENT_ID --set secret.azureclientsecret=$CLIENT_SECRET msal-proxy ./charts/msal-proxy
+helm install --set secret.azureadtenantid=$AZURE_TENANT_ID --set secret.azureadclientid=$CLIENT_ID --set secret.azureclientsecret=$CLIENT_SECRET easyauth-proxy ./charts/easyauth-proxy
 
 # Confirm everything was deployed.
 kubectl get svc,deploy,pod
@@ -302,7 +287,7 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: msal-proxy
+  name: easyauth-proxy
   annotations:
     kubernetes.io/ingress.class: nginx
     cert-manager.io/cluster-issuer: letsencrypt-prod
@@ -315,7 +300,7 @@ spec:
         pathType: Prefix
         backend:
           service:
-            name: msal-proxy
+            name: easyauth-proxy
             port:
               number: 80
   tls:
@@ -357,7 +342,7 @@ It should look something like this:
     az ad app delete --id $CLIENT_ID
     helm delete nginx-ingress --purge
     helm delete cert-manager --purge
-    helm delete msal-proxy --purge
+    helm delete easyauth-proxy --purge
     kubectl delete secret ingress-tls-prod
     kubectl delete -f https://raw.githubusercontent.com/jetstack/cert-manager/release-0.11/deploy/manifests/00-crds.yaml
     kubectl delete ns cert-manager
