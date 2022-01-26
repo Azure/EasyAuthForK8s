@@ -18,7 +18,6 @@ on:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
     name: .NET restore, build & test
 
@@ -37,9 +36,9 @@ jobs:
       run: dotnet test ./src/Tests/EasyAuthForK8s.Tests.Web/EasyAuthForK8s.Tests.Web.csproj --no-build --verbosity normal 
   
   check_for_depreciated_APIs:
+    needs: build
     name: Check Depreciated K8s APIs
     runs-on: macos-latest
-    needs: build
     
     steps:
       - uses: actions/checkout@v2
@@ -48,6 +47,7 @@ jobs:
       - run: pluto detect-files -d ./
       
   push_to_registries:
+    needs: check_for_depreciated_APIs
     name: Push Docker image to multiple registries
     runs-on: ubuntu-latest
     permissions:
