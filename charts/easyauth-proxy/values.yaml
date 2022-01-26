@@ -9,10 +9,10 @@ basePath: "/easyauth"
 replicaCount: 2
 
 image:
-  repository: lesterjt/easyauthfork8s
+  repository: ghcr.io/azure/easyauthfork8s/easy-auth-proxy
   pullPolicy: Always
   # Overrides the image tag whose default is the chart appVersion.
-  tag: dotnet6
+  tag: dev
 
 imagePullSecrets: []
 nameOverride: ""

@@ -1,5 +1,8 @@
 name: Build, test & push to multiple registries
 
+env:
+  iteration: ${{github.run_number}}
+
 on:
   push:
     # Publish `master` as Docker `latest` image.
@@ -42,8 +45,6 @@ jobs:
       - run: pluto detect-files -d ./
       
   push_to_registries:
-  
-    needs: check_for_depreciated_APIs
     name: Push Docker image to multiple registries
     runs-on: ubuntu-latest
     permissions:
@@ -82,3 +83,19 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+  run_e2e_test:
+    needs: push_to_registries
+    runs-on: ubuntu-latest
+    name: Run test.sh script
+
+    steps:
+    - name: 'Login via Azure CLI'
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.DANIEL_AZURE_CREDENTIALS }}
+        allow-no-subscriptions: true
+          
+    - uses: actions/checkout@v2
+    - name: Call the script
+      run: bash test.sh -a auth-proxy-test-$iteration -c auth-proxy-test-$iteration -r auth-proxy-test-$iteration -e dakondra@microsoft.com -l eastus -t ${{ secrets.E2E_ALT_TENANT_ID }} -s ${{ secrets.E2E_SP_ID }} -z ${{ secrets.E2E_SP_SECRET }} 
