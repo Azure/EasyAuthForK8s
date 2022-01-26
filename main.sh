@@ -145,9 +145,9 @@ echo "****BEGIN @ $(date +"%T"): Call Install Cert Manager script****"
 . ./AutomationScripts/4-installCertManager.sh
 echo "****COMPLETE @ $(date +"%T"): Installed Cert Manager script****"
 
-echo "****BEGIN @ $(date +"%T"): Call Deploy MSAL Proxy script****"
-. ./AutomationScripts/5-deployMSALProxy.sh
-echo "****COMPLETE @ $(date +"%T"): Deployed MSAL Proxy script****"
+echo "****BEGIN @ $(date +"%T"): Call Deploy EasyAuth Proxy script****"
+. ./AutomationScripts/5-deployEasyAuthProxy.sh
+echo "****COMPLETE @ $(date +"%T"): Deployed EasyAuth Proxy script****"
 
 echo "BEGIN @ $(date +"%T"): Deploy sample app..."
 # If we have a parameter for an image install a custom image. If not, then we install kuard.

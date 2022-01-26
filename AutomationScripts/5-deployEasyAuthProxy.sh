@@ -4,8 +4,6 @@
 
 echo "BEGIN @ $(date +"%T"): Deploy EasyAuth Proxy..."
 
-# kubectl apply -f msal-net-proxy.yaml
-
 echo "BEGIN @ $(date +"%T"): Calling Helm..."
 echo ""
 
@@ -26,7 +24,7 @@ do
   INPUT_STRING=$(kubectl get svc,deploy,pod -o=jsonpath='{.items[3].status.containerStatuses[0].ready}')
   sleep 10
   if [ "$n" == "0" ]; then
-    echo "ERROR. INFINITE LOOP in 4-deployMSALProxy.sh."
+    echo "ERROR. INFINITE LOOP in 4-EasyAuthProxy.sh."
     exit 1
   fi
   n=$((n-1))
