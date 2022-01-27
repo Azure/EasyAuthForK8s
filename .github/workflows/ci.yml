@@ -1,4 +1,4 @@
-name: Build, test & push to multiple registries
+name: Build, test, push to multiple registries and e2e test
 
 env:
   iteration: ${{github.run_number}}
