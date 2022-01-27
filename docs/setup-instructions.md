@@ -256,11 +256,11 @@ kind: Ingress
 metadata:
   name: easyauth-sample-ingress-default
   annotations:
-    nginx.ingress.kubernetes.io/auth-url: "https://$host/easyauth/auth"
-    nginx.ingress.kubernetes.io/auth-signin: "https://$host/easyauth/login"
+    nginx.ingress.kubernetes.io/auth-url: "https://\$host/easyauth/auth"
+    nginx.ingress.kubernetes.io/auth-signin: "https://\$host/easyauth/login"
     nginx.ingress.kubernetes.io/auth-response-headers: "x-injected-userinfo,x-injected-name,x-injected-oid,x-injected-preferred-username,x-injected-sub,x-injected-tid,x-injected-email,x-injected-groups,x-injected-scp,x-injected-roles,x-injected-graph"
     cert-manager.io/cluster-issuer: letsencrypt-prod
-    #nginx.ingress.kubernetes.io/rewrite-target: /$1
+    #nginx.ingress.kubernetes.io/rewrite-target: /\$1
 spec:
   ingressClassName: nginx
   tls:
@@ -345,11 +345,11 @@ kind: Ingress
 metadata:
   name: easyauth-sample-ingress-role-required
   annotations:
-    nginx.ingress.kubernetes.io/auth-url: "https://$host/easyauth/auth?role=RoleYouDontHave"
-    nginx.ingress.kubernetes.io/auth-signin: "https://$host/easyauth/login"
+    nginx.ingress.kubernetes.io/auth-url: "https://\$host/easyauth/auth?role=RoleYouDontHave"
+    nginx.ingress.kubernetes.io/auth-signin: "https://\$host/easyauth/login"
     nginx.ingress.kubernetes.io/auth-response-headers: "x-injected-userinfo,x-injected-name,x-injected-oid,x-injected-preferred-username,x-injected-sub,x-injected-tid,x-injected-email,x-injected-groups,x-injected-scp,x-injected-roles,x-injected-graph"
     cert-manager.io/cluster-issuer: letsencrypt-prod
-    #nginx.ingress.kubernetes.io/rewrite-target: /$1
+    #nginx.ingress.kubernetes.io/rewrite-target: /\$1
 spec:
   ingressClassName: nginx
   tls:
@@ -373,11 +373,11 @@ kind: Ingress
 metadata:
   name: easyauth-sample-ingress-role-graph
   annotations:
-    nginx.ingress.kubernetes.io/auth-url: "https://$host/easyauth/auth?scope=User.Read&graph=%2Fme%3F%24select%3DdisplayName%2CjobTitle%2CuserPrincipalName"
-    nginx.ingress.kubernetes.io/auth-signin: "https://$host/easyauth/login"
+    nginx.ingress.kubernetes.io/auth-url: "https://\$host/easyauth/auth?scope=User.Read&graph=%2Fme%3F%24select%3DdisplayName%2CjobTitle%2CuserPrincipalName"
+    nginx.ingress.kubernetes.io/auth-signin: "https://\$host/easyauth/login"
     nginx.ingress.kubernetes.io/auth-response-headers: "x-injected-userinfo,x-injected-name,x-injected-oid,x-injected-preferred-username,x-injected-sub,x-injected-tid,x-injected-email,x-injected-groups,x-injected-scp,x-injected-roles,x-injected-graph"
     cert-manager.io/cluster-issuer: letsencrypt-prod
-    #nginx.ingress.kubernetes.io/rewrite-target: /$1
+    #nginx.ingress.kubernetes.io/rewrite-target: /\$1
 spec:
   ingressClassName: nginx
   tls:
