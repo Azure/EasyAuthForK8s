@@ -19,15 +19,9 @@ Once these steps are complete, you will be able to acquire a token to access the
 ![API Auth Flow](media/api-request.png)
 
 ## Using Client Credentials
-For clients with no user, you'll use the OAuth2 [client credentials](https://docs.microsoft.com/en-us/azure/active-directory/develop/v2-oauth2-client-creds-grant-flow#get-a-token) grant to acquire a token.   The parameters you'll need are provided in the response message that EasyAuth provides if you call a protected api from an Unauthorized client:
+For clients with no user, you'll use the OAuth2 [client credentials](https://docs.microsoft.com/en-us/azure/active-directory/develop/v2-oauth2-client-creds-grant-flow#get-a-token) grant to acquire a token.   
 
-![API caller unauthorized](media/api-unauthorized.png)
-
-First, make note of the `scope` attribute.  This is will be used as the scope parameter in the OAuth request.
-
-Second, you'll need to determine the URI of the token endpoint.  This can be found my retrieving the metadata from the URI shown in the `tokenAuthorityMetadata` attribute.  From the metadata, you'll use the `token_endpoint` value as the endpoint for requesting a token.
-
-Here's a sample token request.  Note that you will also need the client_id and secret from the application you registered above.
+Note that you will also need the client_id and secret from the application you registered above.  Here's a sample response:
 
 ![API caller unauthorized](media/api-client-credentials.png)
 
