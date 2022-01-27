@@ -47,8 +47,6 @@ bash main.sh -a easy-auth-demo -c {insert-unique-hostname} -r easy-auth -e email
 * [Calling a Protected API](docs/protecting-an-api.md) - how to authenticate a client application and call an API protected by EasyAuth
 * [Http Headers](docs/headers.md) - Get information about the user that is accessing your application
 * [Proxy Configuration](docs/configuration.md) - an in-depth guide to configure the proxy
-* [Graph Queries](docs/graph-queries.md) - an in-depth guide to query the Microsoft Graph to get additional information about the user
-
 
 # Contributing
 
