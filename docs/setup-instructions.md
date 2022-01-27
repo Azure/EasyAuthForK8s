@@ -167,18 +167,6 @@ echo $AZURE_TENANT_ID
 echo $CLIENT_SECRET
 ```
 
-## Deploy MSAL Proxy
-
-```
-
-# Go to the root of the repo before running this command
-helm install --set secret.azureadtenantid=$AZURE_TENANT_ID --set secret.azureadclientid=$CLIENT_ID --set secret.azureclientsecret=$CLIENT_SECRET easyauth-proxy ./charts/easyauth-proxy
-
-# Confirm everything was deployed.
-kubectl get svc,deploy,pod
-```
-
-
 ## Install Cert Manager
 
 We will use Cert-Manager to create and install SSL Certs from Let'sEncrypt onto our K8S Cluster.  This is because AAD requires all endpoints be either [localhost](http://localhost) or HTTPS. 
@@ -244,28 +232,35 @@ cat ./cluster-issuer-prod.yaml
 kubectl apply -f ./cluster-issuer-prod.yaml
 ```
 
-## Deploy the Application
-
-For this sample app, we will use [kuard](https://github.com/kubernetes-up-and-running/kuard).
-
-To enable MSAL, the application will need two ingress rules.
-  * Ingress for the application.  This needs HTTPS and some annotations to use the nginx auth plugin
-  * Ingress for the MSAL Proxy.  This is for the `/msal` path for the same host
+## Deploy Easy Auth Proxy
 
 ```
-kubectl run kuard-pod --image=gcr.io/kuar-demo/kuard-amd64:1 --expose --port=8080
 
-cat << EOF > ./kuard-ingress.yaml
+# Go to the root of the repo before running this command
+helm install --set azureAd.tenantId=$AZURE_TENANT_ID --set azureAd.clientId=$CLIENT_ID --set secret.name=easyauth-proxy-$AD_APP_NAME-secret --set secret.azureclientsecret=$CLIENT_SECRET --set appHostName=$APP_HOSTNAME --set tlsSecretName=$TLS_SECRET_NAME easyauth-proxy-$AD_APP_NAME ./charts/easyauth-proxy
+
+# Confirm everything was deployed.
+kubectl get svc,deploy,pod
+```
+
+## Deploy the Application
+
+For this sample app, we will use the sample application found in this repo
+
+```
+kubectl run easyauth-sample-pod --image=docker.io/dakondra/eak-test-container:latest --expose --port=80
+
+cat << EOF > ./sample-ingress.yaml
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: kuard
+  name: easyauth-sample-ingress-default
   annotations:
-    nginx.ingress.kubernetes.io/auth-url: "https://\$host/msal/auth"
-    nginx.ingress.kubernetes.io/auth-signin: "https://\$host/msal/index?rd=\$escaped_request_uri"
-    nginx.ingress.kubernetes.io/auth-response-headers: "x-injected-aio,x-injected-name,x-injected-nameidentifier,x-injected-objectidentifier,x-injected-preferred_username,x-injected-tenantid,x-injected-uti"
-    certmanager.k8s.io/cluster-issuer: letsencrypt-prod
-    nginx.ingress.kubernetes.io/rewrite-target: /\$1
+    nginx.ingress.kubernetes.io/auth-url: "https://$host/easyauth/auth"
+    nginx.ingress.kubernetes.io/auth-signin: "https://$host/easyauth/login"
+    nginx.ingress.kubernetes.io/auth-response-headers: "x-injected-userinfo,x-injected-name,x-injected-oid,x-injected-preferred-username,x-injected-sub,x-injected-tid,x-injected-email,x-injected-groups,x-injected-scp,x-injected-roles,x-injected-graph"
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    #nginx.ingress.kubernetes.io/rewrite-target: /$1
 spec:
   ingressClassName: nginx
   tls:
@@ -276,46 +271,139 @@ spec:
   - host: $APP_HOSTNAME
     http:
       paths:
-      - path: /(.*)
+      - path: /
         pathType: Prefix
         backend:
           service:
-            name: kuard-pod
+            name: easyauth-sample-pod
             port:
-              number: 8080
+              number: 80
+        
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: easyauth-proxy
+  name: easyauth-sample-ingress-anonymous
   annotations:
-    kubernetes.io/ingress.class: nginx
     cert-manager.io/cluster-issuer: letsencrypt-prod
 spec:
-  rules:
-  - host: $APP_HOSTNAME
-    http:
-      paths:
-      - path: /msal
-        pathType: Prefix
-        backend:
-          service:
-            name: easyauth-proxy
-            port:
-              number: 80
+  ingressClassName: nginx
   tls:
   - hosts:
     - $APP_HOSTNAME
     secretName: $TLS_SECRET_NAME
+  rules:
+  - host: $APP_HOSTNAME
+    http:
+      paths:
+      - path: /Anonymous
+        pathType: Prefix
+        backend:
+          service:
+            name: easyauth-sample-pod
+            port:
+              number: 80
+      - path: /css
+        pathType: Prefix
+        backend:
+          service:
+            name: easyauth-sample-pod
+            port:
+              number: 80
+      - path: /js
+        pathType: Prefix
+        backend:
+          service:
+            name: easyauth-sample-pod
+            port:
+              number: 80
+      - path: /lib
+        pathType: Prefix
+        backend:
+          service:
+            name: easyauth-sample-pod
+            port:
+              number: 80
+      - path: /favicon.ico
+        pathType: Exact
+        backend:
+          service:
+            name: easyauth-sample-pod
+            port:
+              number: 80
+      - path: /EasyAuthForK8s.Sample.styles.css
+        pathType: Exact
+        backend:
+          service:
+            name: easyauth-sample-pod
+            port:
+              number: 80
+       
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: easyauth-sample-ingress-role-required
+  annotations:
+    nginx.ingress.kubernetes.io/auth-url: "https://$host/easyauth/auth?role=RoleYouDontHave"
+    nginx.ingress.kubernetes.io/auth-signin: "https://$host/easyauth/login"
+    nginx.ingress.kubernetes.io/auth-response-headers: "x-injected-userinfo,x-injected-name,x-injected-oid,x-injected-preferred-username,x-injected-sub,x-injected-tid,x-injected-email,x-injected-groups,x-injected-scp,x-injected-roles,x-injected-graph"
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    #nginx.ingress.kubernetes.io/rewrite-target: /$1
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - $APP_HOSTNAME
+    secretName: $TLS_SECRET_NAME
+  rules:
+  - host: $APP_HOSTNAME
+    http:
+      paths:
+      - path: /RoleRequired
+        pathType: Prefix
+        backend:
+          service:
+            name: easyauth-sample-pod
+            port:
+              number: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: easyauth-sample-ingress-role-graph
+  annotations:
+    nginx.ingress.kubernetes.io/auth-url: "https://$host/easyauth/auth?scope=User.Read&graph=%2Fme%3F%24select%3DdisplayName%2CjobTitle%2CuserPrincipalName"
+    nginx.ingress.kubernetes.io/auth-signin: "https://$host/easyauth/login"
+    nginx.ingress.kubernetes.io/auth-response-headers: "x-injected-userinfo,x-injected-name,x-injected-oid,x-injected-preferred-username,x-injected-sub,x-injected-tid,x-injected-email,x-injected-groups,x-injected-scp,x-injected-roles,x-injected-graph"
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    #nginx.ingress.kubernetes.io/rewrite-target: /$1
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - $APP_HOSTNAME
+    secretName: $TLS_SECRET_NAME
+  rules:
+  - host: $APP_HOSTNAME
+    http:
+      paths:
+      - path: /Graph
+        pathType: Prefix
+        backend:
+          service:
+            name: easyauth-sample-pod
+            port:
+              number: 80       
 EOF
 
 # End of snippet to copy/paste
 
 # Important! Review the file and check the values.
-cat ./kuard-ingress.yaml
+cat ./sample-ingress.yaml
 
 # Deploy the ingress config to the cluster
-kubectl apply -f ./kuard-ingress.yaml
+kubectl apply -f ./sample-ingress.yaml
 ```
 
 ## Verify Production Certificate works
