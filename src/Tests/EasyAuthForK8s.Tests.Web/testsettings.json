@@ -1,0 +1,12 @@
+{
+  "AzureAd": {
+    "Instance": "https://login.microsoftonline.com/",
+    "DomainHint": "foo.onmicrosoft.com",
+    "TenantId": "72f988bf-86f1-41af-91ab-2d7cd011db47",
+    "ClientId": "22222222-2222-2222-2222-222222222222",
+    "CallbackPath": "/easyauth/signin-oidc",
+    "SignedOutCallbackPath ": "/easyauth/signout-callback-oidc",
+    "ClientSecret": "foo",
+    "SignUpSignInPolicyId": ""
+  }
+}

@@ -1,0 +1,104 @@
+name: Build, test & push to multiple registries
+
+env:
+  iteration: ${{github.run_number}}
+
+on:
+  push:
+    # Publish `master` as Docker `latest` image.
+    branches:
+      - master
+      - dev
+
+    # Publish `v1.2.3` tags as releases.
+    tags:
+      - v*
+  release:
+    types: [published]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: .NET restore, build & test
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: | 
+          6.0.x
+    - name: Restore dependencies
+      run: dotnet restore ./src/EasyAuthForK8s.Web/EasyAuthForK8s.Web.csproj
+    - name: Build
+      run: dotnet build ./src/EasyAuthForK8s.Web/EasyAuthForK8s.Web.csproj --no-restore
+    - name: Test
+      run: dotnet test ./src/Tests/EasyAuthForK8s.Tests.Web/EasyAuthForK8s.Tests.Web.csproj --no-build --verbosity normal 
+  
+  check_for_depreciated_APIs:
+    needs: build
+    name: Check Depreciated K8s APIs
+    runs-on: macos-latest
+    
+    steps:
+      - uses: actions/checkout@v2
+      - run: brew install FairwindsOps/tap/pluto
+      - run: pluto detect-files -d ./charts/easyauth-proxy
+      - run: pluto detect-files -d ./
+      
+  push_to_registries:
+    needs: check_for_depreciated_APIs
+    name: Push Docker image to multiple registries
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+    
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v2
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9
+        with:
+          username: ${{ secrets.DOCKER_USER_ID }}
+          password: ${{ secrets.DOCKER_REGISTRY_PASS }}
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@98669ae865ea3cffbcbaa878cf57c20bbf1c6c38
+        with:
+          images: |
+            ghcr.io/${{ github.repository }}/easy-auth-proxy
+            easyauthfork8s/easy-auth-proxy
+      
+      - name: Build and push Docker images
+        uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  run_e2e_test:
+    needs: push_to_registries
+    runs-on: ubuntu-latest
+    name: Run test.sh script
+
+    steps:
+    - name: 'Login via Azure CLI'
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.DANIEL_AZURE_CREDENTIALS }}
+        allow-no-subscriptions: true
+          
+    - uses: actions/checkout@v2
+    - name: Call the script
+      run: bash test.sh -a auth-proxy-test-$iteration -c auth-proxy-test-$iteration -r auth-proxy-test-$iteration -e dakondra@microsoft.com -l eastus -t ${{ secrets.E2E_ALT_TENANT_ID }} -s ${{ secrets.E2E_SP_ID }} -z ${{ secrets.E2E_SP_SECRET }} 

@@ -26,118 +26,93 @@ if ! [ -x "$(command -v az)" ]; then
 fi
 
 echo ""
-# Show the subscription we will be deploying to.
-echo "******We will be deploying to this subscription******"
-az account show
-
-echo ""
 echo "BEGIN @ $(date +"%T"): Set variables..."
 
 # Initialize Variables for flags
-ITERATION=''
 AD_APP_NAME=''
 CLUSTER_NAME=''
 CLUSTER_RG=''
 EMAIL=''
-EMAIL_DOMAIN=''
 LOCATION=''
 INPUTIMAGE=''
-NAMESPACE=''
-CLIENTID='' # The only thing I really need is CLIENT ID. With the client ID, we can skip creating the AAD App.
+ALT_TENANT_ID=''
 SKIP_CLUSTER_CREATION=''
+E2E_TEST_FLAG=''
+SP=''
+SP_SECRET=''
 
-while getopts "a:c:r:e:d:l:i:n:s:p:h" OPTION
+while getopts "a:c:r:e:l:i:t:s:z:pgh" OPTION
 do
 	case $OPTION in
 		a)
-			# echo "The value of -a is ${OPTARG} - AD_APP_NAME"
-            AD_APP_NAME=$OPTARG$ITERATION ;;
+            AD_APP_NAME=$OPTARG ;;
 	    c)
-			# echo "The value of -c is ${OPTARG} - CLUSTER_NAME"
-            CLUSTER_NAME=$OPTARG$ITERATION ;;
+            CLUSTER_NAME=$OPTARG ;;
         r)
-			# echo "The value of -r is ${OPTARG} - CLUSTER_RG"
-            CLUSTER_RG=$OPTARG$ITERATION ;;
+            CLUSTER_RG=$OPTARG ;;
         e)
-			# echo "The value of -e is ${OPTARG} - EMAIL"
             EMAIL=$OPTARG ;;
-        d)
-			# echo "The value of -d is ${OPTARG} - EMAIL_DOMAIN"
-            EMAIL_DOMAIN=$OPTARG ;;
         l)
-			# echo "The value of -l is ${OPTARG} - LOCATION"
             LOCATION=$OPTARG ;;
         i)
-			# echo "The value of -i is ${OPTARG} - INPUTIMAGE"
             INPUTIMAGE=$OPTARG ;;
-        n)
-	         # echo "The value of -n is ${OPTARG} - NAMESPACE"
-            NAMESPACE=$OPTARG ;;
-	    s)
-	        # echo "The value of -s is ${OPTARG} - CLIENTID"
-	        CLIENTID=$OPTARG ;;
+        t)
+            ALT_TENANT_ID=$OPTARG ;;
+        s)
+            SP=$OPTARG ;;
+        z)
+            SP_SECRET=$OPTARG ;;
         p) 
-            # echo "The value of -p is ${OPTARG} - SKIP_CLUSTER_CREATION"
-            SKIP_CLUSTER_CREATION=$OPTARG ;;
+            SKIP_CLUSTER_CREATION="True" ;;
+        g) 
+            E2E_TEST_FLAG="True" ;;  
 		h)
             # Change to how others show it like az
             echo "HELP: Here are the flags and their variables"
 			echo "REQUIRED: -a is for AD_APP_NAME"
-            echo "REQUIRED: -c is for CLUSTER_NAME"
+            echo "REQUIRED: -c is for CLUSTER_NAME *Note: Cluster Name must be unique*" 
             echo "REQUIRED: -r is for CLUSTER_RG"
             echo "REQUIRED: -e is for EMAIL"
-            echo "REQUIRED: -d is for EMAIL_DOMAIN"
             echo "REQUIRED: -l is for LOCATION"
             echo "OPTOINAL: -i is for INPUTIMAGE"
-            echo "OPTOINAL: -n is for NAMESPACE"
-            echo "OPTOINAL: -s is for CLIENTID"
+            echo "OPTOINAL: -t is for ALT_TENANT_ID"
+            echo "OPTOINAL: -s is for SERVICE_PRICIPAL"
+            echo "OPTOINAL: -z is for SP_SECRET"
             echo "OPTOINAL: -p is for SKIP_CLUSTER_CREATION"
 			exit ;;
 	esac
 done
 
-
 # Force required flags.
-if [ -z "$AD_APP_NAME" ] || [ -z "$CLUSTER_NAME" ] || [ -z "$CLUSTER_RG" ] || [ -z "$EMAIL" ] || [ -z "$EMAIL_DOMAIN" ] || [ -z "$LOCATION" ]; then
+if [ -z "$AD_APP_NAME" ] || [ -z "$CLUSTER_NAME" ] || [ -z "$CLUSTER_RG" ] || [ -z "$EMAIL" ] || [ -z "$LOCATION" ]; then
     echo "*****ERROR. Please enter all required flags.*****"
     exit
 fi 
 
-# If there is no flag set for SKIP_CLUSTER_CREATION, then create a random iteration.
-if [ -z "$SKIP_CLUSTER_CREATION" ]; then
-    ITERATION=$RANDOM
-else
-    ITERATION=''
+echo ""
+# Show the subscription we will be deploying to.
+if [ -z "$E2E_TEST_FLAG" ]; then
+    echo "******We will be deploying to this subscription******"
+    az account show
 fi
 
-# ITERATION=34
-# AD_APP_NAME="$1$ITERATION"
-# CLUSTER_NAME=$2$ITERATION
-# CLUSTER_RG=$3$ITERATION
-# EMAIL=$4
-# EMAIL_DOMAIN=$5
-# LOCATION=$6
-# NAMESPACE=$7
 APP_HOSTNAME="$AD_APP_NAME.$LOCATION.cloudapp.azure.com"
 HOMEPAGE=https://$APP_HOSTNAME
 IDENTIFIER_URIS=$HOMEPAGE
-REPLY_URLS=https://$APP_HOSTNAME/msal/signin-oidc
-COOKIE_SECRET=$(python -c 'import os,base64; print(base64.b64encode(os.urandom(16)).decode("utf-8"))')
-INGRESS_IP=0
+REPLY_URLS=https://$APP_HOSTNAME/easyauth/signin-oidc
 
 echo "The value of -a is $AD_APP_NAME - AD_APP_NAME"
 echo "The value of -c is $CLUSTER_NAME - CLUSTER_NAME"
 echo "The value of -r is $CLUSTER_RG - CLUSTER_RG"
 echo "The value of -e is $EMAIL - EMAIL"
-echo "The value of -d is $EMAIL_DOMAIN - EMAIL_DOMAIN"
 echo "The value of -l is $LOCATION - LOCATION"
 echo "The value of -i is $INPUTIMAGE - INPUTIMAGE"
-echo "The value of -n is $NAMESPACE - NAMESPACE"
-echo "The value of -s is $CLIENTID - CLIENTID"
+echo "The value of -t is $ALT_TENANT_ID - ALT_TENANT_ID"
+echo "The value of -s is $SP - SERVICE_PRICIPAL"
+echo "The value of -z is $SP_SECRET - SP_SECRET"
 echo "The value of -p is $SKIP_CLUSTER_CREATION - SKIP_CLUSTER_CREATION"
-echo "COOKIE_SECRET: " $COOKIE_SECRET
+echo "The value of -g is $E2E_TEST_FLAG - E2E_TEST_FLAG"
 echo "COMPLETE @ $(date +"%T"): Setting variables"
-
 
 echo "****BEGIN @ $(date +"%T"): Call AKS Cluster Creation script...****"
 # If there is no flag set for SKIP_CLUSTER_CREATION, then create the AKS cluster.
@@ -166,23 +141,22 @@ echo "****BEGIN @ $(date +"%T"): Call ADD App Creation script****"
 . ./AutomationScripts/3-registerAADApp.sh
 echo "****COMPLETE @ $(date +"%T"): AAD App created script****"
 
-echo "****BEGIN @ $(date +"%T"): Call Deploy MSAL Proxy script****"
-. ./AutomationScripts/4-deployMSALProxy.sh
-echo "****COMPLETE @ $(date +"%T"): Deployed MSAL Proxy script****"
-
 echo "****BEGIN @ $(date +"%T"): Call Install Cert Manager script****"
-. ./AutomationScripts/5-installCertManager.sh
+. ./AutomationScripts/4-installCertManager.sh
 echo "****COMPLETE @ $(date +"%T"): Installed Cert Manager script****"
 
+echo "****BEGIN @ $(date +"%T"): Call Deploy EasyAuth Proxy script****"
+. ./AutomationScripts/5-deployEasyAuthProxy.sh
+echo "****COMPLETE @ $(date +"%T"): Deployed EasyAuth Proxy script****"
+
 echo "BEGIN @ $(date +"%T"): Deploy sample app..."
-# INPUTIMAGE=$7 
 # If we have a parameter for an image install a custom image. If not, then we install kuard.
 if [ -z "$INPUTIMAGE" ]; then
-    echo "No image input, installing kuard."
-    kubectl run kuard-pod --image=gcr.io/kuar-demo/kuard-amd64:1 --expose --port=8080
+    echo "No image input, installing sample."
+    kubectl run easyauth-sample-pod --image=docker.io/dakondra/eak-test-container:latest --expose --port=80
 else
     echo "Your custom image $INPUTIMAGE installed"
-    kubectl run custom-pod --image=$INPUTIMAGE --expose --port=8080
+    kubectl run custom-pod --image=$INPUTIMAGE --expose --port=80
 fi
 echo "COMPLETE @ $(date +"%T"): Deployed sample app"
 
@@ -190,21 +164,29 @@ echo "****BEGIN @ $(date +"%T"): Call Deploy New Ingress Resource script****"
 . ./AutomationScripts/6-deployNewIngressResource.sh
 echo "****COMPLETE @ $(date +"%T"): Deployed New Ingress Resource script****"
 
-
 echo "BEGIN @ $(date +"%T"): Verify Production Certificate works..."
-kubectl get certificate $TLS_SECRET_NAME
-INPUT_STRING=no
-while [ "$INPUT_STRING" != "yes" ]
+INPUT_STATUS=false
+n=50
+while [[ "$INPUT_STATUS" != "True" || "$INPUT_TYPE" != "Ready" ]]
 do
   echo ""
   kubectl get certificate $TLS_SECRET_NAME
+  INPUT_STATUS=$(kubectl get certificate $TLS_SECRET_NAME -o=jsonpath='{.status.conditions[0].status}')
+  INPUT_TYPE=$(kubectl get certificate $TLS_SECRET_NAME -o=jsonpath='{.status.conditions[0].type}')
+  echo "status: " $INPUT_STATUS
+  echo "type: " $INPUT_TYPE
+  sleep 5
+  if [ "$n" == "0" ]; then
+    echo "ERROR. INFINITE LOOP in main.sh when calling kubectl get certificate."
+    exit 1
+  fi
+  n=$((n-1))
   echo ""
-  echo "Is the certificate showing READY = True? Type 'yes' or press enter to try again..."
-  read INPUT_STRING
 done
 echo "COMPLETE @ $(date +"%T"): Verify Production Certificate works"
 echo "END OF SCRIPT"
 echo ""
+echo "NOTE: Please wait 5 minutes for Azure AD to complete setup before opening the homepage!"
 echo ""
 echo "Visit the app in the browser. Good luck! " $HOMEPAGE
 echo ""

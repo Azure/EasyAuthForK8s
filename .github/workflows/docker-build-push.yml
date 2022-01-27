@@ -5,6 +5,7 @@ on:
     # Publish `master` as Docker `latest` image.
     branches:
       - master
+      - dev
 
     # Publish `v1.2.3` tags as releases.
     tags:
@@ -36,7 +37,11 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+<<<<<<< HEAD
       - name: Extract metadata (tags, labels) for Docker
+=======
+      - name: Set metadata (tags, labels) for Docker
+>>>>>>> dev
         id: meta
         uses: docker/metadata-action@98669ae865ea3cffbcbaa878cf57c20bbf1c6c38
         with:

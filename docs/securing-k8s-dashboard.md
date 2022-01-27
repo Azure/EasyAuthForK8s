@@ -22,7 +22,7 @@ Each Ingress resource to authenticate requires a FQDN and SSL.  For the setup-in
 
 ```
 # Delete the existing ingress rules
-kubectl delete ingress kuard msal-proxy
+kubectl delete ingress kuard easyauth-proxy
 
 # Ensure the required envirionment variables are set:
 echo $APP_HOSTNAME
@@ -59,14 +59,14 @@ spec:
 apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
-  name: msal-proxy
+  name: easyauth-proxy
 spec:
   rules:
   - host: $APP_HOSTNAME
     http:
       paths:
       - backend:
-          serviceName: msal-proxy
+          serviceName: easyauth-proxy
           servicePort: 80
         path: /msal
   tls:
