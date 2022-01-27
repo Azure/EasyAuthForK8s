@@ -1,4 +1,4 @@
-[![Actions Status](https://github.com/Azure/EasyAuthForK8s/workflows/Docker%20Build%20and%20Push/badge.svg)](https://github.com/Azure/EasyAuthForK8s/actions)
+[![Build, test, push to multiple registries and e2e test](https://github.com/Azure/EasyAuthForK8s/actions/workflows/ci.yml/badge.svg)](https://github.com/Azure/EasyAuthForK8s/actions/workflows/ci.yml)
 
 # EasyAuth for Kubernetes
 
