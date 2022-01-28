@@ -12,7 +12,7 @@ image:
   repository: ghcr.io/azure/easyauthfork8s/easy-auth-proxy
   pullPolicy: Always
   # Overrides the image tag whose default is the chart appVersion.
-  tag: dev
+  tag: master
 
 imagePullSecrets: []
 nameOverride: ""
