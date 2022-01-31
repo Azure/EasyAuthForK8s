@@ -9,6 +9,9 @@ on:
     branches:
       - master
       - dev
+    paths-ignore:
+      - 'docs/**'
+      - 'README.md'
 
     # Publish `v1.2.3` tags as releases.
     tags:
