@@ -40,7 +40,7 @@ Review these very carefully and modify.
     # If you do not have a secret, set it below
     TLS_SECRET_NAME=$APP_HOSTNAME-tls
 
-## Configure DNS for the cluster public IP (**SKIP** this step if you've already use a FQDN with HTTPS in your cluster)
+## Configure DNS for the cluster public IP (*SKIP* this step if you've already used a FQDN with HTTPS in your cluster)
 To use AAD authentication for your application, you must use a FQDN with HTTPS.  For this tutorial, we will add a DNS record to the Ingress Public IP address.
 
 ```
@@ -213,13 +213,13 @@ spec:
             port:
               number: $SERVICE_PORT
 EOF
-```
 
 # Important! Review the file and check the values.
 cat ./easyauth-ingress.yaml
 
 # Deploy the issuer config to the cluster
 kubectl apply -f ./easyauth-ingress.yaml
+```
 
 ## Verify application works in browser
 NOTE: Wait 5 minutes for the easy auth proxy and Azure AD to get up and running.
