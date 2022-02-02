@@ -1,8 +1,8 @@
 # Example AKS cluster
-![Existing AKS Cluster](media/api-request.png)
+![Existing AKS Cluster](media/no-easyauth.png)
 
 # Example AKS cluster after deploying EasyAuthForK8s
-![Existing AKS Cluster + EasyAuthForK8s](media/api-request.png)
+![Existing AKS Cluster + EasyAuthForK8s](media/with-easyauth.png)
 
 ## Set Variables
 
@@ -41,6 +41,27 @@ Review these very carefully and modify.
     TLS_SECRET_NAME=$APP_HOSTNAME-tls
 
 ## Configure DNS for the cluster public IP (**SKIP** this step if you've already use a FQDN with HTTPS in your cluster)
+To use AAD authentication for your application, you must use a FQDN with HTTPS.  For this tutorial, we will add a DNS record to the Ingress Public IP address.
+
+```
+# Get the AKS MC_ resource group name
+NODE_RG=$(az aks show -n $CLUSTER_NAME -g $CLUSTER_RG -o json | jq -r '.nodeResourceGroup')
+echo $NODE_RG
+
+INGRESS_IP=$(kubectl get services/nginx-ingress-ingress-nginx-controller -n ingress-controllers -o jsonpath="{.status.loadBalancer.ingress[0].ip}")
+echo $INGRESS_IP
+
+IP_NAME=$(az network public-ip list -g $NODE_RG -o json | jq -c ".[] | select(.ipAddress | contains(\"$INGRESS_IP\"))" | jq '.name' -r)
+echo $IP_NAME
+
+# Add a DNS name ($AD_APP_NAME) to the public IP address
+az network public-ip update -g $NODE_RG -n $IP_NAME --dns-name $AD_APP_NAME
+
+# Get the FQDN assigned to the public IP address
+INGRESS_HOST=$(az network public-ip show -g $NODE_RG -n $IP_NAME -o json | jq -r '.dnsSettings.fqdn')
+echo $INGRESS_HOST
+# This should be the same as the $APP_HOSTNAME
+```
 
 ## Register AAD Application
 
