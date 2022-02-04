@@ -1,3 +1,13 @@
+# Prerequisites
+
+This project has been validated to work on the following:
+
+[An existing AKS Cluster](https://docs.microsoft.com/en-us/azure/aks/kubernetes-walkthrough) 
+
+[NGINX Ingress Controller](https://docs.microsoft.com/en-us/azure/aks/ingress-basic?tabs=azure-cli)
+
+[HTTPS with cert-manager](https://docs.microsoft.com/en-us/azure/aks/ingress-tls?tabs=azure-cli)
+
 # Example AKS cluster
 ![Existing AKS Cluster](media/no-easyauth.png)
 
