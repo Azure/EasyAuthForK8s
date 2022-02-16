@@ -153,7 +153,7 @@ echo "BEGIN @ $(date +"%T"): Deploy sample app..."
 # If we have a parameter for an image install a custom image. If not, then we install kuard.
 if [ -z "$INPUTIMAGE" ]; then
     echo "No image input, installing sample."
-    kubectl run easyauth-sample-pod --image=docker.io/dakondra/eak-test-container:latest --expose --port=80
+    kubectl run easyauth-sample-pod --image=docker.io/dakondra/eak-sample:latest --expose --port=80
 else
     echo "Your custom image $INPUTIMAGE installed"
     kubectl run custom-pod --image=$INPUTIMAGE --expose --port=80

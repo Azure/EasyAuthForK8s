@@ -247,7 +247,7 @@ kubectl get svc,deploy,pod
 For this sample app, we will use the sample application found in this repo
 
 ```
-kubectl run easyauth-sample-pod --image=docker.io/dakondra/eak-test-container:latest --expose --port=80
+kubectl run easyauth-sample-pod --image=docker.io/dakondra/eak-sample:latest --expose --port=80
 
 cat << EOF > ./sample-ingress.yaml
 apiVersion: networking.k8s.io/v1
