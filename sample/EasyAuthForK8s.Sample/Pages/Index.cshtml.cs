@@ -14,6 +14,8 @@ namespace EasyAuthForK8s.Sample.Pages
         }
         public void OnGet(string? encoding, string? format, string? prefix)
         {
+            try
+            {
                 if (!string.IsNullOrEmpty(encoding))
                     Encoding = encoding!;
                 if (!string.IsNullOrEmpty(format))
@@ -38,6 +40,11 @@ namespace EasyAuthForK8s.Sample.Pages
                 }
 
                 Headers.AddRange(headers.ToList());
+            }
+            catch (Exception ex)
+            {
+                // Do nothing, just don't throw an exception.
+            }
         }
         public List<KeyValuePair<string, string>> Headers = new();
         public string Encoding = "UrlEncode";
