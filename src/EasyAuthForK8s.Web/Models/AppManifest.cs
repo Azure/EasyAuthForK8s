@@ -120,6 +120,7 @@ namespace EasyAuthForK8s.Web.Models
         public bool Succeeded { get; set; } = false;
         public Exception? Exception { get; set; } = null;
         public AppManifest? AppManifest { get; set; } = null;
+        public AppManifestResult() {  }
     }
 
 
