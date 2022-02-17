@@ -16,8 +16,13 @@ namespace EasyAuthForK8s.Web.Models;
 
 internal static class ModelExtensions
 {
+    //from rfc7230 US-ASCII visual characters not allowed in a token (DQUOTE and "(),/:;<=>?@[\]{}")
+    private static int[] invalid_token_chars = new int[] { 34,40,41,44,47,58,59,60,61,62,63,64,91,92,93,123,125 };
+    const string EMPTY_HEADER_NAME = "illegal-name";
+    
     public static EasyAuthState EasyAuthStateFromHttpContext(this HttpContext context)
     {
+       
         //see if state exists in property bag, and return it
         if (context.Items.ContainsKey(Constants.StateCookieName))
         {
@@ -176,7 +181,7 @@ internal static class ModelExtensions
 
         void addHeader(string name, string value)
         {
-            string headerName = SanitizeHeaderName($"{configOptions.ResponseHeaderPrefix}{name}");
+            string headerName = SanitizeHeaderName($"{configOptions.ResponseHeaderPrefix}{ClaimNameFromUri(name)}");
             string encodedValue = EncodeValue(value, configOptions.ClaimEncodingMethod);
 
             //nginx will only forward the first header of a given name,
@@ -240,16 +245,42 @@ internal static class ModelExtensions
             _ => value,
         };
     }
-    private static string SanitizeHeaderName(string name)
+    //strips out any illegal characters
+    internal static string SanitizeHeaderName(string name)
     {
         if (string.IsNullOrEmpty(name))
         {
             throw new ArgumentNullException("name");
         }
 
-        string clean = new string(name.Where(c => c >= 32 && c < 127).ToArray());
+        string clean = new string(name.Where(c => c >= 32 && c < 127 && !invalid_token_chars.Contains(c)).ToArray());
 
-        return clean.Replace('_', '-').ToLower();
+        //edge case: the original name contains ZERO valid characters
+        //just return a default.  there's no reason to throw when the app may ignore this header anyway
+        if (clean.Length == 0)
+            return EMPTY_HEADER_NAME;
+        else
+            return clean.Replace('_', '-').ToLower();
+    }
+    //while this is not entirely necessary, and might lead to name-uniqueness conflicts
+    //it seems like a reasonable compromize to create a more "friendly" header name
+    internal static string ClaimNameFromUri(string name)
+    {
+        if (string.IsNullOrEmpty(name))
+        {
+            throw new ArgumentNullException("name");
+        }
+        if (name.Contains("/"))
+        {
+            var split = name.Split('/', StringSplitOptions.RemoveEmptyEntries);
+            if (split.Length > 1)
+                return split[split.Length - 1];
+            else
+                //edge case: the original name contains nothing but forward slashes
+                return EMPTY_HEADER_NAME;
+        }
+        else
+            return name;
     }
 }
 
