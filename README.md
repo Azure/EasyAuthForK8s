@@ -36,10 +36,20 @@ Try it out by setting up a new AKS cluster with a sample application that uses E
 git clone https://github.com/Azure/EasyAuthForK8s.git
 cd EasyAuthForK8s
 
-# hint - run bash main.sh -h for parameter help
+# Hint - run bash main.sh -h for parameter help
+# Note: AAD app name (-a) must be *globally* unique
 # Note: Cluster name (-c) must be unique
-bash main.sh -a easy-auth-demo -c {insert-unique-hostname} -r easy-auth -e email@contoso.com -l eastus
+# Estimated Runtime: 15 minutes
+bash main.sh -a {insert-unique-app-name} -c {insert-unique-cluster-name} -r easy-auth -e email@contoso.com -l eastus
 ```
+What the quickstart script does:
+1) Deploy an AKS cluster
+2) Install an Nginx Ingress controller
+3) Configure DNS for the cluster public IP
+4) Register an AAD Application
+5) Install Cert Manager
+6) Deploy the Easy Auth Proxy
+7) Deploy the Application
 
 ## Documentation
 * [Setup Instructions](docs/setup-instructions.md) - step-by-step guide to building a cluster, configuring the ingress controller, and deploying an application protected by EasyAuth
