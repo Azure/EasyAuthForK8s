@@ -21,7 +21,7 @@ do
   echo ""
   kubectl get svc,deploy,pod
   echo ""
-  INPUT_STRING=$(kubectl get svc,deploy,pod -o=jsonpath='{.items[3].status.containerStatuses[0].ready}')
+  INPUT_STRING=$(kubectl get svc,deploy,pod -o=jsonpath='{.items[2].status.containerStatuses[0].ready}')
   sleep 10
   if [ "$n" == "0" ]; then
     echo "ERROR. INFINITE LOOP in 4-EasyAuthProxy.sh."
