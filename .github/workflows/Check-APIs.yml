@@ -2,7 +2,7 @@ name: Check for Deprecated K8s APIs
 
 on:
   schedule:
-    - cron: '0 15 10 15 * ?'
+    - cron: '0 0 1 * *'
 
 jobs:  
   check_for_deprecated_APIs:
