@@ -1,0 +1,19 @@
+name: Build, test, push to multiple registries and e2e test
+
+on:
+  schedule:
+    - cron: '0 15 10 15 * ?'
+
+jobs:  
+  check_for_deprecated_APIs:
+    needs: build
+    name: Check Deprecated K8s APIs
+    runs-on: macos-latest
+    
+    - name: Download Pluto
+      uses: FairwindsOps/pluto/github-action@master
+
+    - name: Use pluto
+      run: |
+        pluto detect-files -d ./charts/easyauth-proxy
+        pluto detect-files -d ./
