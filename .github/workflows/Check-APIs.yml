@@ -9,10 +9,11 @@ jobs:
     name: Check Deprecated K8s APIs
     runs-on: macos-latest
     
-    - name: Download Pluto
-      uses: FairwindsOps/pluto/github-action@master
+    steps:
+      - name: Download Pluto
+        uses: FairwindsOps/pluto/github-action@master
 
-    - name: Use pluto
-      run: |
-        pluto detect-files -d ./charts/easyauth-proxy
-        pluto detect-files -d ./
+      - name: Use pluto
+        run: |
+          pluto detect-files -d ./charts/easyauth-proxy
+          pluto detect-files -d ./
