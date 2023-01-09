@@ -1,4 +1,4 @@
-name: Build, test, push to multiple registries and e2e test
+name: Check for Deprecated K8s APIs
 
 on:
   schedule:
@@ -6,7 +6,6 @@ on:
 
 jobs:  
   check_for_deprecated_APIs:
-    needs: build
     name: Check Deprecated K8s APIs
     runs-on: macos-latest
     
