@@ -4,7 +4,7 @@ echo "BEGIN @ $(date +"%T"): Installing the ingress controller..."
 kubectl create ns ingress-controllers
 helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
 helm repo update
-helm install nginx-ingress ingress-nginx/ingress-nginx --namespace ingress-controllers --set rbac.create=true --set controller.config.large-client-header-buffers="8 32k"
+helm install nginx-ingress ingress-nginx/ingress-nginx --namespace ingress-controllers --set controller.service.annotations."service\.beta\.kubernetes\.io/azure-load-balancer-health-probe-request-path"=/healthz --set rbac.create=true --set controller.config.large-client-header-buffers="8 32k"
 
 INGRESS_IP=$(kubectl get services/nginx-ingress-ingress-nginx-controller -n ingress-controllers -o jsonpath="{.status.loadBalancer.ingress[0].ip}")
 
