@@ -1,0 +1,63 @@
+name: Build, test, push to multiple registries and e2e test
+
+on:
+  pull_request:
+    paths-ignore:
+      - 'docs/**'
+      - 'README.md'
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: .NET restore, build & test
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: | 
+          6.0.x
+    - name: Restore dependencies
+      run: dotnet restore ./src/EasyAuthForK8s.Web/EasyAuthForK8s.Web.csproj
+    - name: Build
+      run: dotnet build ./src/EasyAuthForK8s.Web/EasyAuthForK8s.Web.csproj --no-restore
+    - name: Test
+      run: dotnet test ./src/Tests/EasyAuthForK8s.Tests.Web/EasyAuthForK8s.Tests.Web.csproj --no-build --verbosity normal 
+  
+  check_for_depreciated_APIs:
+    needs: build
+    name: Check Depreciated K8s APIs
+    runs-on: macos-latest
+    
+    steps:
+      - uses: actions/checkout@v2
+      - run: brew install FairwindsOps/tap/pluto
+      - run: pluto detect-files -d ./charts/easyauth-proxy
+      - run: pluto detect-files -d ./
+
+  run_e2e_test:
+    needs: check_for_depreciated_APIs
+    runs-on: ubuntu-latest
+    environment: e2e
+    name: Run end-to-end test
+
+    steps:
+    - name: 'Login via Azure CLI'
+      uses: azure/login@v1
+      with:
+        client-id: ${{ secrets.CAE_AZURE_CLIENT_ID }}
+        tenant-id: ${{ secrets.CAE_AZURE_TENANT_ID }}
+        subscription-id: ${{ secrets.CAE_AZURE_SUBSCRIPTION_ID }}
+          
+    - uses: actions/checkout@v2
+    - name: Call the script
+      run: |
+        bash test.sh -a ${{ vars.e2ePrefix}} -c ${{ vars.e2ePrefix}} -r ${{ vars.e2ePrefix}} -e ${{ vars.email }} -l ${{ vars.location }}
+        az group delete -n ${{ vars.e2ePrefix}}
+        az ad app delete --id (az ad app list --display-name ${{ vars.e2ePrefix}} --query "[0].appId")
+

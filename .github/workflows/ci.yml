@@ -19,6 +19,10 @@ on:
   release:
     types: [published]
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -93,15 +97,19 @@ jobs:
   run_e2e_test:
     needs: push_to_registries
     runs-on: ubuntu-latest
+    environment: e2e
     name: Run test.sh script
 
     steps:
     - name: 'Login via Azure CLI'
       uses: azure/login@v1
       with:
-        creds: ${{ secrets.DANIEL_AZURE_CREDENTIALS }}
-        allow-no-subscriptions: true
+        client-id: ${{ secrets.CAE_AZURE_CLIENT_ID }}
+        tenant-id: ${{ secrets.CAE_AZURE_TENANT_ID }}
+        subscription-id: ${{ secrets.CAE_AZURE_SUBSCRIPTION_ID }}
           
     - uses: actions/checkout@v2
     - name: Call the script
-      run: bash test.sh -a auth-proxy-test-$iteration -c auth-proxy-test-$iteration -r auth-proxy-test-$iteration -e dakondra@microsoft.com -l eastus -t ${{ secrets.E2E_ALT_TENANT_ID }} -s ${{ secrets.E2E_SP_ID }} -z ${{ secrets.E2E_SP_SECRET }} 
+      run: |
+        bash test.sh -a auth-proxy-test-$iteration -c auth-proxy-test-$iteration -r auth-proxy-test-$iteration -e ${{ vars.email }} -l ${{ vars.location }}
+
