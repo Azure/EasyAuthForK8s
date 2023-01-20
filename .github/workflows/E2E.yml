@@ -29,7 +29,7 @@ jobs:
     - name: Test
       run: dotnet test ./src/Tests/EasyAuthForK8s.Tests.Web/EasyAuthForK8s.Tests.Web.csproj --no-build --verbosity normal 
   
-  check_for_depreciated_APIs:
+  check_for_deprecated_APIs:
     needs: build
     name: Check Deprecated K8s APIs
     runs-on: macos-latest
