@@ -31,7 +31,7 @@ jobs:
   
   check_for_depreciated_APIs:
     needs: build
-    name: Check Depreciated K8s APIs
+    name: Check Deprecated K8s APIs
     runs-on: macos-latest
     
     steps:
@@ -41,7 +41,7 @@ jobs:
       - run: pluto detect-files -d ./
 
   run_e2e_test:
-    needs: check_for_depreciated_APIs
+    needs: check_for_deprecated_APIs
     runs-on: ubuntu-latest
     environment: e2e
     name: Run end-to-end test
