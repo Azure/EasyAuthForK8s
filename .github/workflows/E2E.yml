@@ -58,17 +58,20 @@ jobs:
       run: |
         bash main.sh -a "${{ vars.e2ePrefix }}-${{ env.GITHUB_PR_NUMBER }}" -c "${{ vars.e2ePrefix }}-${{ env.GITHUB_PR_NUMBER }}" -r "${{ vars.e2ePrefix }}-${{ env.GITHUB_PR_NUMBER }}" -e ${{ vars.email }} -l ${{ vars.location }}
         exitCode="$?"
+        echo $OBJECT_ID
         if [ "$exitCode" -ne 0 ]; then
-          echo "object_id=$OBJECT_ID" >> $GITHUB_OUTPUT
+          echo "Script Failed"
+          echo "object_id=$(OBJECT_ID)" >> $GITHUB_OUTPUT
         else
-          echo "object_id=$OBJECT_ID" >> $GITHUB_OUTPUT
+          echo "Script Success"
+          echo "object_id=$(OBJECT_ID)" >> $GITHUB_OUTPUT
         fi
 
     - name: Delete e2e environment
       if: ${{ vars.DeleteOnFailure == 'true' }} || success()
       run: |
-          if [ $(az group exists --name ${{ vars.e2ePrefix }}) == "true" ]; then
-              az group delete -n ${{ vars.e2ePrefix }}
+          if [ $(az group exists --name ${{ vars.e2ePrefix }}-${{ env.GITHUB_PR_NUMBER }}) == "true" ]; then
+              az group delete -n ${{ vars.e2ePrefix }}-${{ env.GITHUB_PR_NUMBER }}
           fi
           if [ "${{ steps.runscript.outputs.object_id }}" != "" ];then
               az ad app delete --id $OBJECT_ID
