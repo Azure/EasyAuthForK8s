@@ -62,11 +62,11 @@ jobs:
       if: ${{ vars.DeleteOnFailure == 'true' }} || success()
       run: |
           if [ $(az group exists --name ${{ vars.e2ePrefix }}-${{ env.GITHUB_PR_NUMBER }}) == "true" ]; then
-              az group delete -n ${{ vars.e2ePrefix }}-${{ env.GITHUB_PR_NUMBER }}
+              az group delete -n ${{ vars.e2ePrefix }}-${{ env.GITHUB_PR_NUMBER }} --yes
           fi
           app_id=$(az ad app list --display-name ${{ vars.e2ePrefix}}-${{ env.GITHUB_PR_NUMBER }} --query "[0].appId")
           if [ "$app_id" != "" ]; then
-              az ad app delete --id $app_id
+              az ad app delete --id $app_id 
           fi
 
 
