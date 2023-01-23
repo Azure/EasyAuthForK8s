@@ -5,6 +5,8 @@ on:
     paths-ignore:
       - 'docs/**'
       - 'README.md'
+env:
+  GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
 
 jobs:
   build:
@@ -49,16 +51,27 @@ jobs:
         creds: ${{ secrets.CAE_AZURE_CREDENTIALS }}
           
     - uses: actions/checkout@v2
+
     - name: Call the script
+      id: runscript
+      continue-on-error: true
       run: |
-        bash main.sh -a ${{ vars.e2ePrefix}} -c ${{ vars.e2ePrefix}} -r ${{ vars.e2ePrefix}} -e ${{ vars.email }} -l ${{ vars.location }}
+        bash main.sh -a "${{ vars.e2ePrefix }}-${{ GITHUB_PR_NUMBER }}" -c "${{ vars.e2ePrefix }}-${{ GITHUB_PR_NUMBER }}" -r "${{ vars.e2ePrefix }}-${{ GITHUB_PR_NUMBER }}" -e ${{ vars.email }} -l ${{ vars.location }}
         exitCode="$?"
-        az group delete -n ${{ vars.e2ePrefix}}
         if [ "$exitCode" -ne 0 ]; then
-            if [ "$OBJECT_ID" != "" ];then
-                az ad app delete --id $OBJECT_ID
-            fi
+          echo "object_id=$OBJECT_ID" >> $GITHUB_OUTPUT
         else
-            az ad app delete --id $OBJECT_ID
+          echo "object_id=$OBJECT_ID" >> $GITHUB_OUTPUT
         fi
+
+    - name: Delete e2e environment
+      if: ${{ vars.DeleteOnFailure == 'true' }} || success()
+      run: |
+          if [ $(az group exists --name ${{ vars.e2ePrefix }}) == "true" ]; then
+              az group delete -n ${{ vars.e2ePrefix }}
+          fi
+          if [ "${{ steps.runscript.outputs.object_id }}" != "" ];then
+              az ad app delete --id $OBJECT_ID
+          fi
+
 
