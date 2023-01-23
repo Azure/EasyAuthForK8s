@@ -57,7 +57,9 @@ jobs:
     - uses: actions/checkout@v2
     - name: Call the script
       run: |
-        exitCode = $(bash test.sh -a ${{ vars.e2ePrefix}} -c ${{ vars.e2ePrefix}} -r ${{ vars.e2ePrefix}} -e ${{ vars.email }} -l ${{ vars.location }})
-        az group delete -n ${{ vars.e2ePrefix}}
-        az ad app delete --id (az ad app list --display-name ${{ vars.e2ePrefix}} --query "[0].appId")
+        bash main.sh -a ${{ vars.e2ePrefix}} -c ${{ vars.e2ePrefix}} -r ${{ vars.e2ePrefix}} -e ${{ vars.email }} -l ${{ vars.location }}
+        exitCode="$?"
+        if [ "$exitCode" -ne 0 ]; then
+            az group delete -n ${{ vars.e2ePrefix}}
+        fi
 
