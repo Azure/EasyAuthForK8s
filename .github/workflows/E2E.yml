@@ -53,7 +53,12 @@ jobs:
       run: |
         bash main.sh -a ${{ vars.e2ePrefix}} -c ${{ vars.e2ePrefix}} -r ${{ vars.e2ePrefix}} -e ${{ vars.email }} -l ${{ vars.location }}
         exitCode="$?"
+        az group delete -n ${{ vars.e2ePrefix}}
         if [ "$exitCode" -ne 0 ]; then
-            az group delete -n ${{ vars.e2ePrefix}}
+            if [ "$OBJECT_ID" != "" ];then
+                az ad app delete --id $OBJECT_ID
+            fi
+        else
+            az ad app delete --id $OBJECT_ID
         fi
 
