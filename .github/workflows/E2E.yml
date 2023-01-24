@@ -53,7 +53,6 @@ jobs:
     - uses: actions/checkout@v2
 
     - name: Call the script
-      id: runscript
       continue-on-error: true
       run: |
         bash main.sh -a "${{ vars.e2ePrefix }}-${{ env.GITHUB_PR_NUMBER }}" -c "${{ vars.e2ePrefix }}-${{ env.GITHUB_PR_NUMBER }}" -r "${{ vars.e2ePrefix }}-${{ env.GITHUB_PR_NUMBER }}" -e ${{ vars.email }} -l ${{ vars.location }}

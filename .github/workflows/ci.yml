@@ -19,10 +19,6 @@ on:
   release:
     types: [published]
 
-permissions:
-  id-token: write
-  contents: read
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -42,9 +38,9 @@ jobs:
     - name: Test
       run: dotnet test ./src/Tests/EasyAuthForK8s.Tests.Web/EasyAuthForK8s.Tests.Web.csproj --no-build --verbosity normal 
   
-  check_for_depreciated_APIs:
+  check_for_deprecated_APIs:
     needs: build
-    name: Check Depreciated K8s APIs
+    name: Check Deprecated K8s APIs
     runs-on: macos-latest
     
     steps:
@@ -54,7 +50,7 @@ jobs:
       - run: pluto detect-files -d ./
       
   push_to_registries:
-    needs: check_for_depreciated_APIs
+    needs: check_for_deprecated_APIs
     name: Push Docker image to multiple registries
     runs-on: ubuntu-latest
     permissions:
@@ -94,22 +90,31 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
-  # run_e2e_test:
-  #   needs: push_to_registries
-  #   runs-on: ubuntu-latest
-  #   environment: e2e
-  #   name: Run test.sh script
+  run_e2e_test:
+    needs: push_to_registries
+    runs-on: ubuntu-latest
+    environment: e2e
+    name: Run main.sh script
 
-  #   steps:
-  #   - name: 'Login via Azure CLI'
-  #     uses: azure/login@v1
-  #     with:
-  #       client-id: ${{ secrets.CAE_AZURE_CLIENT_ID }}
-  #       tenant-id: ${{ secrets.CAE_AZURE_TENANT_ID }}
-  #       subscription-id: ${{ secrets.CAE_AZURE_SUBSCRIPTION_ID }}
+    steps:
+    - name: 'Login via Azure CLI'
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.CAE_AZURE_CREDENTIALS }}
           
-  #   - uses: actions/checkout@v2
-  #   - name: Call the script
-  #     run: |
-  #       bash test.sh -a auth-proxy-test-$iteration -c auth-proxy-test-$iteration -r auth-proxy-test-$iteration -e ${{ vars.email }} -l ${{ vars.location }}
+    - uses: actions/checkout@v2
+    - name: Call the script
+      continue-on-error: true
+      run: |
+        bash main.sh -a "${{ vars.e2ePrefix }}-${{ env.iteration }}" -c "${{ vars.e2ePrefix }}-${{ env.iteration }}" -r "${{ vars.e2ePrefix }}-${{ env.iteration }}" -e ${{ vars.email }} -l ${{ vars.location }}
 
+    - name: Delete e2e environment
+      if: ${{ vars.DeleteOnFailure == 'true' }} || success()
+      run: |
+          if [ $(az group exists --name ${{ vars.e2ePrefix }}--${{ env.iteration }}) == "true" ]; then
+              az group delete -n ${{ vars.e2ePrefix }}-${{ env.iteration }} --yes
+          fi
+          app_id=$(az ad app list --display-name ${{ vars.e2ePrefix}}-${{ env.iteration }} --query "[0].appId" -o tsv)
+          if [ "$app_id" != "" ]; then
+              az ad app delete --id $app_id 
+          fi
