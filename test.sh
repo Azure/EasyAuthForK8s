@@ -50,7 +50,8 @@ done
 
 echo ""
 echo "BEGIN @ $(date +"%T"): START OF END-TO-END TEST"
-bash ./main.sh -a $A -c $C -r $R -e $E -l $L -t $T -s $S -z $Z -g
+bash ./main.sh -a $A -c $C -r $R -e $E -l $L 
+# -t $T -s $S -z $Z -g
 
 APP_NAME="$A.$L.cloudapp.azure.com"
 WEBPAGE=https://$APP_NAME

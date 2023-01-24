@@ -1,0 +1,71 @@
+name: Build, test, push to multiple registries and e2e test
+
+on:
+  pull_request:
+    paths-ignore:
+      - 'docs/**'
+      - 'README.md'
+env:
+  GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: .NET restore, build & test
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: | 
+          6.0.x
+    - name: Restore dependencies
+      run: dotnet restore ./src/EasyAuthForK8s.Web/EasyAuthForK8s.Web.csproj
+    - name: Build
+      run: dotnet build ./src/EasyAuthForK8s.Web/EasyAuthForK8s.Web.csproj --no-restore
+    - name: Test
+      run: dotnet test ./src/Tests/EasyAuthForK8s.Tests.Web/EasyAuthForK8s.Tests.Web.csproj --no-build --verbosity normal 
+  
+  check_for_deprecated_APIs:
+    needs: build
+    name: Check Deprecated K8s APIs
+    runs-on: macos-latest
+    
+    steps:
+      - uses: actions/checkout@v2
+      - run: brew install FairwindsOps/tap/pluto
+      - run: pluto detect-files -d ./charts/easyauth-proxy
+      - run: pluto detect-files -d ./
+
+  run_e2e_test:
+    needs: check_for_deprecated_APIs
+    runs-on: ubuntu-latest
+    environment: e2e
+    name: Run end-to-end test
+
+    steps:
+    - name: 'Login via Azure CLI'
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.CAE_AZURE_CREDENTIALS }}
+          
+    - uses: actions/checkout@v2
+
+    - name: Call the script
+      continue-on-error: true
+      run: |
+        bash main.sh -a "${{ vars.e2ePrefix }}-${{ env.GITHUB_PR_NUMBER }}" -c "${{ vars.e2ePrefix }}-${{ env.GITHUB_PR_NUMBER }}" -r "${{ vars.e2ePrefix }}-${{ env.GITHUB_PR_NUMBER }}" -e ${{ vars.email }} -l ${{ vars.location }}
+
+    - name: Delete e2e environment
+      if: ${{ vars.DeleteOnFailure == 'true' }} || success()
+      run: |
+          if [ $(az group exists --name ${{ vars.e2ePrefix }}-${{ env.GITHUB_PR_NUMBER }}) == "true" ]; then
+              az group delete -n ${{ vars.e2ePrefix }}-${{ env.GITHUB_PR_NUMBER }} --yes
+          fi
+          app_id=$(az ad app list --display-name ${{ vars.e2ePrefix}}-${{ env.GITHUB_PR_NUMBER }} --query "[0].appId" -o tsv)
+          if [ "$app_id" != "" ]; then
+              az ad app delete --id $app_id 
+          fi
+
+
