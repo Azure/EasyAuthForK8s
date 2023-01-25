@@ -111,7 +111,7 @@ jobs:
     - name: Delete e2e environment
       if: ${{ vars.DeleteOnFailure == 'true' }} || success()
       run: |
-          if [ $(az group exists --name ${{ vars.e2ePrefix }}--${{ env.iteration }}) == "true" ]; then
+          if [ $(az group exists --name ${{ vars.e2ePrefix }}-${{ env.iteration }}) == "true" ]; then
               az group delete -n ${{ vars.e2ePrefix }}-${{ env.iteration }} --yes
           fi
           app_id=$(az ad app list --display-name ${{ vars.e2ePrefix}}-${{ env.iteration }} --query "[0].appId" -o tsv)
