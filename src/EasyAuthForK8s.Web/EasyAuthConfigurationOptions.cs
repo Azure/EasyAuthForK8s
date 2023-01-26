@@ -3,6 +3,7 @@ public class EasyAuthConfigurationOptions
 {
     public string DataProtectionFileLocation { get; set; } = "C:\\mnt\\dp";
     public string SigninPath { get; set; } = "/easyauth/login";
+    public string SignoutPath { get; set; } = "/easyauth/logout";
     public string AuthPath { get; set; } = "/easyauth/auth";
     public bool AllowBearerToken { get; set; } = false;
     /// <summary>

@@ -58,6 +58,11 @@ public class EasyAuthMiddleware
             await HandleAuth(context);
             return;
         }
+        else if (_configureOptions.SignoutPath == context.Request.Path)
+        {
+            await HandleAuth(context);
+            return;
+        }
 
         // Call the next delegate/middleware in the pipeline
         await _next(context);
