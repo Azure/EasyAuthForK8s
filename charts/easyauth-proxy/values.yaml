@@ -9,10 +9,10 @@ basePath: "/easyauth"
 replicaCount: 2
 
 image:
-  repository: docker.io/ibersanoms/easyauth
+  repository: docker.io/ibersanoms/easy-auth-proxy
   pullPolicy: Always
   # Overrides the image tag whose default is the chart appVersion.
-  tag: v1
+  tag: pr-91
 
 imagePullSecrets: []
 nameOverride: ""

@@ -66,7 +66,7 @@ jobs:
       uses: docker/metadata-action@v4
       with:
         images: |
-          easyauth/easy-auth-proxy
+          ${{ vars.docker_repo }}/easy-auth-proxy
       
     - name: Build and push Docker images
       uses: docker/build-push-action@v3
