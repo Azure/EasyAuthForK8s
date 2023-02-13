@@ -62,11 +62,11 @@ jobs:
         password: ${{ secrets.IBERSANO_DOCKER_TOKEN }}
 
     - name: Extract metadata (tags, labels) for Docker
-        id: meta
-        uses: docker/metadata-action@v4
-        with:
-          images: |
-            easyauth/easy-auth-proxy
+      id: meta
+      uses: docker/metadata-action@v4
+      with:
+        images: |
+          easyauth/easy-auth-proxy
       
     - name: Build and push Docker images
       uses: docker/build-push-action@v3
