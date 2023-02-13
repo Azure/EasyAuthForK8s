@@ -9,10 +9,10 @@ basePath: "/easyauth"
 replicaCount: 2
 
 image:
-  repository: ghcr.io/azure/easyauthfork8s/easy-auth-proxy
+  repository: docker.io/ibersanoms/easyauth
   pullPolicy: Always
   # Overrides the image tag whose default is the chart appVersion.
-  tag: v1.0.2
+  tag: v1
 
 imagePullSecrets: []
 nameOverride: ""
@@ -114,6 +114,7 @@ easyAuthForK8s:
   # such as another easyauth proxy using the same host name
   signinPath: "/login"
   authPath: "/auth"
+  signoutPath: "/logout"
   # use bearer token as a fall back for cookies
   # normally for API web applications only
   allowBearerToken: "false"

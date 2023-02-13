@@ -13,6 +13,7 @@ using Microsoft.Net.Http.Headers;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
@@ -60,7 +61,7 @@ public class EasyAuthMiddleware
         }
         else if (_configureOptions.SignoutPath == context.Request.Path)
         {
-            await HandleAuth(context);
+            await HandleLogout(context);
             return;
         }
 
@@ -238,6 +239,21 @@ public class EasyAuthMiddleware
         }
         //nginx does nothing with the response body, so this is primarily for debugging purposes
         await response.WriteAsync(message);
+
+    }
+
+    public async Task HandleLogout(HttpContext context)
+    {
+        EasyAuthState state = context.EasyAuthStateFromHttpContext();
+
+        LogRequestHeaders("HandleLogout", context.Request);
+
+        await context.SignOutAsync(OpenIdConnectDefaults.AuthenticationScheme);
+
+        // Re route the user to Azure AD to logout
+
+        // Delete the cookie
+        context.Response.Cookies.Delete(Constants.StateCookieName);
 
     }
 

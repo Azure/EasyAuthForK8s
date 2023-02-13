@@ -25,7 +25,16 @@ spec:
             name: easyauth-sample-pod
             port:
               number: 80
-        
+  - host: {{APP_HOSTNAME}}
+    http:
+      paths:
+      - path: /Signout
+        pathType: Prefix
+        backend:
+          service:
+            name: easyauth-sample-pod
+            port:
+              number: 80
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
