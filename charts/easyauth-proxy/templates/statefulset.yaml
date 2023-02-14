@@ -57,6 +57,8 @@ spec:
                 value: "{{ .Values.easyAuthForK8s.dataProtectionFileLocation }}"           
              -  name: EasyAuthForK8s__SigninPath
                 value: "{{ .Values.basePath }}{{ .Values.easyAuthForK8s.signinPath }}"
+             -  name: EasyAuthForK8s__SignoutPath
+                value: "{{ .Values.basePath }}{{ .Values.easyAuthForK8s.signoutPath }}"
              -  name: EasyAuthForK8s__AuthPath
                 value: "{{ .Values.basePath }}{{ .Values.easyAuthForK8s.authPath }}"
              -  name: EasyAuthForK8s__AllowBearerToken

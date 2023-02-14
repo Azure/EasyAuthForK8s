@@ -248,13 +248,11 @@ public class EasyAuthMiddleware
 
         LogRequestHeaders("HandleLogout", context.Request);
 
-        await context.SignOutAsync(OpenIdConnectDefaults.AuthenticationScheme);
+        // Delete the cookie
+        context.Response.Cookies.Delete(Constants.CookieName);
 
         // Re route the user to Azure AD to logout
-
-        // Delete the cookie
-        context.Response.Cookies.Delete(Constants.StateCookieName);
-
+        await context.SignOutAsync(OpenIdConnectDefaults.AuthenticationScheme, new AuthenticationProperties { RedirectUri = _configureOptions.DefaultRedirectAfterSignin }) ;
     }
 
     private void LogRequestHeaders(string prefix, HttpRequest request)
