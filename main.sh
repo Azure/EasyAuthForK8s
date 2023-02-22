@@ -156,7 +156,7 @@ if [ -z "$INPUTIMAGE" ]; then
     kubectl run easyauth-sample-pod --image=docker.io/dakondra/eak-sample:latest --expose --port=80
 else
     echo "Your custom image $INPUTIMAGE installed"
-    kubectl run easyauth-sample-pod --image=$INPUTIMAGE --expose --port=80
+    kubectl run custom-pod --image=$INPUTIMAGE --expose --port=80
 fi
 echo "COMPLETE @ $(date +"%T"): Deployed sample app"
 
