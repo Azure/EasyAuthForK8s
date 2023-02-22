@@ -7,7 +7,7 @@ on:
 jobs:  
   check_for_deprecated_APIs:
     name: Check Deprecated K8s APIs
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     
     steps:
       - name: Download Pluto
