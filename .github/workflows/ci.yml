@@ -41,13 +41,19 @@ jobs:
   check_for_deprecated_APIs:
     needs: build
     name: Check Deprecated K8s APIs
-    runs-on: macos-latest
-    
+    runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v2
-      - run: brew install FairwindsOps/tap/pluto
-      - run: pluto detect-files -d ./charts/easyauth-proxy
-      - run: pluto detect-files -d ./
+      - name: Checkout Code
+        uses: actions/checkout@v2
+        
+      - name: Download Pluto
+        uses: FairwindsOps/pluto/github-action@master
+
+      - name: Use pluto
+        run: |
+          pluto detect-files -d ./charts/easyauth-proxy
+          pluto detect-files -d ./
       
   push_to_registries:
     needs: check_for_deprecated_APIs
