@@ -32,6 +32,11 @@ public class UserInfoPayload
     public List<ClaimValue> otherClaims { get; set; } = new List<ClaimValue>();
     [Key(10)]
     public List<string> graph { get; set; } = new List<string>();
+
+    //the following claims are used internally for session management, but not passed to 
+    //the protected application
+    [Key(11)]
+    public string login_hint { get; set; } = string.Empty;
 }
 [MessagePackObject]
 public struct ClaimValue

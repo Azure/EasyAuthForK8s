@@ -18,7 +18,7 @@ if [ -n "$ALT_TENANT_ID" ]; then
   fi
 fi
 
-CLIENT_ID=$(az ad app create --display-name $AD_APP_NAME --web-home-page-url $HOMEPAGE --web-redirect-uris $REPLY_URLS --required-resource-accesses @./TemplateFiles/manifest.json -o json | jq -r '.appId')
+CLIENT_ID=$(az ad app create --display-name $AD_APP_NAME --web-home-page-url $HOMEPAGE --web-redirect-uris $REPLY_URLS --required-resource-accesses @./TemplateFiles/manifest.json --optional-claims @./TemplateFiles/claims.json -o json | jq -r '.appId') 
 echo "CLIENT_ID: " $CLIENT_ID
 
 # AAD core store is eventually consistent.  Usually we can retrieve the object on the first try after creation,

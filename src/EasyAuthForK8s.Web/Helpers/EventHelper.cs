@@ -7,21 +7,26 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.Identity.Web;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using System;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
+using System.Reflection.Metadata.Ecma335;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
 using System.Web;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace EasyAuthForK8s.Web.Helpers
 {
     internal class EventHelper
     {
+        public const string LoginHint = "login_hint";
+
         private readonly EasyAuthConfigurationOptions _configOptions;
         public EventHelper(EasyAuthConfigurationOptions configOptions)
         {
@@ -218,6 +223,7 @@ namespace EasyAuthForK8s.Web.Helpers
                 {
                     throw new InvalidOperationException("id_token is missing from authentication properties.  Ensure that SaveTokens option is 'true'.");
                 }
+                
 
                 JwtSecurityToken jwtSecurityToken = new JwtSecurityToken(id_token);
                 userInfo.PopulateFromClaims(jwtSecurityToken.Claims);
@@ -285,6 +291,101 @@ namespace EasyAuthForK8s.Web.Helpers
                 manifestResult.Succeeded ? manifestResult.AppManifest! : new AppManifest(),
                 reasonPhrase ?? ReasonPhrases.GetReasonPhrase(code), message);
         }
+
+        /// <summary>
+        /// Handles the cookie signout before proceeding with the OIDC remote sign out
+        /// </summary>
+        /// <param name="context"></param>
+        /// <param name="next"></param>
+        /// <returns></returns>
+        public async Task OidcRemoteSignout(RemoteSignOutContext context, Func<RemoteSignOutContext, Task> next)
+        {
+            EnsureLogger(context.HttpContext);
+
+            AuthenticationProperties properties = context.Properties!.Clone();
+
+            //see if the request specified a post-signout redirect, otherwise the default is used.
+            properties.RedirectUri = context.HttpContext.Request.Query.ContainsKey(Constants.RedirectParameterName) ?
+                 context.HttpContext.Request.Query[Constants.RedirectParameterName].First() : _configOptions.DefaultRedirectAfterSignout;
+
+            //we won't have loaded a principal at this point, so authenticate to see if the user is actually logged in currently
+            AuthenticateResult authN = await context.HttpContext.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+
+            //perform cookie signout before redirecting;
+            await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+
+            if (authN.Succeeded)
+            {
+                
+                _logger!.LogInformation($"Handle Signout - Subject:{authN.Principal?.Identity?.Name}, Path:{context.HttpContext.Request.Path}, Query:{context.HttpContext.Request.QueryString}");
+
+                var userinfo = authN.Principal?.UserInfoPayloadFromPrincipal(_configOptions);
+                if (userinfo != null)
+                {
+                    //set the login_hint for the redirect to the account we should sign out of
+                    //avoids asking the user to choose.LoginHint
+                    if (properties.Parameters.ContainsKey(LoginHint))
+                        properties.Parameters[LoginHint] = userinfo.login_hint;
+                    else
+                        properties.Parameters.Add(LoginHint, userinfo.login_hint);
+                }
+
+                await context.HttpContext.SignOutAsync(OpenIdConnectDefaults.AuthenticationScheme, properties);
+            }
+            else
+            {
+                _logger!.LogInformation($"Handle Signout - Current claims principal is missing or unauthenticated.  Skipping remote redirect.");
+
+                await OidcRemoteSignoutCallback(context, (ctx) => { ctx.Response.Redirect(properties.RedirectUri); return Task.CompletedTask; }) ;
+            }
+
+            //mark the response as handled, since we will either render our own page or sign-out of OIDC directly
+            context.HandleResponse();
+
+            await next(context).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Configures the non-standard Azure AD protocol options that the Generic OIDC Handler ignores
+        /// see: https://learn.microsoft.com/en-us/azure/active-directory/develop/v2-protocols-oidc
+        /// </summary>
+        /// <param name="context"></param>
+        /// <param name="next"></param>
+        /// <returns></returns>
+        public async Task OidcRedirectForSignout(RedirectContext context, Func<RedirectContext, Task> next)
+        {
+            if (context.Properties.Parameters.ContainsKey(LoginHint) && !context.ProtocolMessage.Parameters.ContainsKey("logout_hint"))
+            {
+                context.ProtocolMessage.Parameters.Add("logout_hint", context.Properties.Parameters[LoginHint] as string);
+            }
+            await next(context).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Checks to see if an external redirect after signout is provided, otherwise renders a basic page
+        /// </summary>
+        /// <param name="context"></param>
+        /// <param name="next"></param>
+        /// <returns></returns>
+        public async Task OidcRemoteSignoutCallback(RemoteSignOutContext context, Func<RemoteSignOutContext, Task> next)
+        {
+            if (context.Properties?.RedirectUri == Constants.NoOpRedirectUri)
+            {
+                EnsureLogger(context.HttpContext);
+                _logger!.LogInformation("Render internal signed-out page");
+
+                var graphService = context.HttpContext.RequestServices.GetService<GraphHelperService>();
+
+                var manifestResult = graphService != null ? await graphService.GetManifestConfigurationAsync(context.HttpContext.RequestAborted) : new();
+
+                await SignedOutPage.Render(context.Response,
+                    manifestResult.Succeeded ? manifestResult.AppManifest! : new AppManifest());
+
+                context.HandleResponse();
+            }
+            await next(context).ConfigureAwait(false);
+        }
+
         private string BuildScopeString(string baseScope, IList<string> additionalScopes)
         {
             return string.Join(' ', (baseScope ?? string.Empty)

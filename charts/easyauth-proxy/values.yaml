@@ -102,7 +102,6 @@ azureAd:
   # there's no reason to change these unless there is a conflict
   # such as another easyauth proxy using the same host name
   callbackPath: "/signin-oidc"
-  signedOutCallbackPath : "/signout-callback-oidc"
   # Leave this blank if not B2C
   signUpSignInPolicyId: ""
 
@@ -121,6 +120,9 @@ easyAuthForK8s:
   # fallback path to redirect user after signin if
   # prior page url cannot be determined
   defaultRedirectAfterSignin: "/"
+    # fallback path to redirect user after signout
+    # if no redirect parameter is provided
+  defaultRedirectAfterSignout: "_blank"
   # Make the cookie payload as small as possible to avoid having to 
   # increase the allowed nginx header size.  
   compressCookieClaims: "true"

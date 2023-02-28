@@ -12,11 +12,14 @@ using Microsoft.Extensions.Options;
 using Microsoft.Net.Http.Headers;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
+using System.Web;
+using System.Xml.Linq;
 
 namespace EasyAuthForK8s.Web;
 
@@ -59,11 +62,6 @@ public class EasyAuthMiddleware
             await HandleAuth(context);
             return;
         }
-        else if (_configureOptions.SignoutPath == context.Request.Path)
-        {
-            await HandleLogout(context);
-            return;
-        }
 
         // Call the next delegate/middleware in the pipeline
         await _next(context);
@@ -72,7 +70,7 @@ public class EasyAuthMiddleware
     {
         EasyAuthState state = context.EasyAuthStateFromHttpContext();
 
-        LogRequestHeaders("HandleChallenge", context.Request);
+        _logger.LogInformation($"Invoke HandleChallenge - Path:{ context.Request.Path}, Query: { context.Request.QueryString}");
         if (state.Status == EasyAuthState.AuthStatus.Forbidden)
         {
             //show error or redirect
@@ -240,19 +238,6 @@ public class EasyAuthMiddleware
         //nginx does nothing with the response body, so this is primarily for debugging purposes
         await response.WriteAsync(message);
 
-    }
-
-    public async Task HandleLogout(HttpContext context)
-    {
-        EasyAuthState state = context.EasyAuthStateFromHttpContext();
-
-        LogRequestHeaders("HandleLogout", context.Request);
-
-        // Delete the cookie
-        context.Response.Cookies.Delete(Constants.CookieName);
-
-        // Re route the user to Azure AD to logout
-        await context.SignOutAsync(OpenIdConnectDefaults.AuthenticationScheme, new AuthenticationProperties { RedirectUri = _configureOptions.DefaultRedirectAfterSignin }) ;
     }
 
     private void LogRequestHeaders(string prefix, HttpRequest request)

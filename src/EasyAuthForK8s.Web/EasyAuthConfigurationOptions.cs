@@ -4,13 +4,20 @@ public class EasyAuthConfigurationOptions
     public string DataProtectionFileLocation { get; set; } = "C:\\mnt\\dp";
     public string SigninPath { get; set; } = "/easyauth/login";
     public string SignoutPath { get; set; } = "/easyauth/logout";
+    public string SignedOutNoRedirectPath { get; set; } = "/easyauth/signedout";
     public string AuthPath { get; set; } = "/easyauth/auth";
     public bool AllowBearerToken { get; set; } = false;
     /// <summary>
-    /// provides a default path to send the user after successful login where the 
+    /// Provides a default path to send the user after successful login where the 
     /// RedirectParam query string has no value
     /// </summary>
     public string DefaultRedirectAfterSignin { get; set; } = "/";
+
+    /// <summary>
+    /// Provides a default path to send the user after successful sign-out where the 
+    /// RedirectParam query string has no value
+    /// </summary>
+    public string DefaultRedirectAfterSignout { get; set; } = Constants.NoOpRedirectUri;
 
     /// <summary>
     /// Experimental feature that serializes, compresses, and encodes the payload

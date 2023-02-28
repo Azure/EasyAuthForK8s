@@ -306,7 +306,7 @@ namespace EasyAuthForK8s.Web.Helpers
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error retrieving application manifest configuration.");
+                    _logger.LogError(ex, $"Error retrieving application manifest configuration. {ex.Message}");
                     throw;
                 }
 

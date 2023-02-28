@@ -1,0 +1,10 @@
+{
+    "idToken": [
+        {
+            "name": "login_hint",
+            "essential": false
+        }
+    ],
+    "accessToken": [],
+    "saml2Token": []
+}

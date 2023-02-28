@@ -26,5 +26,7 @@ public class Constants
     public static readonly string[] IgnoredClaims = {
         "aud","iss","iat","idp","nbf","exp","c_hash","at_hash","aio","nonce","rh","unique_name","uti","ver"
     };
+
+    public const string NoOpRedirectUri = "_blank";
 }
 

@@ -157,7 +157,10 @@ internal static class ModelExtensions
                         break;
                     case ClaimConstants.Scp:
                     case ClaimConstants.Scope:
-                        payload.email = claim.Value;
+                        payload.scp = claim.Value;
+                        break;
+                    case "login_hint":
+                        payload.login_hint = claim.Value;
                         break;
                     default:
                         {
