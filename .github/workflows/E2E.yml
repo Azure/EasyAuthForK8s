@@ -7,6 +7,7 @@ on:
       - 'README.md'
 env:
   GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
+  EnvironmentName: e2e-${{ github.event.pull_request.user.login }}
 
 jobs:
   build:
@@ -47,21 +48,45 @@ jobs:
   run_e2e_test:
     needs: check_for_deprecated_APIs
     runs-on: ubuntu-latest
-    environment: e2e
+    environment: ${{ env.EnvironmentName }}
     name: Run end-to-end test
 
     steps:
     - name: 'Login via Azure CLI'
       uses: azure/login@v1
       with:
-        creds: ${{ secrets.CAE_AZURE_CREDENTIALS }}
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
           
     - uses: actions/checkout@v2
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: Login to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_TOKEN }}
+
+    - name: Extract metadata (tags, labels) for Docker
+      id: meta
+      uses: docker/metadata-action@v4
+      with:
+        images: |
+          ${{ vars.docker_repo }}/easy-auth-proxy
+      
+    - name: Build and push Docker images
+      uses: docker/build-push-action@v3
+      with:
+        context: .
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
 
     - name: Call the script
       continue-on-error: true
       run: |
-        bash main.sh -a "${{ vars.e2ePrefix }}-${{ env.GITHUB_PR_NUMBER }}" -c "${{ vars.e2ePrefix }}-${{ env.GITHUB_PR_NUMBER }}" -r "${{ vars.e2ePrefix }}-${{ env.GITHUB_PR_NUMBER }}" -e ${{ vars.email }} -l ${{ vars.location }}
+        bash main.sh -a "${{ vars.e2ePrefix }}-${{ env.GITHUB_PR_NUMBER }}" -c "${{ vars.e2ePrefix }}-${{ env.GITHUB_PR_NUMBER }}" -r "${{ vars.e2ePrefix }}-${{ env.GITHUB_PR_NUMBER }}" -e ${{ vars.email }} -l ${{ vars.location }} -v "latest"
 
     - name: Delete e2e environment
       if: ${{ vars.DeleteOnFailure == 'true' }} || success()
