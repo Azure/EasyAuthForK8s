@@ -4,6 +4,12 @@
 
 tlsSecretName: ""
 appHostName: ""
+
+# The base path will be pre-pended to all urls on the EasyAuth Proxy
+# For example, the Auth endpoint will listen on "/easyauth/auth" by default
+# You should change the base path if you are deploying multiple EasyAuth pods
+# that share the same host name, such as a mult-tenant app.  See documentation 
+# for more.
 basePath: "/easyauth"
 
 replicaCount: 2
@@ -98,19 +104,20 @@ azureAd:
   tenantId: ""
   # app Id of the service principal.
   clientId: ""
-  # configure paths for OIDC middleware
-  # there's no reason to change these unless there is a conflict
-  # such as another easyauth proxy using the same host name
-  callbackPath: "/signin-oidc"
-  # Leave this blank if not B2C
+  # B2C Sign-in policy, if used
+  # Leave this blank if not using B2C
   signUpSignInPolicyId: ""
+  # configure paths for OIDC middleware
+  # you shouldn't need to change these from the default
+  # all paths will be prefiixed with the basePath value
+  callbackPath: "/signin-oidc"
 
 easyAuthForK8s: 
   # data protection key ring location
   dataProtectionFileLocation: "/mnt/dp"
   # configure paths for EasyAuth middleware
-  # there's no reason to change these unless there is a conflict
-  # such as another easyauth proxy using the same host name
+  # you shouldn't need to change these from the default
+  # all paths will be prefiixed with the basePath value
   signinPath: "/login"
   authPath: "/auth"
   signoutPath: "/logout"

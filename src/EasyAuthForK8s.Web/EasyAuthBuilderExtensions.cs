@@ -45,6 +45,7 @@ public static class EasyAuthBuilderExtensions
             {
                 azureAdConfigSection.Bind(o);
 
+
                 var nextRedirectHandler = o.Events.OnRedirectToIdentityProvider;
                 o.Events.OnRedirectToIdentityProvider = async context =>
                     await eventHelper.HandleRedirectToIdentityProvider(context, nextRedirectHandler);

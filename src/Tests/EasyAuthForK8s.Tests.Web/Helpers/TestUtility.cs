@@ -1,5 +1,7 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using EasyAuthForK8s.Web;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Primitives;
 using System;
 using System.Collections.Generic;
@@ -38,6 +40,13 @@ namespace EasyAuthForK8s.Tests.Web.Helpers
                     keyValuePairs[name] = StringValues.Concat(keyValuePairs[name], value);
             }
             return new QueryCollection(keyValuePairs);
+        }
+        public static IConfiguration GetConfiguration(EasyAuthConfigurationOptions options)
+        {
+            return new ConfigurationBuilder()
+                .AddJsonFile("testsettings.json", false, true)
+                .Add(new EasyAuthOptionsConfigurationSource(options))
+                .Build();
         }
     }
 }
