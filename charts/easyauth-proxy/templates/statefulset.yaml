@@ -57,13 +57,19 @@ spec:
                 value: "{{ .Values.easyAuthForK8s.dataProtectionFileLocation }}"           
              -  name: EasyAuthForK8s__SigninPath
                 value: "{{ .Values.basePath }}{{ .Values.easyAuthForK8s.signinPath }}"
+             -  name: EasyAuthForK8s__SignoutPath
+                value: "{{ .Values.basePath }}{{ .Values.easyAuthForK8s.signoutPath }}"
              -  name: EasyAuthForK8s__AuthPath
                 value: "{{ .Values.basePath }}{{ .Values.easyAuthForK8s.authPath }}"
              -  name: EasyAuthForK8s__AllowBearerToken
                 value: "{{ .Values.easyAuthForK8s.allowBearerToken }}"
              -  name: EasyAuthForK8s__DefaultRedirectAfterSignin
                 value: "{{ .Values.easyAuthForK8s.defaultRedirectAfterSignin }}"
-                name: EasyAuthForK8s__CompressCookieClaims
+             -  name: EasyAuthForK8s__DefaultRedirectAfterSignout
+                value: "{{ .Values.easyAuthForK8s.defaultRedirectAfterSignout }}"
+            -  name: EasyAuthForK8s__SignedOutNoRedirectPath
+                value: "{{ .Values.basePath }}/signedout"
+             -  name: EasyAuthForK8s__CompressCookieClaims
                 value: "{{ .Values.easyAuthForK8s.compressCookieClaims }}"
              -  name: EasyAuthForK8s__ResponseHeaderPrefix
                 value: "{{ .Values.easyAuthForK8s.responseHeaderPrefix }}"
@@ -81,8 +87,6 @@ spec:
                 value: "{{ .Values.azureAd.clientId }}"
              -  name: AzureAd__CallbackPath
                 value: "{{ .Values.basePath }}{{ .Values.azureAd.callbackPath }}"
-             -  name: AzureAd__SignedOutCallbackPath
-                value: "{{ .Values.basePath }}{{ .Values.azureAd.signedOutCallbackPath }}"
              -  name: AzureAd__SignUpSignInPolicyId
                 value: "{{ .Values.azureAd.signUpSignInPolicyId }}"   
              -  name: AzureAd__ClientSecret

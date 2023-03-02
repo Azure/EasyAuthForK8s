@@ -182,7 +182,8 @@ public class EasyAuthMiddlewareTests
         EasyAuthConfigurationOptions options = new EasyAuthConfigurationOptions()
         { HeaderFormatOption = EasyAuthConfigurationOptions.HeaderFormat.Separate };
 
-        HttpResponseMessage response = await GetResponseForHeadersWithCookieSignedInAsync(options);
+        using var server = await CookieAuthHelper.GetTestServerWithCookieSignedInAsync(options);
+        HttpResponseMessage response = await server.CreateClient().GetAsync(options.AuthPath); 
 
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
 
@@ -343,7 +344,7 @@ public class EasyAuthMiddlewareTests
             .ConfigureServices(services =>
             {
                 services.AddSingleton<ILogger<EasyAuthMiddleware>>(logger.Factory().CreateLogger<EasyAuthMiddleware>());
-                services.AddEasyAuthForK8s(GetConfiguration(options), logger.Factory());
+                services.AddEasyAuthForK8s(TestUtility.GetConfiguration(options), logger.Factory());
 
                 //swap out the cookiehandler with one that will do what we tell it
                 services.Configure<AuthenticationOptions>(options =>
@@ -362,7 +363,7 @@ public class EasyAuthMiddlewareTests
                     //explicitly add a requested scope
                     configureOptions.Scope.Add("User.Read");
                 });
-                services.Replace(new ServiceDescriptor(typeof(GraphHelperService), MockGraphHelper()));
+                services.Replace(new ServiceDescriptor(typeof(GraphHelperService), MockGraphHelperService.Factory()));
             })
             .ConfigureWebHost(webHostBuilder =>
             {
@@ -409,13 +410,7 @@ public class EasyAuthMiddlewareTests
         //this is not a requirement, just ensuring the sort is deterministic
         Assert.Equal("User.Read", scopeValues[scopeValues.Length - 2]);
     }
-    private IConfiguration GetConfiguration(EasyAuthConfigurationOptions options)
-    {
-        return new ConfigurationBuilder()
-            .AddJsonFile("testsettings.json", false, true)
-            .Add(new EasyAuthOptionsConfigurationSource(options))
-            .Build();
-    }
+
     private HttpResponseMessage GetResponseForAuthN(
         EasyAuthConfigurationOptions options,
         string query,
@@ -429,8 +424,8 @@ public class EasyAuthMiddlewareTests
             .ConfigureServices(services =>
             {
                 services.AddSingleton<ILogger<EasyAuthMiddleware>>(logger.Factory().CreateLogger<EasyAuthMiddleware>());
-                services.AddEasyAuthForK8s(GetConfiguration(options), logger.Factory());
-                services.Replace(new ServiceDescriptor(typeof(GraphHelperService), MockGraphHelper()));
+                services.AddEasyAuthForK8s(TestUtility.GetConfiguration(options), logger.Factory());
+                services.Replace(new ServiceDescriptor(typeof(GraphHelperService), MockGraphHelperService.Factory()));
             })
             .ConfigureWebHost(webHostBuilder =>
             {
@@ -476,7 +471,7 @@ public class EasyAuthMiddlewareTests
             .ConfigureServices(services =>
             {
                 services.AddSingleton<ILogger<EasyAuthMiddleware>>(logger.Factory().CreateLogger<EasyAuthMiddleware>());
-                services.AddEasyAuthForK8s(GetConfiguration(options), logger.Factory());
+                services.AddEasyAuthForK8s(TestUtility.GetConfiguration(options), logger.Factory());
                 if (handlerOptions != null)
                     services.AddSingleton<TestAuthenticationHandlerOptions>(handlerOptions);
 
@@ -490,7 +485,7 @@ public class EasyAuthMiddlewareTests
                         s.HandlerType = typeof(TestAuthenticationHandler);
                     }
                 });
-                services.Replace(new ServiceDescriptor(typeof(GraphHelperService), MockGraphHelper()));
+                services.Replace(new ServiceDescriptor(typeof(GraphHelperService), MockGraphHelperService.Factory()));
             })
             .ConfigureWebHost(webHostBuilder =>
             {
@@ -523,7 +518,7 @@ public class EasyAuthMiddlewareTests
         using IHost host = new HostBuilder()
             .ConfigureServices(services =>
             {
-                services.AddEasyAuthForK8s(GetConfiguration(options), new TestLogger().Factory());
+                services.AddEasyAuthForK8s(TestUtility.GetConfiguration(options), new TestLogger().Factory());
                 if (handlerOptions != null)
                     services.AddSingleton<TestAuthenticationHandlerOptions>(handlerOptions);
 
@@ -537,7 +532,7 @@ public class EasyAuthMiddlewareTests
                         s.HandlerType = typeof(TestAuthenticationHandler);
                     }
                 });
-                services.Replace(new ServiceDescriptor(typeof(GraphHelperService), MockGraphHelper()));
+                services.Replace(new ServiceDescriptor(typeof(GraphHelperService), MockGraphHelperService.Factory()));
             })
             .ConfigureWebHost(webHostBuilder =>
             {
@@ -556,88 +551,7 @@ public class EasyAuthMiddlewareTests
             .GetAsync(options.AuthPath);
 
     }
-    private async Task<HttpResponseMessage> GetResponseForHeadersWithCookieSignedInAsync(
-       EasyAuthConfigurationOptions options,
-       TestAuthenticationHandlerOptions handlerOptions = null)
-    {
-        using IHost host = new HostBuilder()
-            .ConfigureServices(services =>
-            {
-                services.AddEasyAuthForK8s(GetConfiguration(options), new TestLogger().Factory());
-                if (handlerOptions != null)
-                    services.AddSingleton<TestAuthenticationHandlerOptions>(handlerOptions);
-
-                services.Replace(new ServiceDescriptor(typeof(GraphHelperService), MockGraphHelper()));
-            })
-            .ConfigureWebHost(webHostBuilder =>
-            {
-                webHostBuilder
-                .UseTestServer()
-                .Configure(app =>
-                {
-                    app.Use(async (context, next) =>
-                    {
-                        var token = new JwtSecurityToken("eyJhbGciOiJub25lIn0.eyJpc3MiOiJqb24ifQ.");
-                        AuthenticationProperties props = new AuthenticationProperties(
-                            new Dictionary<string, string>() {
-                                { Constants.OidcGraphQueryStateBag, "foo" },
-                                { ".Token.access_token", new JwtSecurityTokenHandler().WriteToken(token) },
-                                { ".Token.id_token", new JwtSecurityTokenHandler().WriteToken(token) }
-                            });
-
-                        var signedIn = false;
-                        var cookieValue = "";
-
-                        //inject resultant cookie from the response back into to the request
-                        var cookies = new Mock<IRequestCookieCollection>();
-                        cookies.Setup(x => x[Constants.CookieName]).Returns(() =>
-                        {
-                            //force the sign in logic to run, which will execute graph queries
-                            //should only run once
-                            if (!signedIn)
-                            {
-                                signedIn = true;
-
-                                context.SignInAsync(
-                                    CookieAuthenticationDefaults.AuthenticationScheme,
-                                    new TestAuthenticationHandler().AuthenticateAsync().Result.Principal,
-                                    props).Wait();
-
-                                var cookies = CookieHeaderValue.ParseList(context.Response.Headers.SetCookie);
-
-                                cookieValue = cookies
-                                    .Where(x => x.Name == Constants.CookieName)
-                                    .Select(x => x.Value)
-                                    .First()
-                                    .ToString();
-
-                            }
-                            return cookieValue;
-                        }
-                        );
-                        cookies.Setup(x => x.ContainsKey(Constants.CookieName)).Returns(true);
-                        context.Request.Cookies = cookies.Object;
-
-
-
-
-
-                        await next.Invoke();
-                    });
-                    app.UseEasyAuthForK8s();
-                });
-            }).Build();
-
-        await host.StartAsync();
-
-        return await host.GetTestServer()
-            .CreateClient()
-            .GetAsync(options.AuthPath);
-
-    }
-
-
-
+   
     private EasyAuthState GetStateFromResponseWithAsserts(IDataProtector dp, HttpResponseMessage response)
     {
         Assert.True(response.Headers.Contains(HeaderNames.SetCookie));
@@ -659,44 +573,5 @@ public class EasyAuthMiddlewareTests
         Assert.Contains(containsMessage, state.Msg);
         Assert.Contains(logs, x => x.Message.Contains(containsMessage));
     }
-    private GraphHelperService MockGraphHelper(ILogger logger = null)
-    {
-        var manifest = new AppManifest()
-        {
-            appId = TestUtility.DummyGuid,
-            publishedPermissionScopes = new()
-            {
-                new() { value = "foo" },
-                new() { value = "bar" }
-            },
-            oidcScopes = new string[]
-            {
-                "openid",
-                "profile",
-                "email",
-                "offline_access"
-            }
-        };
-
-        var openIdConnectOptions = Mock.Of<IOptionsMonitor<OpenIdConnectOptions>>();
-        var httpClient = Mock.Of<HttpClient>();
-        logger = logger ?? Mock.Of<ILogger<GraphHelperService>>();
-
-        var graphService = new Mock<GraphHelperService>(openIdConnectOptions, httpClient, logger);
-
-        graphService.Setup(x => x.GetManifestConfigurationAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new AppManifestResult() { AppManifest = manifest, Succeeded = true });
-
-        graphService.Setup(x => x.ExecuteQueryAsync(It.IsAny<string>(), It.IsAny<string[]>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(() =>
-            {
-                var data = new List<string>();
-                GraphHelperService.ExtractGraphResponse(data, File.OpenRead("./Helpers/sample-graph-result.json"), logger).Wait();
-                return data;
-            });
-
-        return graphService.Object;
-    }
-
 }
 

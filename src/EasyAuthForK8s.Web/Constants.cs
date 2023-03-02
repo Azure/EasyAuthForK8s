@@ -21,10 +21,19 @@ public class Constants
         public const string Name = "n";
         public const string Subject = "s";
         public const string Role = "r";
+        public const string LoginHint = "h";
+    }
+    //non-standard claims that AAD supports for OIDC
+    public class AadClaimParameters
+    {
+        public const string LoginHint = "login_hint";
+        public const string LogoutHint = "logout_hint";
     }
 
     public static readonly string[] IgnoredClaims = {
         "aud","iss","iat","idp","nbf","exp","c_hash","at_hash","aio","nonce","rh","unique_name","uti","ver"
     };
+
+    public const string NoOpRedirectUri = "_blank";
 }
 

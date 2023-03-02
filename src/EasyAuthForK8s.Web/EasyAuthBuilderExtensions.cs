@@ -45,9 +45,22 @@ public static class EasyAuthBuilderExtensions
             {
                 azureAdConfigSection.Bind(o);
 
+
                 var nextRedirectHandler = o.Events.OnRedirectToIdentityProvider;
                 o.Events.OnRedirectToIdentityProvider = async context =>
                     await eventHelper.HandleRedirectToIdentityProvider(context, nextRedirectHandler);
+
+                var nextRemoteSignOutHandler = o.Events.OnRemoteSignOut;
+                o.Events.OnRemoteSignOut = async context =>
+                    await eventHelper.OidcRemoteSignout(context, nextRemoteSignOutHandler);
+
+                var nextSignedOutCallbackRedirectHandler = o.Events.OnSignedOutCallbackRedirect;
+                o.Events.OnSignedOutCallbackRedirect = async context =>
+                    await eventHelper.OidcRemoteSignout(context, nextSignedOutCallbackRedirectHandler);
+
+                var nextRedirectToIdentityProviderForSignOutHandler = o.Events.OnRedirectToIdentityProviderForSignOut;
+                o.Events.OnRedirectToIdentityProviderForSignOut = async context =>
+                    await eventHelper.OidcRedirectForSignout(context, nextRedirectToIdentityProviderForSignOutHandler);
             },
             c =>
             {
@@ -64,6 +77,9 @@ public static class EasyAuthBuilderExtensions
             configureOptions.ResponseType = "code";
             configureOptions.SaveTokens = true;
             configureOptions.ReturnUrlParameter = Constants.RedirectParameterName;
+            configureOptions.UsePkce = true;
+            configureOptions.RemoteSignOutPath = easyAuthConfig.SignoutPath;
+            configureOptions.SignedOutRedirectUri = easyAuthConfig.DefaultRedirectAfterSignout;
         });
 
 

@@ -40,7 +40,7 @@ internal class TestAuthenticationHandler : IAuthenticationHandler
     public Task InitializeAsync(AuthenticationScheme scheme, HttpContext context) => Task.FromResult(0);
 #pragma warning restore CS8632 // The annotation for nullable reference types should only be used in code within a '#nullable' annotations context.
 }
-internal class TestAuthenticationHandlerOptions
+public class TestAuthenticationHandlerOptions
 {
     public List<Claim> Claims { get; set; } = new List<Claim>();
 }

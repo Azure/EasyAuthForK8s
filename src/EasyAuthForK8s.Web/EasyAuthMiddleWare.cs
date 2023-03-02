@@ -12,10 +12,14 @@ using Microsoft.Extensions.Options;
 using Microsoft.Net.Http.Headers;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
+using System.Web;
+using System.Xml.Linq;
 
 namespace EasyAuthForK8s.Web;
 
@@ -66,7 +70,7 @@ public class EasyAuthMiddleware
     {
         EasyAuthState state = context.EasyAuthStateFromHttpContext();
 
-        LogRequestHeaders("HandleChallenge", context.Request);
+        _logger.LogInformation($"Invoke HandleChallenge - Path:{ context.Request.Path}, Query: { context.Request.QueryString}");
         if (state.Status == EasyAuthState.AuthStatus.Forbidden)
         {
             //show error or redirect
