@@ -159,9 +159,6 @@ internal static class ModelExtensions
                     case ClaimConstants.Scope:
                         payload.scp = claim.Value;
                         break;
-                    case "login_hint":
-                        payload.login_hint = claim.Value;
-                        break;
                     default:
                         {
                             if (!Constants.IgnoredClaims.Any(x => x == claim.Type))

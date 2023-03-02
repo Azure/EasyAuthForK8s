@@ -25,8 +25,7 @@ namespace EasyAuthForK8s.Web.Helpers
 {
     internal class EventHelper
     {
-        public const string LoginHint = "login_hint";
-
+        private const string PrincipalParameter = Constants.CookieName;
         private readonly EasyAuthConfigurationOptions _configOptions;
         public EventHelper(EasyAuthConfigurationOptions configOptions)
         {
@@ -152,6 +151,10 @@ namespace EasyAuthForK8s.Web.Helpers
                     else if (claim.Type == ClaimTypes.NameIdentifier)
                     {
                         addClaim(claim, Constants.Claims.Subject);
+                    }
+                    else if (claim.Type == Constants.AadClaimParameters.LoginHint)
+                    {
+                        addClaim(claim, Constants.Claims.LoginHint);
                     }
                 }
 
@@ -303,7 +306,6 @@ namespace EasyAuthForK8s.Web.Helpers
             EnsureLogger(context.HttpContext);
 
             AuthenticationProperties properties = context.Properties!.Clone();
-
             //see if the request specified a post-signout redirect, otherwise the default is used.
             properties.RedirectUri = context.HttpContext.Request.Query.ContainsKey(Constants.RedirectParameterName) ?
                  context.HttpContext.Request.Query[Constants.RedirectParameterName].First() : _configOptions.DefaultRedirectAfterSignout;
@@ -319,16 +321,9 @@ namespace EasyAuthForK8s.Web.Helpers
                 
                 _logger!.LogInformation($"Handle Signout - Subject:{authN.Principal?.Identity?.Name}, Path:{context.HttpContext.Request.Path}, Query:{context.HttpContext.Request.QueryString}");
 
-                var userinfo = authN.Principal?.UserInfoPayloadFromPrincipal(_configOptions);
-                if (userinfo != null)
-                {
-                    //set the login_hint for the redirect to the account we should sign out of
-                    //avoids asking the user to choose.LoginHint
-                    if (properties.Parameters.ContainsKey(LoginHint))
-                        properties.Parameters[LoginHint] = userinfo.login_hint;
-                    else
-                        properties.Parameters.Add(LoginHint, userinfo.login_hint);
-                }
+                //add the principal to the property bag, so it's available 
+                //to later handlers, since the user is now signed out locally
+                properties!.Parameters[PrincipalParameter] = authN.Principal;
 
                 await context.HttpContext.SignOutAsync(OpenIdConnectDefaults.AuthenticationScheme, properties);
             }
@@ -336,7 +331,7 @@ namespace EasyAuthForK8s.Web.Helpers
             {
                 _logger!.LogInformation($"Handle Signout - Current claims principal is missing or unauthenticated.  Skipping remote redirect.");
 
-                await OidcRemoteSignoutCallback(context, (ctx) => { ctx.Response.Redirect(properties.RedirectUri); return Task.CompletedTask; }) ;
+                await OidcRemoteSignoutCallback(context, (ctx) => { ctx.Response.Redirect(properties.RedirectUri!); return Task.CompletedTask; }) ;
             }
 
             //mark the response as handled, since we will either render our own page or sign-out of OIDC directly
@@ -354,9 +349,17 @@ namespace EasyAuthForK8s.Web.Helpers
         /// <returns></returns>
         public async Task OidcRedirectForSignout(RedirectContext context, Func<RedirectContext, Task> next)
         {
-            if (context.Properties.Parameters.ContainsKey(LoginHint) && !context.ProtocolMessage.Parameters.ContainsKey("logout_hint"))
+            if (context.Properties.Parameters.ContainsKey(PrincipalParameter) && !context.ProtocolMessage.Parameters.ContainsKey(Constants.AadClaimParameters.LogoutHint))
             {
-                context.ProtocolMessage.Parameters.Add("logout_hint", context.Properties.Parameters[LoginHint] as string);
+                ClaimsPrincipal? principal = context.Properties.Parameters[PrincipalParameter] as ClaimsPrincipal;
+
+                //if we received a login hint in the original token, and we still have it,
+                //set the parameter to logout that specific user, so they won't have to choose
+                //which account to sign out of
+                if (principal != null && principal!.HasClaim(c => c.Type == Constants.Claims.LoginHint))
+                {
+                    context.ProtocolMessage.Parameters.Add(Constants.AadClaimParameters.LogoutHint, principal.FindFirst(Constants.Claims.LoginHint)?.Value as string);
+                }
             }
             await next(context).ConfigureAwait(false);
         }

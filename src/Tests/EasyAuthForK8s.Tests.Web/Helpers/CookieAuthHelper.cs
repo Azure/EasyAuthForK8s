@@ -19,6 +19,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.Net.Http.Headers;
 using System.Net;
+using Xunit;
 
 namespace EasyAuthForK8s.Tests.Web.Helpers
 {
@@ -68,7 +69,7 @@ namespace EasyAuthForK8s.Tests.Web.Helpers
 
                                     context.SignInAsync(
                                         CookieAuthenticationDefaults.AuthenticationScheme,
-                                        new TestAuthenticationHandler().AuthenticateAsync().Result.Principal,
+                                        new TestAuthenticationHandler(handlerOptions).AuthenticateAsync().Result.Principal,
                                         props).Wait();
 
                                     var cookies = CookieHeaderValue.ParseList(context.Response.Headers.SetCookie);
@@ -107,6 +108,20 @@ namespace EasyAuthForK8s.Tests.Web.Helpers
                 cookieContainer.SetCookies(uri, value);
             }
             return cookieContainer.GetAllCookies();
+        }
+
+        public static SetCookieHeaderValue? GetAuthCookieFromResponse(HttpResponseMessage? response)
+        {
+            if(response != null && response.Headers.Contains(HeaderNames.SetCookie))
+            {
+                IList<SetCookieHeaderValue> cookies;
+                if(SetCookieHeaderValue.TryParseList(response.Headers.Single(x => x.Key == HeaderNames.SetCookie).Value.ToList(), out cookies)
+                    && cookies.Any(c => c.Name == Constants.CookieName))
+                {
+                    return cookies.First(c => c.Name == Constants.CookieName);
+                }
+            }
+            return null;
         }
     }
 }
