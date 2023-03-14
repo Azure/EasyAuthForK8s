@@ -41,12 +41,11 @@ jobs:
 
         # run only if some file in 'sample' folder was changed
       - if: steps.changes.outputs.sample == 'true'
-        run: ...
-          environment: ${{ env.EnvironmentName }}
-          uses: ./.github/workflows/Build-Sample-App.yml
-          with:
-            Environment: ${{ env.Environment}}
-          secrets: inherit
+        environment: ${{ env.EnvironmentName }}
+        uses: ./.github/workflows/Build-Sample-App.yml
+        with:
+          Environment: ${{ env.Environment}}
+        secrets: inherit
 
   check_for_deprecated_APIs:
     name: Check Deprecated K8s APIs
