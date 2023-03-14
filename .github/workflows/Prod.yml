@@ -76,7 +76,8 @@ jobs:
           pluto detect-files -d ./charts/easyauth-proxy
           pluto detect-files -d ./
   
-  build_and_push_sample_app:
+  check_changes:
+    runs-on: ubuntu-latest
     steps:
       - uses: dorny/paths-filter@v2
         id: changes
@@ -85,14 +86,14 @@ jobs:
             sample:
               - 'sample/EasyAuthForK8s.Sample/**'
 
-        # run only if some file in 'sample' folder was changed
-      - if: steps.changes.outputs.sample == 'true'
-        run: ...
-          environment: ${{ env.EnvironmentName }}
-          uses: ./.github/workflows/Build-Sample-App.yml
-          with:
-            Environment: ${{ vars.Environment}}
-          secrets: inherit
+  build_and_push_sample_app:
+    runs-on: ubuntu-latest
+    needs: check-changes
+    if: needs.build_and_push_sample_app.changes.outputs.sample == 'true'
+    uses: ./.github/workflows/Build-Sample-App.yml
+    with:
+      EnvironmentName: prod
+    secrets: inherit
 
   push_to_registries:
     needs: [check_for_deprecated_APIs, build_proxy, build_and_push_sample_app]
