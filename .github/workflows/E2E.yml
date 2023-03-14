@@ -1,4 +1,4 @@
-name: Build, test, push to multiple registries and e2e test
+name: E2E Build
 
 on:
   pull_request:

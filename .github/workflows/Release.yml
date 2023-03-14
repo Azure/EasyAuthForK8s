@@ -1,4 +1,4 @@
-name: Build, test, push to multiple registries and e2e test
+name: Release build
 
 env:
   version: ${{ github.release.tag_name }}
