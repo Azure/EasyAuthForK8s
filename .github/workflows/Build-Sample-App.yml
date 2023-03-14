@@ -1,0 +1,59 @@
+name: Build and push sample app to registry
+
+on:
+  workflow_call:
+    inputs:
+      EnvironmentName:
+        required: true
+        type: string
+
+jobs:
+  environment: SampleApp
+  build:
+    runs-on: ubuntu-latest
+    name: .NET restore, build & test
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: | 
+          6.0.x
+    - name: Restore dependencies
+      run: dotnet restore ./sample/EasyAuthForK8s.Sample/EasyAuthForK8s.Sample.csproj
+    - name: Build
+      run: dotnet build ./sample/EasyAuthForK8s.Sample/EasyAuthForK8s.Sample.csproj --no-restore
+
+  push_to_registry:
+    environment: ${{ inputs.EnvironmentName }}
+    name: Push Docker image to multiple registries
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+    
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v2
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USER_ID }}
+          password: ${{ secrets.DOCKER_REGISTRY_PASS }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: |
+            easyauthfork8s-sampleapp/easy-auth-sample-app
+      
+      - name: Build and push Docker images
+        uses: docker/build-push-action@v3
+        with:
+          context: ./sample/EasyAuthForK8s.Sample
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
