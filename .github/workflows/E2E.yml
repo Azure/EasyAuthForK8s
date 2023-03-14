@@ -39,7 +39,6 @@ jobs:
             sample:
               - 'sample/EasyAuthForK8s.Sample/**'
   build_and_push_sample_app:
-    runs-on: ubuntu-latest
     needs: check-changes
     if: needs.build_and_push_sample_app.changes.outputs.sample == 'true'
     uses: ./.github/workflows/Build-Sample-App.yml
