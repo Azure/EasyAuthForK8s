@@ -45,7 +45,7 @@ jobs:
           environment: ${{ env.EnvironmentName }}
           uses: ./.github/workflows/Build-Sample-App.yml
           with:
-            Environment: ${{ vars.Environment}}
+            Environment: ${{ env.Environment}}
           secrets: inherit
 
   check_for_deprecated_APIs:
@@ -105,7 +105,7 @@ jobs:
     - name: Call the script
       continue-on-error: true
       run: |
-        bash main.sh -a "${{ vars.e2ePrefix }}-${{ env.GITHUB_PR_NUMBER }}" -c "${{ vars.e2ePrefix }}-${{ env.GITHUB_PR_NUMBER }}" -r "${{ vars.e2ePrefix }}-${{ env.GITHUB_PR_NUMBER }}" -e ${{ vars.email }} -l ${{ vars.location }} -v "latest" 
+        bash main.sh -a "${{ vars.e2ePrefix }}-${{ env.GITHUB_PR_NUMBER }}" -c "${{ vars.e2ePrefix }}-${{ env.GITHUB_PR_NUMBER }}" -r "${{ vars.e2ePrefix }}-${{ env.GITHUB_PR_NUMBER }}" -e ${{ vars.email }} -l ${{ vars.location }} -v "latest" -d ${{ vars.docker_repo }}
 
     - name: Delete e2e environment
       if: ${{ vars.DeleteOnFailure == 'true' }} || success()

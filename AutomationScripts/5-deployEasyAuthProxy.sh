@@ -6,10 +6,12 @@ echo "BEGIN @ $(date +"%T"): Deploy EasyAuth Proxy..."
 
 echo "BEGIN @ $(date +"%T"): Calling Helm..."
 echo ""
-if [-z "$PROXY_VERSION"]
-  helm install --set azureAd.tenantId=$AZURE_TENANT_ID --set azureAd.clientId=$CLIENT_ID --set secret.name=easyauth-proxy-$AD_APP_NAME-secret --set secret.azureclientsecret=$CLIENT_SECRET --set appHostName=$APP_HOSTNAME --set tlsSecretName=$TLS_SECRET_NAME --set image.tag=$PROXY_VERSION easyauth-proxy-$AD_APP_NAME ./charts/easyauth-proxy
-else
+if [ -z "$PROXY_VERSION" ]; then
   helm install --set azureAd.tenantId=$AZURE_TENANT_ID --set azureAd.clientId=$CLIENT_ID --set secret.name=easyauth-proxy-$AD_APP_NAME-secret --set secret.azureclientsecret=$CLIENT_SECRET --set appHostName=$APP_HOSTNAME --set tlsSecretName=$TLS_SECRET_NAME easyauth-proxy-$AD_APP_NAME ./charts/easyauth-proxy
+elif ! [ -z "$PROXY_VERSION" ] && ! [ -z "$REPO_NAME" ]; then 
+  helm install --set azureAd.tenantId=$AZURE_TENANT_ID --set azureAd.clientId=$CLIENT_ID --set secret.name=easyauth-proxy-$AD_APP_NAME-secret --set secret.azureclientsecret=$CLIENT_SECRET --set appHostName=$APP_HOSTNAME --set tlsSecretName=$TLS_SECRET_NAME --set image.repository=$REPO_NAME --set image.tag=$PROXY_VERSION easyauth-proxy-$AD_APP_NAME ./charts/easyauth-proxy
+elif ! [ -z "$PROXY_VERSION" ]; then
+    helm install --set azureAd.tenantId=$AZURE_TENANT_ID --set azureAd.clientId=$CLIENT_ID --set secret.name=easyauth-proxy-$AD_APP_NAME-secret --set secret.azureclientsecret=$CLIENT_SECRET --set appHostName=$APP_HOSTNAME --set tlsSecretName=$TLS_SECRET_NAME --set image.tag=$PROXY_VERSION easyauth-proxy-$AD_APP_NAME ./charts/easyauth-proxy
 fi 
 
 echo ""
