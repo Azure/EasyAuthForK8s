@@ -42,7 +42,7 @@ TAG=''
 SP=''
 SP_SECRET=''
 
-while getopts "a:c:r:e:l:i:t:s:z:pgh" OPTION
+while getopts "a:c:r:e:l:i:t:s:z:v:d:pgh" OPTION
 do
 	case $OPTION in
 		a)
@@ -69,6 +69,8 @@ do
             E2E_TEST_FLAG="True" ;;  
         v)
             PROXY_VERSION = $OPTARG ;;
+        d)  
+            REPO_NAME = $OPTARG ;;
 		h)
             # Change to how others show it like az
             echo "HELP: Here are the flags and their variables"
@@ -83,6 +85,7 @@ do
             echo "OPTOINAL: -z is for SP_SECRET"
             echo "OPTOINAL: -p is for SKIP_CLUSTER_CREATION"
             echo "OPTIONAL: -v is for PROXY_VERSION"
+            echo "OPTIONAL: -d is for REPO_NAME"
 			exit ;;
 	esac
 done
@@ -117,6 +120,7 @@ echo "The value of -z is $SP_SECRET - SP_SECRET"
 echo "The value of -p is $SKIP_CLUSTER_CREATION - SKIP_CLUSTER_CREATION"
 echo "The value of -g is $E2E_TEST_FLAG - E2E_TEST_FLAG"
 echo "The value of -v is $PROXY_VERSION - PROXY_VERSION"
+echo "The value of -d is $REPO_NAME - REPO_NAME"
 echo "COMPLETE @ $(date +"%T"): Setting variables"
 
 echo "****BEGIN @ $(date +"%T"): Call AKS Cluster Creation script...****"
