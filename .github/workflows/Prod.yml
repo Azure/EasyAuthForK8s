@@ -1,4 +1,4 @@
-name: Build, test, push to multiple registries and e2e test
+name: Production Build
 
 env:
   iteration: ${{github.run_number}}
@@ -14,12 +14,39 @@ on:
       - 'README.md'
 
 jobs:
-  build:
+  build_proxy:
     runs-on: ubuntu-latest
     name: .NET restore, build & test
 
     steps:
     - uses: actions/checkout@v2
+
+    - name: Calculate new version number
+        id: versionNum
+        run: |
+          TAG=$(git describe --tags --abbrev=0)
+          arrIN=(${TAG//./ })
+          arrSize=${#arrIN[@]}
+          if(arrSize == 3)
+          {
+            newVersion="${TAG}.1"
+          }
+          if(arrSize == 4)
+          {
+            b=1
+            newBuildNumber=$((${arrIN[3]}+$b))
+            newVersion="${arrIN[0]}.${arrIN[1]}.${arrIN[2]}.$newBuildNum
+          }
+          echo The latest branch version is $newVersion
+          echo "versionNumber=$(newVersion)" >> $GITHUB_OUTPUT
+    
+    - name: Tag commit
+      run: |
+          git config user.name "GitHub Actions Bot"
+          git config user.email ""
+          git tag ${{ steps.versionNum.outputs.versionNumber }}
+          git push origin ${{ steps.versionNum.outputs.versionNumber }}
+
     - name: Setup .NET
       uses: actions/setup-dotnet@v1
       with:
@@ -28,7 +55,7 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore ./src/EasyAuthForK8s.Web/EasyAuthForK8s.Web.csproj
     - name: Build
-      run: dotnet build ./src/EasyAuthForK8s.Web/EasyAuthForK8s.Web.csproj --no-restore
+      run: dotnet build ./src/EasyAuthForK8s.Web/EasyAuthForK8s.Web.csproj --no-restore -p:Version=${{ steps.versionNum.outputs.versionNumber }}
     - name: Test
       run: dotnet test ./src/Tests/EasyAuthForK8s.Tests.Web/EasyAuthForK8s.Tests.Web.csproj --no-build --verbosity normal 
   
@@ -48,9 +75,27 @@ jobs:
         run: |
           pluto detect-files -d ./charts/easyauth-proxy
           pluto detect-files -d ./
-      
+  
+  build_and_push_sample_app:
+    steps:
+      - uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            sample:
+              - 'sample/EasyAuthForK8s.Sample/**'
+
+        # run only if some file in 'sample' folder was changed
+      - if: steps.changes.outputs.sample == 'true'
+        run: ...
+          environment: ${{ env.EnvironmentName }}
+          uses: ./.github/workflows/Build-Sample-App.yml
+          with:
+            Environment: ${{ vars.Environment}}
+          secrets: inherit
+
   push_to_registries:
-    needs: check_for_deprecated_APIs
+    needs: [check_for_deprecated_APIs, build_proxy, build_and_push_sample_app]
     name: Push Docker image to multiple registries
     runs-on: ubuntu-latest
     permissions:
@@ -87,8 +132,9 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ needs.build_proxy.outputs.steps.versionNum.versionNumber }}
+          labels: ${{ steps.meta.outputs.labels }}  
+
 
   run_e2e_test:
     needs: push_to_registries
