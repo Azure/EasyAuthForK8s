@@ -22,24 +22,24 @@ jobs:
     - uses: actions/checkout@v2
 
     - name: Calculate new version number
-        id: versionNum
-        run: |
-          TAG=$(git describe --tags --abbrev=0)
-          arrIN=(${TAG//./ })
-          arrSize=${#arrIN[@]}
-          if(arrSize == 3)
-          {
-            newVersion="${TAG}.1"
-          }
-          if(arrSize == 4)
-          {
-            b=1
-            newBuildNumber=$((${arrIN[3]}+$b))
-            newVersion="${arrIN[0]}.${arrIN[1]}.${arrIN[2]}.$newBuildNum
-          }
-          echo The latest branch version is $newVersion
-          echo "versionNumber=$(newVersion)" >> $GITHUB_OUTPUT
-    
+      id: versionNum
+      run: |
+        TAG=$(git describe --tags --abbrev=0)
+        arrIN=(${TAG//./ })
+        arrSize=${#arrIN[@]}
+        if(arrSize == 3)
+        {
+          newVersion="${TAG}.1"
+        }
+        if(arrSize == 4)
+        {
+          b=1
+          newBuildNumber=$((${arrIN[3]}+$b))
+          newVersion="${arrIN[0]}.${arrIN[1]}.${arrIN[2]}.$newBuildNum
+        }
+        echo The latest branch version is $newVersion
+        echo "versionNumber=$(newVersion)" >> $GITHUB_OUTPUT
+  
     - name: Tag commit
       run: |
           git config user.name "GitHub Actions Bot"
