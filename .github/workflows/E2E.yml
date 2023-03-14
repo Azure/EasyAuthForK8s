@@ -10,12 +10,13 @@ env:
   EnvironmentName: e2e-${{ github.event.pull_request.user.login }}
 
 jobs:
-  build:
+  build_proxy:
     runs-on: ubuntu-latest
     name: .NET restore, build & test
 
     steps:
     - uses: actions/checkout@v2
+
     - name: Setup .NET
       uses: actions/setup-dotnet@v1
       with:
@@ -28,8 +29,26 @@ jobs:
     - name: Test
       run: dotnet test ./src/Tests/EasyAuthForK8s.Tests.Web/EasyAuthForK8s.Tests.Web.csproj --no-build --verbosity normal 
   
+  build_and_push_sample_app:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            sample:
+              - 'sample/EasyAuthForK8s.Sample/**'
+
+        # run only if some file in 'sample' folder was changed
+      - if: steps.changes.outputs.sample == 'true'
+        run: ...
+          environment: ${{ env.EnvironmentName }}
+          uses: ./.github/workflows/Build-Sample-App.yml
+          with:
+            Environment: ${{ vars.Environment}}
+          secrets: inherit
+
   check_for_deprecated_APIs:
-    needs: build
     name: Check Deprecated K8s APIs
     runs-on: ubuntu-latest
 
@@ -46,7 +65,7 @@ jobs:
           pluto detect-files -d ./
 
   run_e2e_test:
-    needs: check_for_deprecated_APIs
+    needs: [check_for_deprecated_APIs, build_and_push_sample_app, build_proxy]
     runs-on: ubuntu-latest
     environment: ${{ env.EnvironmentName }}
     name: Run end-to-end test
@@ -86,7 +105,7 @@ jobs:
     - name: Call the script
       continue-on-error: true
       run: |
-        bash main.sh -a "${{ vars.e2ePrefix }}-${{ env.GITHUB_PR_NUMBER }}" -c "${{ vars.e2ePrefix }}-${{ env.GITHUB_PR_NUMBER }}" -r "${{ vars.e2ePrefix }}-${{ env.GITHUB_PR_NUMBER }}" -e ${{ vars.email }} -l ${{ vars.location }} -v "latest"
+        bash main.sh -a "${{ vars.e2ePrefix }}-${{ env.GITHUB_PR_NUMBER }}" -c "${{ vars.e2ePrefix }}-${{ env.GITHUB_PR_NUMBER }}" -r "${{ vars.e2ePrefix }}-${{ env.GITHUB_PR_NUMBER }}" -e ${{ vars.email }} -l ${{ vars.location }} -v "latest" 
 
     - name: Delete e2e environment
       if: ${{ vars.DeleteOnFailure == 'true' }} || success()
