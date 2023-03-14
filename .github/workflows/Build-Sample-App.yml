@@ -8,8 +8,8 @@ on:
         type: string
 
 jobs:
-  environment: ${{ inputs.EnvironmentName }}
   build:
+    environment: ${{ inputs.EnvironmentName }}
     runs-on: ubuntu-latest
     name: .NET restore, build & test
 
