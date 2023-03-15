@@ -65,7 +65,7 @@ jobs:
   run_e2e_test:
     needs: [check_for_deprecated_APIs, build_and_push_sample_app, build_proxy]
     runs-on: ubuntu-latest
-    environment: ${{ env.EnvironmentName }}
+    environment: e2e-${{ github.event.pull_request.user.login }}
     name: Run end-to-end test
 
     steps:
