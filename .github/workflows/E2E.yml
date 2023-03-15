@@ -43,7 +43,7 @@ jobs:
     if: needs.build_and_push_sample_app.changes.outputs.sample == 'true'
     uses: ./.github/workflows/Build-Sample-App.yml
     with:
-      EnvironmentName: ${{ env.EnvironmentName}}
+      EnvironmentName: e2e-${{ github.event.pull_request.user.login }}
     secrets: inherit
 
   check_for_deprecated_APIs:
