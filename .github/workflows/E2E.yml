@@ -40,7 +40,7 @@ jobs:
               - 'sample/EasyAuthForK8s.Sample/**'
   build_and_push_sample_app:
     needs: check_changes
-    if: needs.build_and_push_sample_app.changes.outputs.sample == 'true'
+    if: needs.build_and_push_sample_app.changes.outputs.sample == 'false'
     uses: ./.github/workflows/Build-Sample-App.yml
     with:
       EnvironmentName: e2e-${{ github.event.pull_request.user.login }}
@@ -63,7 +63,7 @@ jobs:
           pluto detect-files -d ./
 
   run_e2e_test:
-    if: success('build_and_push_sample_app')
+    if: needs.build_and_push_sample_app.changes.outputs.sample == 'true'
     needs: [check_for_deprecated_APIs, build_proxy]
     runs-on: ubuntu-latest
     environment: e2e-${{ github.event.pull_request.user.login }}
