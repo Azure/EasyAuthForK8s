@@ -41,6 +41,8 @@ E2E_TEST_FLAG=''
 TAG=''
 SP=''
 SP_SECRET=''
+PROXY_VERSION=''
+REPO_NAME=''
 
 while getopts "a:c:r:e:l:i:t:s:z:v:d:pgh" OPTION
 do
@@ -68,9 +70,9 @@ do
         g) 
             E2E_TEST_FLAG="True" ;;  
         v)
-            PROXY_VERSION = $OPTARG ;;
+            PROXY_VERSION=$OPTARG ;;
         d)  
-            REPO_NAME = $OPTARG ;;
+            REPO_NAME=$OPTARG ;;
 		h)
             # Change to how others show it like az
             echo "HELP: Here are the flags and their variables"
