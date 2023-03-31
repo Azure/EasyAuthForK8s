@@ -156,7 +156,7 @@ echo "****BEGIN @ $(date +"%T"): Call Install Cert Manager script****"
 . ./AutomationScripts/4-installCertManager.sh
 echo "****COMPLETE @ $(date +"%T"): Installed Cert Manager script****"
 
-if [-z "$REPO_NAME" ]; then
+if [ -z "$REPO_NAME" ]; then
     echo "Using default repo"
 else   
     REPO_NAME=$REPO_NAME/easy-auth-proxy
