@@ -55,7 +55,7 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore ./src/EasyAuthForK8s.Web/EasyAuthForK8s.Web.csproj
     - name: Build
-      run: dotnet build ./src/EasyAuthForK8s.Web/EasyAuthForK8s.Web.csproj --no-restore -p:Version=${{ steps.versionNum.outputs.versionNumber }}
+      run: dotnet build ./src/EasyAuthForK8s.Web/EasyAuthForK8s.Web.csproj --no-restore
     - name: Test
       run: dotnet test ./src/Tests/EasyAuthForK8s.Tests.Web/EasyAuthForK8s.Tests.Web.csproj --no-build --verbosity normal 
   
