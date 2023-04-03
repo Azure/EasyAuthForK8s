@@ -16,6 +16,8 @@ on:
 jobs:
   build_proxy:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.versionNum.outputs.versionNumber }}
     name: .NET restore, build & test
 
     steps:
@@ -138,7 +140,7 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ needs.build_proxy.outputs.steps.versionNum.versionNumber }}
+          tags: ${{ needs.build_proxy.outputs.version }}
           labels: ${{ steps.meta.outputs.labels }}  
 
 
@@ -164,7 +166,7 @@ jobs:
     - name: Call the script
       continue-on-error: true
       run: |
-        bash main.sh -a "${{ vars.prodPrefix }}-${{ env.iteration }}" -c "${{ vars.prodPrefix }}-${{ env.iteration }}" -r "${{ vars.prodPrefix }}-${{ env.iteration }}" -e ${{ vars.email }} -l ${{ vars.location }} -v ${{ needs.build_proxy.outputs.steps.versionNum.versionNumber }}
+        bash main.sh -a "${{ vars.prodPrefix }}-${{ env.iteration }}" -c "${{ vars.prodPrefix }}-${{ env.iteration }}" -r "${{ vars.prodPrefix }}-${{ env.iteration }}" -e ${{ vars.email }} -l ${{ vars.location }} -v ${{ needs.build_proxy.outputs.version }}
 
     - name: Delete e2e environment
       if: ${{ vars.DeleteOnFailure == 'true' }} || success()
