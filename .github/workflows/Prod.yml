@@ -37,7 +37,7 @@ jobs:
         {
           b=1
           newBuildNumber=$((${arrIN[3]}+$b))
-          newVersion="${arrIN[0]}.${arrIN[1]}.${arrIN[2]}.$newBuildNum
+          newVersion="${arrIN[0]}.${arrIN[1]}.${arrIN[2]}.$newBuildNumber"
         }
         echo The latest branch version is $newVersion
         echo "versionNumber=$newVersion" >> $GITHUB_OUTPUT
