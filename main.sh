@@ -38,10 +38,13 @@ INPUTIMAGE=''
 ALT_TENANT_ID=''
 SKIP_CLUSTER_CREATION=''
 E2E_TEST_FLAG=''
+TAG=''
 SP=''
 SP_SECRET=''
+PROXY_VERSION=''
+REPO_NAME=''
 
-while getopts "a:c:r:e:l:i:t:s:z:pgh" OPTION
+while getopts "a:c:r:e:l:i:t:s:z:v:d:pgh" OPTION
 do
 	case $OPTION in
 		a)
@@ -66,6 +69,10 @@ do
             SKIP_CLUSTER_CREATION="True" ;;
         g) 
             E2E_TEST_FLAG="True" ;;  
+        v)
+            PROXY_VERSION=$OPTARG ;;
+        d)  
+            REPO_NAME=$OPTARG ;;
 		h)
             # Change to how others show it like az
             echo "HELP: Here are the flags and their variables"
@@ -79,6 +86,8 @@ do
             echo "OPTOINAL: -s is for SERVICE_PRICIPAL"
             echo "OPTOINAL: -z is for SP_SECRET"
             echo "OPTOINAL: -p is for SKIP_CLUSTER_CREATION"
+            echo "OPTIONAL: -v is for PROXY_VERSION"
+            echo "OPTIONAL: -d is for REPO_NAME"
 			exit ;;
 	esac
 done
@@ -112,6 +121,8 @@ echo "The value of -s is $SP - SERVICE_PRICIPAL"
 echo "The value of -z is $SP_SECRET - SP_SECRET"
 echo "The value of -p is $SKIP_CLUSTER_CREATION - SKIP_CLUSTER_CREATION"
 echo "The value of -g is $E2E_TEST_FLAG - E2E_TEST_FLAG"
+echo "The value of -v is $PROXY_VERSION - PROXY_VERSION"
+echo "The value of -d is $REPO_NAME - REPO_NAME"
 echo "COMPLETE @ $(date +"%T"): Setting variables"
 
 echo "****BEGIN @ $(date +"%T"): Call AKS Cluster Creation script...****"
@@ -145,6 +156,11 @@ echo "****BEGIN @ $(date +"%T"): Call Install Cert Manager script****"
 . ./AutomationScripts/4-installCertManager.sh
 echo "****COMPLETE @ $(date +"%T"): Installed Cert Manager script****"
 
+if [ -z "$REPO_NAME" ]; then
+    echo "Using default repo"
+else   
+    REPO_NAME=$REPO_NAME/easy-auth-proxy
+fi
 echo "****BEGIN @ $(date +"%T"): Call Deploy EasyAuth Proxy script****"
 . ./AutomationScripts/5-deployEasyAuthProxy.sh
 echo "****COMPLETE @ $(date +"%T"): Deployed EasyAuth Proxy script****"
@@ -153,7 +169,8 @@ echo "BEGIN @ $(date +"%T"): Deploy sample app..."
 # If we have a parameter for an image install a custom image. If not, then we install kuard.
 if [ -z "$INPUTIMAGE" ]; then
     echo "No image input, installing sample."
-    kubectl run easyauth-sample-pod --image=docker.io/dakondra/eak-sample:latest --expose --port=80
+    # kubectl run easyauth-sample-pod --image=docker.io/dakondra/eak-sample:latest --expose --port=80
+    kubectl run easyauth-sample-pod --image=docker.io/ibersanoms/easy-auth-sample:latest --expose --port=80
 else
     echo "Your custom image $INPUTIMAGE installed"
     kubectl run custom-pod --image=$INPUTIMAGE --expose --port=80

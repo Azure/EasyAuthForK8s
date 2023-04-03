@@ -1,4 +1,4 @@
-name: Build, test, push to multiple registries and e2e test
+name: E2E Build
 
 on:
   pull_request:
@@ -7,14 +7,16 @@ on:
       - 'README.md'
 env:
   GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
+  EnvironmentName: e2e-${{ github.event.pull_request.user.login }}
 
 jobs:
-  build:
+  build_proxy:
     runs-on: ubuntu-latest
     name: .NET restore, build & test
 
     steps:
     - uses: actions/checkout@v2
+
     - name: Setup .NET
       uses: actions/setup-dotnet@v1
       with:
@@ -27,8 +29,24 @@ jobs:
     - name: Test
       run: dotnet test ./src/Tests/EasyAuthForK8s.Tests.Web/EasyAuthForK8s.Tests.Web.csproj --no-build --verbosity normal 
   
+  check_changes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            sample:
+              - 'sample/EasyAuthForK8s.Sample/**'
+  build_and_push_sample_app:
+    needs: check_changes
+    if: needs.check_changes.outputs.sample == 'false'
+    uses: ./.github/workflows/Build-Sample-App.yml
+    with:
+      EnvironmentName: e2e-${{ github.event.pull_request.user.login }}
+    secrets: inherit
+
   check_for_deprecated_APIs:
-    needs: build
     name: Check Deprecated K8s APIs
     runs-on: ubuntu-latest
 
@@ -45,23 +63,52 @@ jobs:
           pluto detect-files -d ./
 
   run_e2e_test:
-    needs: check_for_deprecated_APIs
+    if: |
+      always() &&
+      (needs.build_and_push_sample_app.result == 'skipped' || needs.build_and_push_sample_app.result == 'success') && 
+      needs.build_proxy.result == 'success' && 
+      needs.check_for_deprecated_APIs.result == 'success'
+    needs: [check_for_deprecated_APIs, build_and_push_sample_app, build_proxy]
     runs-on: ubuntu-latest
-    environment: e2e
+    environment: e2e-${{ github.event.pull_request.user.login }}
     name: Run end-to-end test
 
     steps:
     - name: 'Login via Azure CLI'
       uses: azure/login@v1
       with:
-        creds: ${{ secrets.CAE_AZURE_CREDENTIALS }}
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
           
     - uses: actions/checkout@v2
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: Login to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_TOKEN }}
+
+    - name: Extract metadata (tags, labels) for Docker
+      id: meta
+      uses: docker/metadata-action@v4
+      with:
+        images: |
+          ${{ vars.docker_repo }}/easy-auth-proxy
+      
+    - name: Build and push Docker images
+      uses: docker/build-push-action@v3
+      with:
+        context: .
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
 
     - name: Call the script
       continue-on-error: true
       run: |
-        bash main.sh -a "${{ vars.e2ePrefix }}-${{ env.GITHUB_PR_NUMBER }}" -c "${{ vars.e2ePrefix }}-${{ env.GITHUB_PR_NUMBER }}" -r "${{ vars.e2ePrefix }}-${{ env.GITHUB_PR_NUMBER }}" -e ${{ vars.email }} -l ${{ vars.location }}
+        bash main.sh -a "${{ vars.e2ePrefix }}-${{ env.GITHUB_PR_NUMBER }}" -c "${{ vars.e2ePrefix }}-${{ env.GITHUB_PR_NUMBER }}" -r "${{ vars.e2ePrefix }}-${{ env.GITHUB_PR_NUMBER }}" -e ${{ vars.email }} -l ${{ vars.location }} -v "pr-${{ env.GITHUB_PR_NUMBER }}" -d "docker.io/${{ vars.docker_repo }}"
 
     - name: Delete e2e environment
       if: ${{ vars.DeleteOnFailure == 'true' }} || success()
