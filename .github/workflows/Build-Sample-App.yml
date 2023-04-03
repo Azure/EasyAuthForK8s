@@ -48,7 +48,7 @@ jobs:
         uses: docker/metadata-action@v4
         with:
           images: |
-            easyauthfork8s-sampleapp/easy-auth-sample-app
+            ${{ vars.SAMPLE_APP_DOCKER_REPO }}/easyauthfork8s-sampleapp
       
       - name: Build and push Docker images
         uses: docker/build-push-action@v3
