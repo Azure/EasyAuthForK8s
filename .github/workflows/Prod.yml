@@ -96,6 +96,11 @@ jobs:
     secrets: inherit
 
   push_to_registries:
+    if: |
+        always() &&
+        (needs.build_and_push_sample_app.result == 'skipped' || needs.build_and_push_sample_app.result == 'success') && 
+        needs.build_proxy.result == 'success' && 
+        needs.check_for_deprecated_APIs.result == 'success'
     needs: [check_for_deprecated_APIs, build_proxy, build_and_push_sample_app]
     name: Push Docker image to multiple registries
     runs-on: ubuntu-latest
