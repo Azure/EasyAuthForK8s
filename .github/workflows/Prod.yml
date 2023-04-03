@@ -29,17 +29,15 @@ jobs:
         TAG=$(git describe --tags --abbrev=0)
         arrIN=(${TAG//./ })
         arrSize=${#arrIN[@]}
-        if(arrSize == 3)
-        {
+        newVersion=""
+        if [ $arrSize == 3 ]; then
           newVersion="${TAG}.1"
-        }
-        if(arrSize == 4)
-        {
+        elif [ $arrSize == 4 ]; then
           b=1
           newBuildNumber=$((${arrIN[3]}+$b))
-          newVersion="${arrIN[0]}.${arrIN[1]}.${arrIN[2]}.$newBuildNumber"
-        }
-        echo The latest branch version is $newVersion
+          newVersion=${arrIN[0]}.${arrIN[1]}.${arrIN[2]}.$newBuildNumber
+        fi
+         echo "The new version number is $newVersion."
         echo "versionNumber=$newVersion" >> $GITHUB_OUTPUT
   
     - name: Tag commit
