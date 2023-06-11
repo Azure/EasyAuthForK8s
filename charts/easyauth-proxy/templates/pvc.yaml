@@ -2,6 +2,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
     name: {{ .Values.claimName }}
+    namespace: {{ include "easyauth-proxy.namespace" . }}
 spec:
     accessModes:
     - ReadWriteMany

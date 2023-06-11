@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: {{ include "easyauth-proxy.fullname" . }}
+  namespace: {{ include "easyauth-proxy.namespace" . }}
   labels:
     {{- include "easyauth-proxy.labels" . | nindent 4 }}
 spec:
