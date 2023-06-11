@@ -3,6 +3,7 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: {{ include "easyauth-proxy.fullname" . }}-ingress
+  namespace: {{ include "easyauth-proxy.namespace" . }}
   labels:
     {{- include "easyauth-proxy.labels" . | nindent 4 }}
   {{- with .Values.ingress.annotations }}
