@@ -18,6 +18,10 @@ This project has been validated to work on the following:
 
 Review these very carefully and modify.
 
+    # Set your AKS cluster name and resource group
+    CLUSTER_NAME=easy-auth-proxy-aks
+    CLUSTER_RG=easy-auth-proxy-rg
+
     # Set your backend service variables
     SERVICE=<insert name of K8s service you want to redirect to after login>
     SERVICE_PORT=<insert service port of the K8s service you want to redirect to after login> 
@@ -97,10 +101,10 @@ EOF
 cat manifest.json
 
 # Create the Azure AD SP for our application and save the Client ID to a variable
-CLIENT_ID=$(az ad app create --display-name $AD_APP_NAME --homepage $HOMEPAGE --reply-urls $REPLY_URLS --required-resource-accesses @manifest.json -o json | jq -r '.appId')
+CLIENT_ID=$(az ad app create --display-name $AD_APP_NAME  --web-home-page-url $HOMEPAGE --web-redirect-uris $REPLY_URLS --required-resource-accesses @manifest.json -o json | jq -r '.appId')
 echo $CLIENT_ID
 
-OBJECT_ID=$(az ad app show --id $CLIENT_ID -o json | jq '.objectId' -r)
+OBJECT_ID=$(az ad app show --id $CLIENT_ID -o json | jq '.id' -r)
 echo $OBJECT_ID
 
 az ad app update --id $OBJECT_ID --set oauth2Permissions[0].isEnabled=false

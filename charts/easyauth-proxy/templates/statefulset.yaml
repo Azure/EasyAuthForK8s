@@ -63,7 +63,7 @@ spec:
                 value: "{{ .Values.easyAuthForK8s.allowBearerToken }}"
              -  name: EasyAuthForK8s__DefaultRedirectAfterSignin
                 value: "{{ .Values.easyAuthForK8s.defaultRedirectAfterSignin }}"
-                name: EasyAuthForK8s__CompressCookieClaims
+             -  name: EasyAuthForK8s__CompressCookieClaims
                 value: "{{ .Values.easyAuthForK8s.compressCookieClaims }}"
              -  name: EasyAuthForK8s__ResponseHeaderPrefix
                 value: "{{ .Values.easyAuthForK8s.responseHeaderPrefix }}"
